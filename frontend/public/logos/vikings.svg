@@ -1,0 +1,5 @@
+<!-- This is a placeholder. Replace with actual Viking logo -->
+<svg width="64" height="64" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+  <circle cx="32" cy="32" r="30" fill="#2c5282"/>
+  <text x="32" y="38" font-family="Arial" font-size="12" fill="white" text-anchor="middle">V</text>
+</svg>
