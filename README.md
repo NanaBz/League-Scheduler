@@ -2,6 +2,17 @@
 
 A comprehensive web application for managing a school's football league system with MongoDB + Express backend and React frontend.
 
+## Screenshots
+
+### Desktop View
+![League Table](screenshots/desktop-league-table.png)
+![Fixtures](screenshots/desktop-fixtures.png)
+![Admin Panel](screenshots/desktop-admin-panel.png)
+
+### Mobile View (Coming Soon)
+![Mobile League Table](screenshots/mobile-league-table.png)
+![Mobile Fixtures](screenshots/mobile-fixtures.png)
+
 ## Features
 
 ### Admin Panel
