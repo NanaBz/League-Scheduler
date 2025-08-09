@@ -125,6 +125,30 @@ const UserView = ({ competitions, selectedCompetition, refreshKey, isAdmin }) =>
     return new Date(dateString).toLocaleDateString();
   };
 
+  const formatStage = (stage, competition) => {
+    if (!stage || stage === 'regular') return '';
+    
+    // Special handling for Super Cup
+    if (competition === 'super-cup') {
+      return 'FINAL';
+    }
+    
+    switch (stage.toLowerCase()) {
+      case 'group':
+        return competition === 'league' ? 'LEAGUE' : 'GROUP';
+      case 'final':
+        return 'FINAL';
+      case 'semi-final':
+      case 'semifinal':
+        return 'SEMI-FINAL';
+      case 'quarter-final':
+      case 'quarterfinal':
+        return 'QUARTER-FINAL';
+      default:
+        return stage.toUpperCase();
+    }
+  };
+
   return (
     <div>
       {/* Season Selector */}
@@ -188,11 +212,6 @@ const UserView = ({ competitions, selectedCompetition, refreshKey, isAdmin }) =>
           <div className="card">
             <h2>📊 League Table</h2>
             
-            {/* Mobile scroll hint */}
-            <div className="horizontal-scroll-hint mobile-only">
-              👈 Swipe left/right to view all stats
-            </div>
-            
             {/* Position Legend */}
             <div className="table-legend" style={{ 
               display: 'flex', 
@@ -222,24 +241,26 @@ const UserView = ({ competitions, selectedCompetition, refreshKey, isAdmin }) =>
                 <span>Miss Agha Cup (Bottom 2)</span>
               </div>
             </div>
-            
-            <table className="table">
-              <thead>
-                <tr>
-                  <th>Pos</th>
-                  <th>Team</th>
-                  <th>P</th>
-                  <th>W</th>
-                  <th>D</th>
-                  <th>L</th>
-                  <th>GF</th>
-                  <th>GA</th>
-                  <th>GD</th>
-                  <th>Pts</th>
-                  <th>Form</th>
-                </tr>
-              </thead>
-              <tbody>
+
+            {/* Desktop Table View */}
+            <div className="desktop-only">
+              <table className="table">
+                <thead>
+                  <tr>
+                    <th>Pos</th>
+                    <th>Team</th>
+                    <th>P</th>
+                    <th>W</th>
+                    <th>D</th>
+                    <th>L</th>
+                    <th>GF</th>
+                    <th>GA</th>
+                    <th>GD</th>
+                    <th>Pts</th>
+                    <th>Form</th>
+                  </tr>
+                </thead>
+                <tbody>
                   {teams.map((team, index) => {
                     const position = index + 1;
                     let rowClass = '';
@@ -280,6 +301,91 @@ const UserView = ({ competitions, selectedCompetition, refreshKey, isAdmin }) =>
                   })}
                 </tbody>
               </table>
+            </div>
+
+            {/* Mobile Card View */}
+            <div className="mobile-only">
+              <div className="league-cards">
+                {teams.map((team, index) => {
+                  const position = index + 1;
+                  let cardClass = 'league-card';
+                  
+                  // Add position-based styling
+                  if (position <= 4) {
+                    cardClass += ' qualified'; // Top 4 - Green (Agha Cup)
+                  } else if (position >= 5) {
+                    cardClass += ' not-qualified'; // Bottom 2 (positions 5-6) - Red (Miss Agha Cup)
+                  }
+                  
+                  return (
+                    <div key={team._id} className={cardClass}>
+                      <div className="league-card-header">
+                        <div className="position-badge">{position}</div>
+                        <div className="team-info">
+                          {team.logo && (
+                            <img 
+                              src={team.logo} 
+                              alt={team.name} 
+                              className={getTeamLogoClass(team.name)}
+                            />
+                          )}
+                          <div className="team-details">
+                            <h3>{team.name}</h3>
+                            <div className="team-status">
+                              {position <= 4 ? 'Qualified for Agha Cup' : 'Miss Agha Cup'}
+                            </div>
+                          </div>
+                        </div>
+                        <div className="points-display">
+                          <div className="points">{team.points}</div>
+                          <div className="points-label">PTS</div>
+                        </div>
+                      </div>
+                      
+                      <div className="league-card-stats">
+                        <div className="stat-group">
+                          <div className="stat-item">
+                            <span className="stat-label">P</span>
+                            <span className="stat-value">{team.played}</span>
+                          </div>
+                          <div className="stat-item">
+                            <span className="stat-label">W</span>
+                            <span className="stat-value">{team.won}</span>
+                          </div>
+                          <div className="stat-item">
+                            <span className="stat-label">D</span>
+                            <span className="stat-value">{team.drawn}</span>
+                          </div>
+                          <div className="stat-item">
+                            <span className="stat-label">L</span>
+                            <span className="stat-value">{team.lost}</span>
+                          </div>
+                        </div>
+                        
+                        <div className="stat-group">
+                          <div className="stat-item">
+                            <span className="stat-label">GF</span>
+                            <span className="stat-value">{team.goalsFor}</span>
+                          </div>
+                          <div className="stat-item">
+                            <span className="stat-label">GA</span>
+                            <span className="stat-value">{team.goalsAgainst}</span>
+                          </div>
+                          <div className="stat-item">
+                            <span className="stat-label">GD</span>
+                            <span className="stat-value">{team.goalDifference > 0 ? '+' : ''}{team.goalDifference}</span>
+                          </div>
+                          <div className="stat-item">
+                            <span className="stat-label">Form</span>
+                            <span className="stat-value form-display">{renderForm(team.form)}</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
           </div>
         </>
       )}
@@ -396,81 +502,75 @@ const UserView = ({ competitions, selectedCompetition, refreshKey, isAdmin }) =>
           {/* Super Cup Display */}
           <div className="card">
             <h2>⭐ Super Cup Final</h2>
-            <div className="super-cup-display">
-              {matches.length > 0 ? (
-                <div className="super-cup-match">
-                  <div className="super-cup-header">
-                    <h3>🏆 The Ultimate Showdown</h3>
+            {matches.length > 0 ? (
+              matches.map(match => (
+                <div key={match._id} className="super-cup-responsive">
+                  <div className="super-cup-header-responsive">
+                    <div className="trophy-icon">🏆</div>
+                    <h3>The Ultimate Showdown</h3>
                     <p>League Champion vs Cup Winner</p>
                   </div>
-                  {matches.map(match => (
-                    <div key={match._id} className="super-cup-teams">
-                      <div className="super-cup-team">
-                        <div className="team-badge">
-                          <div className="team-info" style={{ marginBottom: '4px' }}>
-                            {match.homeTeam.logo && (
-                              <img 
-                                src={match.homeTeam.logo} 
-                                alt={match.homeTeam.name} 
-                                className={getTeamLogoClass(match.homeTeam.name)}
-                                style={{ width: '28px', height: '28px' }}
-                              />
-                            )}
-                            <h4>{match.homeTeam.name}</h4>
-                          </div>
-                          <small>League Champion</small>
-                        </div>
-                        {match.isPlayed && (
-                          <div className="super-cup-score">{match.homeScore}</div>
-                        )}
-                      </div>
-                      
-                      <div className="super-cup-center">
-                        <div className="super-cup-vs">VS</div>
-                        <div className="super-cup-date">
-                          {formatDate(match.date)} at {match.time}
-                        </div>
-                        {match.isPlayed && (
-                          <div className="super-cup-result">
-                            {match.homeScore > match.awayScore 
-                              ? `${match.homeTeam.name} Wins!` 
-                              : match.awayScore > match.homeScore 
-                              ? `${match.awayTeam.name} Wins!` 
-                              : 'Draw!'}
-                          </div>
-                        )}
-                      </div>
-                      
-                      <div className="super-cup-team">
-                        <div className="team-badge">
-                          <div className="team-info" style={{ marginBottom: '4px' }}>
-                            {match.awayTeam.logo && (
-                              <img 
-                                src={match.awayTeam.logo} 
-                                alt={match.awayTeam.name} 
-                                className={getTeamLogoClass(match.awayTeam.name)}
-                                style={{ width: '28px', height: '28px' }}
-                              />
-                            )}
-                            <h4>{match.awayTeam.name}</h4>
-                          </div>
-                          <small>Cup Winner</small>
-                        </div>
-                        {match.isPlayed && (
-                          <div className="super-cup-score">{match.awayScore}</div>
-                        )}
-                      </div>
+                  
+                  <div className="super-cup-match-responsive">
+                    <div className="super-cup-team-responsive">
+                      {match.homeTeam.logo && (
+                        <img 
+                          src={match.homeTeam.logo} 
+                          alt={match.homeTeam.name} 
+                          className={getTeamLogoClass(match.homeTeam.name)}
+                        />
+                      )}
+                      <h4>{match.homeTeam.name}</h4>
+                      <small>League Champion</small>
+                      {match.isPlayed && (
+                        <div className="super-cup-score-responsive">{match.homeScore}</div>
+                      )}
                     </div>
-                  ))}
+                    
+                    <div className="super-cup-vs-responsive">
+                      {match.isPlayed && (
+                        <div className="match-result">
+                          {match.homeScore > match.awayScore 
+                            ? `${match.homeTeam.name} Wins!` 
+                            : match.awayScore > match.homeScore 
+                            ? `${match.awayTeam.name} Wins!` 
+                            : 'Draw!'}
+                        </div>
+                      )}
+                    </div>
+                    
+                    <div className="super-cup-team-responsive">
+                      {match.awayTeam.logo && (
+                        <img 
+                          src={match.awayTeam.logo} 
+                          alt={match.awayTeam.name} 
+                          className={getTeamLogoClass(match.awayTeam.name)}
+                        />
+                      )}
+                      <h4>{match.awayTeam.name}</h4>
+                      <small>Cup Winner</small>
+                      {match.isPlayed && (
+                        <div className="super-cup-score-responsive">{match.awayScore}</div>
+                      )}
+                    </div>
+                  </div>
+                  
+                  <div className="super-cup-info-responsive">
+                    <span>{formatDate(match.date)} at {match.time}</span>
+                    <span className={`badge ${match.isPlayed ? 'badge-success' : 'badge-warning'}`}>
+                      {match.isPlayed ? 'FINAL' : 'UPCOMING'}
+                    </span>
+                  </div>
                 </div>
-              ) : (
-                <div className="super-cup-placeholder">
-                  <h3>🏆 Super Cup Final</h3>
-                  <p>Waiting for League and Cup to complete...</p>
-                  <small>The champions will face off here!</small>
-                </div>
-              )}
-            </div>
+              ))
+            ) : (
+              <div className="super-cup-placeholder-responsive">
+                <div className="trophy-icon-large">🏆</div>
+                <h3>Super Cup Final</h3>
+                <p>Waiting for League and Cup to complete...</p>
+                <small>The champions will face off here!</small>
+              </div>
+            )}
           </div>
         </>
       )}
@@ -493,16 +593,18 @@ const UserView = ({ competitions, selectedCompetition, refreshKey, isAdmin }) =>
           )}
         </div>
 
-        {/* Table header */}
-        <div className="match-header">
-          <div>Date</div>
-          <div>Time</div>
-          <div>Home Team</div>
-          <div>Score</div>
-          <div>Away Team</div>
-          <div>Stage</div>
-          <div>Status</div>
-        </div>
+        {/* Desktop Table View */}
+        <div className="desktop-only">
+          {/* Table header */}
+          <div className="match-header">
+            <div>Date</div>
+            <div>Time</div>
+            <div>Home Team</div>
+            <div>Score</div>
+            <div>Away Team</div>
+            <div>Stage</div>
+            <div>Status</div>
+          </div>
 
         <div className="fixtures-container">
           {selectedCompetition === 'league' ? (
@@ -554,7 +656,7 @@ const UserView = ({ competitions, selectedCompetition, refreshKey, isAdmin }) =>
                               <strong>{match.awayTeam.name}</strong>
                             </div>
                           </div>
-                          <div>{match.stage || 'Regular'}</div>
+                          <div>{formatStage(match.stage, selectedCompetition) || 'Regular'}</div>
                           <div>
                             <span className={`badge ${match.isPlayed ? 'badge-success' : 'badge-warning'}`}>
                               {match.isPlayed ? 'Played' : 'Scheduled'}
@@ -621,7 +723,7 @@ const UserView = ({ competitions, selectedCompetition, refreshKey, isAdmin }) =>
                           <strong>{match.awayTeam.name}</strong>
                         </div>
                       </div>
-                      <div>{match.stage || 'Regular'}</div>
+                      <div>{formatStage(match.stage, selectedCompetition) || 'Regular'}</div>
                       <div>
                         <span className={`badge ${match.isPlayed ? 'badge-success' : 'badge-warning'}`}>
                           {match.isPlayed ? 'Played' : 'Scheduled'}
@@ -685,7 +787,7 @@ const UserView = ({ competitions, selectedCompetition, refreshKey, isAdmin }) =>
                         <strong>{match.awayTeam.name}</strong>
                       </div>
                     </div>
-                    <div>{match.stage || 'Final'}</div>
+                    <div>{formatStage(match.stage, selectedCompetition) || 'Final'}</div>
                     <div>
                       <span className={`badge ${match.isPlayed ? 'badge-success' : 'badge-warning'}`}>
                         {match.isPlayed ? 'Played' : 'Scheduled'}
@@ -743,7 +845,7 @@ const UserView = ({ competitions, selectedCompetition, refreshKey, isAdmin }) =>
                     <strong>{match.awayTeam.name}</strong>
                   </div>
                 </div>
-                <div>{match.stage || 'Regular'}</div>
+                <div>{formatStage(match.stage, selectedCompetition) || 'Regular'}</div>
                 <div>
                   <span className={`badge ${match.isPlayed ? 'badge-success' : 'badge-warning'}`}>
                     {match.isPlayed ? 'Played' : 'Scheduled'}
@@ -760,6 +862,266 @@ const UserView = ({ competitions, selectedCompetition, refreshKey, isAdmin }) =>
           </div>
         )}
         </div> {/* Close fixtures-container */}
+        </div> {/* Close desktop-only */}
+
+        {/* Mobile Card View */}
+        <div className="mobile-only">
+          <div className="fixtures-mobile">
+            {selectedCompetition === 'league' ? (
+              // Group matches by matchweek for league - Mobile Cards
+              <>
+                {getMatchweeks()
+                  .filter(week => !selectedMatchweek || week === parseInt(selectedMatchweek))
+                  .map(week => (
+                    <div key={week} className="matchweek-section">
+                      <div className="matchweek-header-mobile">
+                        <h3>Matchweek {week}</h3>
+                      </div>
+                      <div className="matches-cards">
+                        {matches
+                          .filter(match => match.matchweek === week)
+                          .map(match => (
+                            <div key={match._id} className={`fixture-card ${match.isPlayed ? 'played' : 'scheduled'}`}>
+                              <div className="fixture-header">
+                                <div className="fixture-datetime">
+                                  <span className="fixture-date">{formatDate(match.date)}</span>
+                                  <span className="fixture-time">{match.time}</span>
+                                </div>
+                                <div className="fixture-status">
+                                  <span className={`status-badge ${match.isPlayed ? 'completed' : 'upcoming'}`}>
+                                    {match.isPlayed ? 'FT' : 'Scheduled'}
+                                  </span>
+                                </div>
+                              </div>
+                              
+                              <div className="fixture-teams">
+                                <div className="team-section home">
+                                  <div className="team-info">
+                                    {match.homeTeam.logo && (
+                                      <img 
+                                        src={match.homeTeam.logo} 
+                                        alt={match.homeTeam.name} 
+                                        className={getTeamLogoClass(match.homeTeam.name)}
+                                      />
+                                    )}
+                                    <span className="team-name">{match.homeTeam.name}</span>
+                                  </div>
+                                  {match.isPlayed && (
+                                    <div className="team-score">{match.homeScore}</div>
+                                  )}
+                                </div>
+                                
+                                <div className="vs-section">
+                                  {match.isPlayed ? (
+                                    <div className="final-score">
+                                      <span className="score-display">{match.homeScore} - {match.awayScore}</span>
+                                    </div>
+                                  ) : (
+                                    <div className="vs-display">VS</div>
+                                  )}
+                                </div>
+                                
+                                <div className="team-section away">
+                                  <div className="team-info">
+                                    {match.awayTeam.logo && (
+                                      <img 
+                                        src={match.awayTeam.logo} 
+                                        alt={match.awayTeam.name} 
+                                        className={getTeamLogoClass(match.awayTeam.name)}
+                                      />
+                                    )}
+                                    <span className="team-name">{match.awayTeam.name}</span>
+                                  </div>
+                                  {match.isPlayed && (
+                                    <div className="team-score">{match.awayScore}</div>
+                                  )}
+                                </div>
+                              </div>
+                              
+                              {(match.stage && match.stage !== 'regular') && (
+                                <div className="fixture-stage">
+                                  {formatStage(match.stage, selectedCompetition)}
+                                </div>
+                              )}
+                            </div>
+                          ))}
+                      </div>
+                    </div>
+                  ))}
+              </>
+            ) : selectedCompetition === 'cup' ? (
+              // Group Cup matches by stage - Mobile Cards
+              <>
+                {(() => {
+                  const stages = [...new Set(matches.map(match => match.stage))].sort((a, b) => {
+                    const order = { 'semi-final': 1, 'final': 2 };
+                    return (order[a] || 99) - (order[b] || 99);
+                  });
+                  
+                  return stages.map(stage => {
+                    const stageMatches = matches.filter(match => match.stage === stage);
+                    const stageDisplayName = formatStage(stage, selectedCompetition);
+                    
+                    return (
+                      <div key={stage} className="matchweek-section">
+                        <div className="matchweek-header-mobile">
+                          <h3>{stageDisplayName}</h3>
+                        </div>
+                        <div className="matches-cards">
+                          {stageMatches.map(match => (
+                            <div key={match._id} className={`fixture-card ${match.isPlayed ? 'played' : 'scheduled'}`}>
+                              <div className="fixture-header">
+                                <div className="fixture-datetime">
+                                  <span className="fixture-date">{formatDate(match.date)}</span>
+                                  <span className="fixture-time">{match.time}</span>
+                                </div>
+                                <div className="fixture-status">
+                                  <span className={`status-badge ${match.isPlayed ? 'completed' : 'upcoming'}`}>
+                                    {match.isPlayed ? 'FT' : 'Scheduled'}
+                                  </span>
+                                </div>
+                              </div>
+                              
+                              <div className="fixture-teams">
+                                <div className="team-section home">
+                                  <div className="team-info">
+                                    {match.homeTeam.logo && (
+                                      <img 
+                                        src={match.homeTeam.logo} 
+                                        alt={match.homeTeam.name} 
+                                        className={getTeamLogoClass(match.homeTeam.name)}
+                                      />
+                                    )}
+                                    <span className="team-name">{match.homeTeam.name}</span>
+                                  </div>
+                                  {match.isPlayed && (
+                                    <div className="team-score">{match.homeScore}</div>
+                                  )}
+                                </div>
+                                
+                                <div className="vs-section">
+                                  {match.isPlayed ? (
+                                    <div className="final-score">
+                                      <span className="score-display">{match.homeScore} - {match.awayScore}</span>
+                                      {match.homePenalties !== undefined && match.awayPenalties !== undefined && (
+                                        <div className="penalties-display">
+                                          ({match.homePenalties} - {match.awayPenalties} pens)
+                                        </div>
+                                      )}
+                                    </div>
+                                  ) : (
+                                    <div className="vs-display">VS</div>
+                                  )}
+                                </div>
+                                
+                                <div className="team-section away">
+                                  <div className="team-info">
+                                    {match.awayTeam.logo && (
+                                      <img 
+                                        src={match.awayTeam.logo} 
+                                        alt={match.awayTeam.name} 
+                                        className={getTeamLogoClass(match.awayTeam.name)}
+                                      />
+                                    )}
+                                    <span className="team-name">{match.awayTeam.name}</span>
+                                  </div>
+                                  {match.isPlayed && (
+                                    <div className="team-score">{match.awayScore}</div>
+                                  )}
+                                </div>
+                              </div>
+                              
+                              {(match.stage && match.stage !== 'regular') && (
+                                <div className="fixture-stage">
+                                  {formatStage(match.stage, selectedCompetition)}
+                                </div>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  });
+                })()}
+              </>
+            ) : (
+              // For other competitions, show simple cards
+              <div className="matches-cards">
+                {matches.map(match => (
+                  <div key={match._id} className={`fixture-card ${match.isPlayed ? 'played' : 'scheduled'} ${selectedCompetition === 'super-cup' ? 'super-cup' : ''}`}>
+                    <div className="fixture-header">
+                      <div className="fixture-datetime">
+                        <span className="fixture-date">{formatDate(match.date)}</span>
+                        <span className="fixture-time">{match.time}</span>
+                      </div>
+                      <div className="fixture-status">
+                        <span className={`status-badge ${match.isPlayed ? 'completed' : 'upcoming'}`}>
+                          {match.isPlayed ? 'FT' : 'Scheduled'}
+                        </span>
+                      </div>
+                    </div>
+                    
+                    <div className="fixture-teams">
+                      <div className="team-section home">
+                        <div className="team-info">
+                          {match.homeTeam.logo && (
+                            <img 
+                              src={match.homeTeam.logo} 
+                              alt={match.homeTeam.name} 
+                              className={getTeamLogoClass(match.homeTeam.name)}
+                            />
+                          )}
+                          <span className="team-name">{match.homeTeam.name}</span>
+                        </div>
+                        {match.isPlayed && (
+                          <div className="team-score">{match.homeScore}</div>
+                        )}
+                      </div>
+                      
+                      <div className="vs-section">
+                        {match.isPlayed ? (
+                          <div className="final-score">
+                            <span className="score-display">{match.homeScore} - {match.awayScore}</span>
+                          </div>
+                        ) : (
+                          <div className="vs-display">VS</div>
+                        )}
+                      </div>
+                      
+                      <div className="team-section away">
+                        <div className="team-info">
+                          {match.awayTeam.logo && (
+                            <img 
+                              src={match.awayTeam.logo} 
+                              alt={match.awayTeam.name} 
+                              className={getTeamLogoClass(match.awayTeam.name)}
+                            />
+                          )}
+                          <span className="team-name">{match.awayTeam.name}</span>
+                        </div>
+                        {match.isPlayed && (
+                          <div className="team-score">{match.awayScore}</div>
+                        )}
+                      </div>
+                    </div>
+                    
+                    {(match.stage && match.stage !== 'regular') && (
+                      <div className="fixture-stage">
+                        {formatStage(match.stage, selectedCompetition)}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {matches.length === 0 && (
+              <div style={{ textAlign: 'center', padding: '2rem', color: '#666' }}>
+                No matches found for the selected criteria.
+              </div>
+            )}
+          </div>
+        </div>
       </div>
     </div>
   );

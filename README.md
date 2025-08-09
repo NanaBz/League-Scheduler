@@ -9,29 +9,61 @@ A comprehensive web application for managing a school's football league system w
 ![Fixtures](screenshots/desktop-fixtures.png)
 ![Admin Panel](screenshots/desktop-admin-panel.png)
 
-### Mobile View (Coming Soon)
+### Mobile View
 ![Mobile League Table](screenshots/mobile-league-table.png)
 ![Mobile Fixtures](screenshots/mobile-fixtures.png)
 
 ## Features
 
 ### Admin Panel
+- **Secure Authentication**: Email whitelist with strong password requirements
 - **Set League Fixtures**: Generate home and away fixtures for 6 teams (10 matchweeks total)
 - **Set Cup Fixtures**: Create knockout tournament for top 4 teams (semifinals and final)
 - **Set Super Cup Fixture**: League winner vs cup winner
 - **Edit Matches**: Update scores, dates, and times for all matches
 - **Reset Season**: Clear all data and start fresh
+- **Session Management**: JWT-based authentication with automatic logout
+
+### Security Features
+- **Email Whitelist**: Only authorized admins can access admin panel
+- **Password Hashing**: bcryptjs encryption for secure password storage
+- **JWT Tokens**: Secure session management with expiration
+- **CORS Protection**: Production-ready CORS configuration
 
 ### User View
 - **League Table**: Real-time standings with points, goals, and statistics
 - **Fixtures & Results**: View all matches with filtering options
 - **Winner Banners**: Congratulatory messages when competitions are won
 
+### Mobile Features
+- **Responsive Design**: Mobile-first responsive design with bottom navigation
+- **Mobile League Table**: Card-based layout optimized for touch interaction
+- **Mobile Fixtures & Results**: Clean card layout for matches with easy-to-read information
+- **Mobile Cup Matches**: Organized by tournament stages (Semi-Finals, Final) with penalty shootout display
+- **Mobile Super Cup**: Special purple gradient card design for the ultimate championship showdown
+- **Mobile Archived Seasons**: Complete mobile responsiveness for viewing historical season data with card-based league tables and match results
+- **Touch-Friendly Navigation**: Bottom navigation bar with competition tabs
+- **Mobile Admin Access**: Full admin functionality accessible on mobile devices
+
 ## Technology Stack
 
 - **Backend**: Node.js, Express.js, MongoDB, Mongoose
 - **Frontend**: React, Axios
 - **Database**: MongoDB
+- **Authentication**: JWT tokens, bcryptjs password hashing
+- **Security**: Email whitelist, CORS protection
+
+## 🚀 Quick Deployment
+
+**Live Demo**: [Your deployed app URL here]
+
+For full deployment instructions, see [DEPLOYMENT_GUIDE.md](DEPLOYMENT_GUIDE.md)
+
+### Production Stack
+- **Frontend**: Vercel
+- **Backend**: Railway
+- **Database**: MongoDB Atlas
+- **Cost**: Free tier available
 
 ## Quick Start
 

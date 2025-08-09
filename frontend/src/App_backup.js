@@ -1,87 +1,58 @@
 import React, { useState, useEffect } from 'react';
 import UserView from './components/UserView';
 import AdminPanel from './components/AdminPanel';
-import AdminAuth from './components/AdminAuth';
 import Footer from './components/Footer';
-import axios from 'axios';
 import './index.css';
 
 function App() {
   const [activeTab, setActiveTab] = useState('user');
   const [selectedCompetition, setSelectedCompetition] = useState('league');
   const [isAdmin, setIsAdmin] = useState(false);
-  const [adminData, setAdminData] = useState(null);
-  const [adminToken, setAdminToken] = useState(null);
   const [showLogin, setShowLogin] = useState(false);
+  const [password, setPassword] = useState('');
+  const [loginError, setLoginError] = useState('');
   const [isLoading, setIsLoading] = useState(true);
-  const [dataRefreshKey, setDataRefreshKey] = useState(0);
+  const [dataRefreshKey, setDataRefreshKey] = useState(0); // Add refresh trigger
   const [competitions] = useState({
     league: { name: 'League', description: 'Circle Method league' },
     cup: { name: 'Agha Cup', description: 'Knockout cup for top 4 teams' },
     'super-cup': { name: 'Super Cup', description: 'League winner vs Cup winner' }
   });
 
-  const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5001/api';
+  // Admin password
+  const ADMIN_PASSWORD = 'admin123';
 
-  // App initialization and token verification
+  // App initialization
   useEffect(() => {
-    const initializeApp = async () => {
-      const token = localStorage.getItem('adminToken');
-      
-      if (token) {
-        try {
-          const response = await axios.get(`${API_BASE_URL}/auth/verify`, {
-            headers: { Authorization: `Bearer ${token}` }
-          });
-          
-          if (response.data.success) {
-            setIsAdmin(true);
-            setAdminData(response.data.admin);
-            setAdminToken(token);
-          } else {
-            localStorage.removeItem('adminToken');
-          }
-        } catch (error) {
-          console.log('Token verification failed:', error);
-          localStorage.removeItem('adminToken');
-        }
-      }
-      
-      setTimeout(() => {
-        setIsLoading(false);
-      }, 500);
-    };
+    const timer = setTimeout(() => {
+      setIsLoading(false);
+    }, 500); // Reduced to 500ms for faster testing
+    return () => clearTimeout(timer);
+  }, []);
 
-    initializeApp();
-  }, [API_BASE_URL]);
-
-  const handleAdminLogin = (admin, token) => {
-    setIsAdmin(true);
-    setAdminData(admin);
-    setAdminToken(token);
-    setShowLogin(false);
-    setActiveTab('admin');
-  };
-
-  const handleLogout = async () => {
-    try {
-      if (adminToken) {
-        await axios.post(`${API_BASE_URL}/auth/logout`, {}, {
-          headers: { Authorization: `Bearer ${adminToken}` }
-        });
-      }
-    } catch (error) {
-      console.log('Logout error:', error);
-    } finally {
-      localStorage.removeItem('adminToken');
-      setIsAdmin(false);
-      setAdminData(null);
-      setAdminToken(null);
-      setActiveTab('user');
+  const handleAdminLogin = (e) => {
+    e.preventDefault();
+    if (password === ADMIN_PASSWORD) {
+      setIsAdmin(true);
+      setShowLogin(false);
+      setActiveTab('admin');
+      setPassword('');
+      setLoginError('');
+    } else {
+      setLoginError('Invalid password. Try again.');
+      setPassword('');
     }
   };
 
+  const handleLogout = () => {
+    setIsAdmin(false);
+    setActiveTab('user');
+    setPassword('');
+    setLoginError('');
+  };
+
   const handleDataChange = () => {
+    // Trigger refresh of data when admin makes changes
     setDataRefreshKey(prev => prev + 1);
     console.log('Data changed - triggering UserView refresh');
   };
@@ -138,6 +109,42 @@ function App() {
               </button>
             </div>
           )}
+          
+          {/* Right Section: Admin Access */}
+          <div className="nav-admin">
+            {!isAdmin ? (
+              <button
+                className="admin-login-btn"
+                onClick={() => setShowLogin(true)}
+              >
+                🔐 Admin Login
+              </button>
+            ) : (
+              <>
+                {activeTab === 'admin' ? (
+                  <button
+                    className="admin-btn"
+                    onClick={() => setActiveTab('user')}
+                  >
+                    🏆 Back to League
+                  </button>
+                ) : (
+                  <button
+                    className="admin-btn"
+                    onClick={() => setActiveTab('admin')}
+                  >
+                    ⚙️ Admin Panel
+                  </button>
+                )}
+                <button
+                  className="logout-btn"
+                  onClick={handleLogout}
+                >
+                  🚪 Logout
+                </button>
+              </>
+            )}
+          </div>
         </nav>
 
         {/* Mobile Bottom Navigation */}
@@ -210,12 +217,49 @@ function App() {
           )}
         </nav>
 
-        {/* Admin Authentication */}
+        {/* Login Modal */}
         {showLogin && (
-          <AdminAuth
-            onLoginSuccess={handleAdminLogin}
-            onCancel={() => setShowLogin(false)}
-          />
+          <div className="modal-overlay">
+            <div className="modal">
+              <h3>🔐 Admin Login</h3>
+              <form onSubmit={handleAdminLogin}>
+                <div className="form-group">
+                  <label htmlFor="password">Enter Admin Password:</label>
+                  <input
+                    type="password"
+                    id="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="Password"
+                    className="input"
+                    autoFocus
+                  />
+                </div>
+                {loginError && (
+                  <div className="error-message">{loginError}</div>
+                )}
+                <div className="form-actions">
+                  <button type="submit" className="btn btn-primary">
+                    Login
+                  </button>
+                  <button 
+                    type="button" 
+                    className="btn btn-secondary"
+                    onClick={() => {
+                      setShowLogin(false);
+                      setPassword('');
+                      setLoginError('');
+                    }}
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </form>
+              <div className="login-hint">
+                <small>💡 Hint: Try "admin123"</small>
+              </div>
+            </div>
+          </div>
         )}
 
         {/* Competition Info Banner */}
@@ -247,14 +291,7 @@ function App() {
         ) : null}
 
         {/* Footer */}
-        <Footer 
-          isAdmin={isAdmin} 
-          onLoginClick={() => setShowLogin(true)}
-          onAdminClick={() => setActiveTab('admin')}
-          onLogoutClick={handleLogout}
-          onBackToLeagueClick={() => setActiveTab('user')}
-          activeTab={activeTab}
-        />
+        <Footer isAdmin={isAdmin} />
       </div>
     </div>
   );

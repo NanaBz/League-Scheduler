@@ -1,6 +1,6 @@
 import React from 'react';
 
-const Footer = ({ isAdmin }) => {
+const Footer = ({ isAdmin, onLoginClick, onAdminClick, onLogoutClick, onBackToLeagueClick, activeTab }) => {
   const currentYear = new Date().getFullYear();
 
   return (
@@ -14,7 +14,6 @@ const Footer = ({ isAdmin }) => {
             <span className="feature-tag">League Management</span>
             <span className="feature-tag">Cup Competitions</span>
             <span className="feature-tag">Season Archives</span>
-            {isAdmin && <span className="feature-tag admin-tag">Admin Controls</span>}
           </div>
         </div>
 
@@ -26,6 +25,41 @@ const Footer = ({ isAdmin }) => {
             <span className="footer-link">📅 Fixtures & Results</span>
             <span className="footer-link">🏆 Cup Competitions</span>
             <span className="footer-link">📚 Season Archives</span>
+            {/* Admin Access */}
+            <div className="admin-access">
+              {!isAdmin ? (
+                <button 
+                  className="footer-admin-btn"
+                  onClick={onLoginClick}
+                >
+                  🔐 Admin Login
+                </button>
+              ) : (
+                <div className="admin-controls">
+                  {activeTab === 'admin' ? (
+                    <button 
+                      className="footer-admin-btn"
+                      onClick={onBackToLeagueClick}
+                    >
+                      🏆 Back to League
+                    </button>
+                  ) : (
+                    <button 
+                      className="footer-admin-btn"
+                      onClick={onAdminClick}
+                    >
+                      ⚙️ Admin Panel
+                    </button>
+                  )}
+                  <button 
+                    className="footer-admin-btn logout"
+                    onClick={onLogoutClick}
+                  >
+                    🚪 Logout
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
@@ -39,7 +73,7 @@ const Footer = ({ isAdmin }) => {
             </div>
             <div className="status-item">
               <span className="status-indicator"></span>
-              <span>{isAdmin ? 'Admin Access Granted' : 'Public View Active'}</span>
+              <span>Public View Active</span>
             </div>
           </div>
         </div>

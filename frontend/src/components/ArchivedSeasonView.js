@@ -81,6 +81,92 @@ const ArchivedSeasonView = ({ season, onBackToLive }) => {
     return (
       <div className="table-container responsive-table">
         <div className="archived-badge">📊 Archived Season {season.seasonNumber}</div>
+        
+        {/* Mobile Card Layout */}
+        <div className="mobile-league-cards">
+          {season.finalStandings.map((standing, index) => {
+            const teamName = getTeamDisplayName(standing);
+            const teamLogo = getTeamLogo(standing);
+            
+            return (
+              <div 
+                key={standing.team?._id || standing.team || `team-${index}`}
+                className={`mobile-league-card ${index < 2 ? 'qualified' : 'not-qualified'}`}
+              >
+                <div className="league-card-header">
+                  <div className="position-badge">{standing.position}</div>
+                  <div className="team-info">
+                    {teamLogo && (
+                      <img 
+                        src={teamLogo} 
+                        alt={teamName} 
+                        className={getTeamLogoClass(teamName)}
+                      />
+                    )}
+                    <span className="team-name">{teamName}</span>
+                  </div>
+                  <div className="points-badge">{standing.points} PTS</div>
+                </div>
+                <div className="league-card-stats">
+                  <div className="stat-group">
+                    <div className="stat">
+                      <span className="stat-label">P</span>
+                      <span className="stat-value">{standing.played}</span>
+                    </div>
+                    <div className="stat">
+                      <span className="stat-label">W</span>
+                      <span className="stat-value">{standing.won}</span>
+                    </div>
+                    <div className="stat">
+                      <span className="stat-label">D</span>
+                      <span className="stat-value">{standing.drawn}</span>
+                    </div>
+                    <div className="stat">
+                      <span className="stat-label">L</span>
+                      <span className="stat-value">{standing.lost}</span>
+                    </div>
+                  </div>
+                  <div className="stat-group">
+                    <div className="stat">
+                      <span className="stat-label">GF</span>
+                      <span className="stat-value">{standing.goalsFor}</span>
+                    </div>
+                    <div className="stat">
+                      <span className="stat-label">GA</span>
+                      <span className="stat-value">{standing.goalsAgainst}</span>
+                    </div>
+                    <div className="stat">
+                      <span className="stat-label">GD</span>
+                      <span className={`stat-value ${standing.goalDifference >= 0 ? 'positive' : 'negative'}`}>
+                        {standing.goalDifference >= 0 ? '+' : ''}{standing.goalDifference}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+                <div className="league-card-form">
+                  <span className="form-label">Form:</span>
+                  {standing.form && standing.form.length > 0 ? (
+                    <div className="form-display">
+                      {standing.form.map((result, idx) => (
+                        <span
+                          key={idx}
+                          className={`form-result ${result.toLowerCase()}`}
+                          title={result === 'W' ? 'Win' : result === 'D' ? 'Draw' : 'Loss'}
+                        >
+                          {result}
+                        </span>
+                      ))}
+                    </div>
+                  ) : (
+                    <span className="no-form">-</span>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Desktop Table Layout */}
         <div className="table-wrapper">
           <table className="league-table">
             <thead>
@@ -245,8 +331,14 @@ const ArchivedSeasonView = ({ season, onBackToLive }) => {
               const awayTeamLogo = getMatchTeamLogo(match.awayTeam);
               
               return (
-                <div key={match._id} className="match-item archived">
-                  <div className="match-teams">
+                <div key={match._id} className="mobile-fixture-card archived">
+                  <div className="fixture-card-header">
+                    <div className="fixture-info">
+                      <span className="fixture-date">{formatDate(match.date)}</span>
+                      <span className="fixture-time">{match.time}</span>
+                    </div>
+                  </div>
+                  <div className="fixture-teams">
                     <div className="team home-team">
                       {homeTeamLogo && (
                         <img 
@@ -257,11 +349,11 @@ const ArchivedSeasonView = ({ season, onBackToLive }) => {
                       )}
                       <span className="team-name">{homeTeamName}</span>
                     </div>
-                    <div className="match-score">
+                    <div className="fixture-score">
                       {match.isPlayed ? (
-                        <span className="score">{match.homeScore} - {match.awayScore}</span>
+                        <span className="score-display">{match.homeScore} - {match.awayScore}</span>
                       ) : (
-                        <span className="vs">vs</span>
+                        <span className="vs-display">VS</span>
                       )}
                     </div>
                     <div className="team away-team">
@@ -274,10 +366,6 @@ const ArchivedSeasonView = ({ season, onBackToLive }) => {
                         />
                       )}
                     </div>
-                  </div>
-                  <div className="match-info">
-                    <div>{formatDate(match.date)}</div>
-                    <div>{match.time}</div>
                   </div>
                 </div>
               );
@@ -303,8 +391,17 @@ const ArchivedSeasonView = ({ season, onBackToLive }) => {
                 const awayTeamLogo = getMatchTeamLogo(match.awayTeam);
                 
                 return (
-                  <div key={match._id} className="match-item archived">
-                    <div className="match-teams">
+                  <div key={match._id} className={`mobile-fixture-card archived ${competition === 'super-cup' ? 'super-cup-responsive' : ''}`}>
+                    <div className="fixture-card-header">
+                      <div className="fixture-info">
+                        <span className="fixture-date">{formatDate(match.date)}</span>
+                        <span className="fixture-time">{match.time}</span>
+                      </div>
+                      {competition === 'super-cup' && (
+                        <div className="super-cup-badge">⭐ SUPER CUP</div>
+                      )}
+                    </div>
+                    <div className="fixture-teams">
                       <div className="team home-team">
                         {homeTeamLogo && (
                           <img 
@@ -315,18 +412,18 @@ const ArchivedSeasonView = ({ season, onBackToLive }) => {
                         )}
                         <span className="team-name">{homeTeamName}</span>
                       </div>
-                      <div className="match-score">
+                      <div className="fixture-score">
                         {match.isPlayed ? (
-                          <div>
-                            <span className="score">{match.homeScore} - {match.awayScore}</span>
+                          <div className="score-container">
+                            <span className="score-display">{match.homeScore} - {match.awayScore}</span>
                             {match.homePenalties !== null && match.awayPenalties !== null && (
-                              <div className="penalties">
+                              <div className="penalties-display">
                                 ({match.homePenalties} - {match.awayPenalties} pens)
                               </div>
                             )}
                           </div>
                         ) : (
-                          <span className="vs">vs</span>
+                          <span className="vs-display">VS</span>
                         )}
                       </div>
                       <div className="team away-team">
@@ -339,10 +436,6 @@ const ArchivedSeasonView = ({ season, onBackToLive }) => {
                           />
                         )}
                       </div>
-                    </div>
-                    <div className="match-info">
-                      <div>{formatDate(match.date)}</div>
-                      <div>{match.time}</div>
                     </div>
                   </div>
                 );

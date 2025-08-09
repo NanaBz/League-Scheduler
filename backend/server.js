@@ -7,7 +7,15 @@ const app = express();
 const PORT = process.env.PORT || 5001;
 
 // Middleware
-app.use(cors());
+const corsOptions = {
+  origin: process.env.NODE_ENV === 'production' 
+    ? process.env.FRONTEND_URL || 'https://your-app-name.vercel.app'
+    : 'http://localhost:3000',
+  credentials: true,
+  optionsSuccessStatus: 200
+};
+
+app.use(cors(corsOptions));
 app.use(express.json());
 
 // MongoDB connection
@@ -23,6 +31,7 @@ db.once('open', () => {
 });
 
 // Routes
+app.use('/api/auth', require('./routes/auth'));
 app.use('/api/teams', require('./routes/teams'));
 app.use('/api/matches', require('./routes/matches'));
 app.use('/api/competitions', require('./routes/competitions'));
