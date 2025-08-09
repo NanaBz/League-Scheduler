@@ -122,7 +122,7 @@ For full deployment instructions, see [DEPLOYMENT_GUIDE.md](DEPLOYMENT_GUIDE.md)
 
 ## League System
 
-- **6 Teams**: Vikings, Warriors, Lions, Elites, Falcons
+- **6 Teams**: Dragons, Vikings, Warriors, Lions, Elites, Falcons
 - **League**: Double round-robin (home and away)
 - **Cup**: Top 4 teams in knockout format
 - **Super Cup**: League winner vs Cup winner
