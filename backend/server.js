@@ -9,7 +9,7 @@ const PORT = process.env.PORT || 5001;
 // Middleware
 const corsOptions = {
   origin: process.env.NODE_ENV === 'production' 
-    ? process.env.FRONTEND_URL || 'https://your-app-name.vercel.app'
+    ? [process.env.FRONTEND_URL, 'https://league-scheduler-bqav.vercel.app'].filter(Boolean)
     : 'http://localhost:3000',
   credentials: true,
   optionsSuccessStatus: 200
