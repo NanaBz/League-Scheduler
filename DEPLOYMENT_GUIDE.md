@@ -21,7 +21,7 @@
 3. **Security Setup**
    - Create a database user with read/write permissions
    - Add your IP address to IP whitelist (or 0.0.0.0/0 for all IPs)
-   - Get your connection string: `mongodb+srv://username:password@cluster.mongodb.net/league-scheduler`
+   - Get your connection string: `mongodb+srv://YOUR_USERNAME:YOUR_PASSWORD@YOUR_CLUSTER.mongodb.net/YOUR_DATABASE`
 
 ## Step 2: Backend Deployment (Railway)
 
@@ -34,10 +34,10 @@
 
 2. **Environment Variables**
    ```
-   MONGODB_URI=mongodb+srv://username:password@cluster.mongodb.net/league-scheduler
+   MONGODB_URI=mongodb+srv://YOUR_USERNAME:YOUR_PASSWORD@YOUR_CLUSTER.mongodb.net/YOUR_DATABASE
    JWT_SECRET=your-super-strong-jwt-secret-minimum-32-characters
    NODE_ENV=production
-   ADMIN_EMAIL=nboakyeakyeampong@gmail.com
+   ADMIN_EMAIL=your-admin-email@example.com
    PORT=5000
    FRONTEND_URL=https://your-app-name.vercel.app
    ```
@@ -98,17 +98,17 @@
 3. **Admin Setup**
    - Go to your deployed app
    - Click "Admin" in the footer
-   - Enter: nboakyeakyeampong@gmail.com
+   - Enter: your-admin-email@example.com
    - Set up your secure password
 
 ## Environment Variables Summary
 
 ### Backend (Railway)
 ```
-MONGODB_URI=mongodb+srv://...
+MONGODB_URI=mongodb+srv://YOUR_USERNAME:YOUR_PASSWORD@YOUR_CLUSTER.mongodb.net/YOUR_DATABASE
 JWT_SECRET=your-32-char-secret
 NODE_ENV=production
-ADMIN_EMAIL=nboakyeakyeampong@gmail.com
+ADMIN_EMAIL=your-admin-email@example.com
 PORT=5000
 FRONTEND_URL=https://your-app.vercel.app
 ```

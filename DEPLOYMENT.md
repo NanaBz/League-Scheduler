@@ -63,9 +63,9 @@ This guide covers deploying the League Scheduler application with:
      ```
      NODE_ENV=production
      PORT=5001
-     MONGODB_URI=mongodb+srv://username:password@cluster.mongodb.net/league-scheduler
+     MONGODB_URI=mongodb+srv://YOUR_USERNAME:YOUR_PASSWORD@YOUR_CLUSTER.mongodb.net/YOUR_DATABASE
      JWT_SECRET=your-super-secure-jwt-secret-256-bit
-     ADMIN_EMAIL=nboakyeakyeampong@gmail.com
+     ADMIN_EMAIL=your-admin-email@example.com
      ```
 
 4. **Generate Strong JWT Secret**
@@ -120,7 +120,7 @@ This guide covers deploying the League Scheduler application with:
 1. **Access Admin Panel**
    - Go to your deployed frontend
    - Click "Admin" in the footer
-   - Enter your email: `nboakyeakyeampong@gmail.com`
+   - Enter your email: `your-admin-email@example.com`
 
 2. **Set Strong Password**
    - Create a password with:
@@ -140,9 +140,9 @@ REACT_APP_ENV=production
 ```
 NODE_ENV=production
 PORT=5001
-MONGODB_URI=mongodb+srv://username:password@cluster.mongodb.net/league-scheduler
+MONGODB_URI=mongodb+srv://YOUR_USERNAME:YOUR_PASSWORD@YOUR_CLUSTER.mongodb.net/YOUR_DATABASE
 JWT_SECRET=your-super-secure-jwt-secret
-ADMIN_EMAIL=nboakyeakyeampong@gmail.com
+ADMIN_EMAIL=your-admin-email@example.com
 ```
 
 ## Security Checklist
