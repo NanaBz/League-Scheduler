@@ -21,7 +21,10 @@ function App() {
     'super-cup': { name: 'Super Cup', description: 'League winner vs Cup winner' }
   });
 
-  const API_BASE_URL = process.env.REACT_APP_API_URL || 'https://league-scheduler.onrender.com/api';
+  // Force production API URL
+    const API_BASE_URL = process.env.NODE_ENV === 'production' 
+    ? 'https://league-scheduler.onrender.com/api'
+    : process.env.REACT_APP_API_URL || 'http://localhost:5001/api';
 
   // App initialization and token verification
   useEffect(() => {

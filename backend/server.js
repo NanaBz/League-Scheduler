@@ -28,6 +28,9 @@ db.once('open', () => {
   console.log('Connected to MongoDB');
 });
 
+// Debug log for JWT_SECRET
+console.log('JWT_SECRET at startup:', process.env.JWT_SECRET ? '[SET]' : '[NOT SET]');
+
 // Routes
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/teams', require('./routes/teams'));

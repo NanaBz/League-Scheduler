@@ -10,7 +10,10 @@ const AdminAuth = ({ onLoginSuccess, onCancel }) => {
   const [loading, setLoading] = useState(false);
   const [passwordStrength, setPasswordStrength] = useState({ isValid: false, errors: [] });
 
-  const API_BASE_URL = process.env.REACT_APP_API_URL || 'https://league-scheduler.onrender.com/api';
+  // Force production API URL
+    const API_BASE_URL = process.env.NODE_ENV === 'production' 
+    ? 'https://league-scheduler.onrender.com/api'
+    : process.env.REACT_APP_API_URL || 'http://localhost:5001/api';
 
   // Password strength validation
   const validatePasswordStrength = (pwd) => {
