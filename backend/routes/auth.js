@@ -13,6 +13,14 @@ router.post('/check-email', async (req, res) => {
   try {
     const { email } = req.body;
 
+    // Debug logging
+    console.log('Email check request:', { email });
+    console.log('Environment variables:', {
+      ADMIN_EMAIL: process.env.ADMIN_EMAIL,
+      ADMIN_EMAILS: process.env.ADMIN_EMAILS,
+      NODE_ENV: process.env.NODE_ENV
+    });
+
     if (!email) {
       return res.status(400).json({
         success: false,
@@ -22,11 +30,14 @@ router.post('/check-email', async (req, res) => {
 
     // Check if email is whitelisted
     if (!isWhitelistedEmail(email)) {
+      console.log('Email not whitelisted:', email);
       return res.status(403).json({
         success: false,
         message: 'Access denied. Email not authorized for admin access.'
       });
     }
+
+    console.log('Email is whitelisted:', email);
 
     // Check if admin already exists
     const existingAdmin = await Admin.findOne({ email: email.toLowerCase() });
