@@ -1020,6 +1020,28 @@ code {
   gap: 0.5rem;
 }
 
+  /* === Mobile improvements for fixture/results section === */
+  @media (max-width: 768px) {
+    /* Improve fixture date/time clarity on mobile */
+    .fixture-date, .fixture-time {
+      font-size: 1.1rem !important;
+      color: #fff !important;
+      text-shadow: 0 1px 4px rgba(0,0,0,0.5);
+      font-weight: bold !important;
+    }
+
+    /* Make VS background darker and more visible on mobile */
+    .vs {
+      background: #222 !important;
+      color: #fff !important;
+      border-radius: 50%;
+      padding: 0.5rem 1.2rem;
+      font-size: 1.7rem !important;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+      display: inline-block;
+    }
+  }
+
 .admin-buttons {
   display: flex;
   gap: 1rem;
