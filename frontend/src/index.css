@@ -1,3 +1,64 @@
+/* Ensure fixture date, time, and penalties are readable in both light and dark mode on mobile */
+
+/* MOBILE FIXTURES: Make date/time dark and scores compact & uniform */
+
+@media (max-width: 768px) {
+  .fixture-date,
+  .fixture-time {
+    color: #000 !important;       /* solid black for readability */
+    font-weight: 600 !important;  /* make it bolder */
+    text-shadow: none !important; /* remove any washed-out shadow */
+  }
+
+  /* Score card compactness and uniformity */
+  .fixture-score, .score-display {
+    font-size: 1.1rem !important;
+    min-width: 48px;
+    min-height: 36px;
+    padding: 0.2rem 0.5rem !important;
+    border-radius: 10px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    margin: 0 0.2rem !important;
+    background: #fff6f6 !important;
+    color: var(--primary-red) !important;
+    box-shadow: 0 1px 4px rgba(220,38,38,0.07);
+    font-weight: 900 !important;
+  }
+
+  /* VS box in the middle */
+  .vs-display {
+    font-size: 1.1rem !important;
+    font-weight: 700 !important;
+    color: var(--primary-red) !important;
+    background: #fff6f6 !important;
+    border-radius: 8px !important;
+    padding: 0.1rem 0.7rem !important;
+    margin: 0 0.2rem !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    box-shadow: 0 1px 4px rgba(220,38,38,0.07);
+  }
+
+  /* Make the whole score row horizontally aligned and not stacked */
+  .fixture-score {
+    flex-direction: row !important;
+    gap: 0.2rem !important;
+    width: 100%;
+    justify-content: center !important;
+    align-items: center !important;
+  }
+}
+
+@media (max-width: 768px) and (prefers-color-scheme: dark) {
+  .fixture-date, .fixture-time, .penalties-display {
+    color: #fff !important;
+    font-weight: 900 !important;
+    text-shadow: 0 2px 8px rgba(0,0,0,0.7);
+  }
+}
 /* ========================================
    RED & WHITE THEME - Academic City Premier League
    ======================================== */
@@ -2576,15 +2637,13 @@ code {
     gap: 0.25rem;
   }
   
+  /* .fixture-date and .fixture-time color/font overridden by mobile rule for clarity */
   .fixture-date {
     font-size: 0.9rem;
     font-weight: 600;
-    color: var(--text-dark);
   }
-  
   .fixture-time {
     font-size: 0.8rem;
-    color: var(--dark-gray);
   }
   
   .fixture-status {
@@ -3060,20 +3119,9 @@ code {
   .fixture-date {
     font-size: 0.85rem;
     font-weight: 600;
-    color: var(--medium-gray);
   }
-  
-  .mobile-fixture-card.archived.super-cup-responsive .fixture-date {
-    color: rgba(255, 255, 255, 0.9);
-  }
-  
   .fixture-time {
     font-size: 0.75rem;
-    color: var(--medium-gray);
-  }
-  
-  .mobile-fixture-card.archived.super-cup-responsive .fixture-time {
-    color: rgba(255, 255, 255, 0.8);
   }
   
   .super-cup-badge {
@@ -3681,25 +3729,30 @@ code {
    LOADING STATES & ANIMATIONS
    ======================================== */
 
-.fade-in {
-  animation: fadeIn 0.5s ease-in;
+/* Modern, compact, less bold footer link style */
+.footer-link {
+  display: block;
+  background: transparent;
+  color: #fff;
+  border: 1.5px solid var(--primary-red);
+  border-radius: 10px;
+  padding: 0.5rem 0.8rem;
+  margin-bottom: 0.3rem;
+  font-size: 0.98rem;
+  font-weight: 400;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s, box-shadow 0.2s, border 0.2s;
+  box-shadow: 0 1px 4px rgba(220,38,38,0.04);
+  line-height: 1.2;
 }
-
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(20px); }
-  to { opacity: 1; transform: translateY(0); }
+.footer-link:hover, .footer-link:focus {
+  background: var(--primary-red);
+  color: #fff;
+  border-color: #fff;
+  box-shadow: 0 2px 8px rgba(220,38,38,0.12);
+  outline: none;
 }
-
-.pulse {
-  animation: pulse 2s infinite;
-}
-
-@keyframes pulse {
-  0%, 100% { transform: scale(1); }
-  50% { transform: scale(1.05); }
-}
-
-/* ========================================
    ACCESSIBILITY IMPROVEMENTS
    ======================================== */
 
