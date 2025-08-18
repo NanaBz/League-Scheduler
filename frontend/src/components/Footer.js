@@ -1,5 +1,6 @@
 import React from 'react';
 
+
 const Footer = ({ isAdmin, onLoginClick, onAdminClick, onLogoutClick, onBackToLeagueClick, activeTab }) => {
   const currentYear = new Date().getFullYear();
 
@@ -21,10 +22,10 @@ const Footer = ({ isAdmin, onLoginClick, onAdminClick, onLogoutClick, onBackToLe
         <div className="footer-section">
           <h4>Quick Access</h4>
           <div className="footer-links">
-            <span className="footer-link">📊 Current Standings</span>
-            <span className="footer-link">📅 Fixtures & Results</span>
-            <span className="footer-link">🏆 Cup Competitions</span>
-            <span className="footer-link">📚 Season Archives</span>
+            <button className="footer-link" onClick={() => window.setSelectedCompetition && window.setSelectedCompetition('cup')}>🏆 Cup Competitions</button>
+            <button className="footer-link" onClick={() => window.setSelectedCompetition && window.setSelectedCompetition('super-cup')}>⭐ Super Cup</button>
+            <button className="footer-link" onClick={() => window.setSelectedCompetition && window.setSelectedCompetition('league')}>📊 Current Standings</button>
+            <button className="footer-link" onClick={() => window.setSelectedCompetition && window.setSelectedCompetition('fixtures')}>📅 Fixtures & Results</button>
             {/* Admin Access */}
             <div className="admin-access">
               {!isAdmin ? (
