@@ -1091,6 +1091,7 @@ code {
   }
 }
 
+
     /* Make VS background darker and more visible on mobile */
     .vs {
       background: #222 !important;
@@ -1101,7 +1102,7 @@ code {
       box-shadow: 0 2px 8px rgba(0,0,0,0.3);
       display: inline-block;
     }
-  }
+/* removed extra closing curly brace here */
 
 .admin-buttons {
   display: flex;
