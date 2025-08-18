@@ -209,7 +209,7 @@ const UserView = ({ competitions, selectedCompetition, refreshKey, isAdmin }) =>
       {selectedCompetition === 'league' && (
         <>
           {/* League Table */}
-          <div className="card">
+          <div className="card" id="standings">
             <h2>📊 League Table</h2>
             
             {/* Position Legend */}
@@ -393,7 +393,7 @@ const UserView = ({ competitions, selectedCompetition, refreshKey, isAdmin }) =>
       {selectedCompetition === 'cup' && (
         <>
           {/* Cup Tournament Bracket */}
-          <div className="card">
+          <div className="card" id="cup">
             <h2>🏅 Agha Cup Tournament</h2>
             <div className="cup-bracket">
               <div className="bracket-round">
@@ -500,7 +500,7 @@ const UserView = ({ competitions, selectedCompetition, refreshKey, isAdmin }) =>
       {selectedCompetition === 'super-cup' && (
         <>
           {/* Super Cup Display */}
-          <div className="card">
+          <div className="card" id="archives">
             <h2>⭐ Super Cup Final</h2>
             {matches.length > 0 ? (
               matches.map(match => (
@@ -576,7 +576,7 @@ const UserView = ({ competitions, selectedCompetition, refreshKey, isAdmin }) =>
       )}
 
       {/* Fixtures/Results */}
-      <div className="card">
+  <div className="card" id="fixtures">
         <h2>📅 Fixtures & Results</h2>
         
         <div className="filter-section">
@@ -882,17 +882,18 @@ const UserView = ({ competitions, selectedCompetition, refreshKey, isAdmin }) =>
                           .filter(match => match.matchweek === week)
                           .map(match => (
                             <div key={match._id} className={`fixture-card ${match.isPlayed ? 'played' : 'scheduled'}`}>
-                              <div className="fixture-header">
-                                <div className="fixture-datetime">
-                                  <span className="fixture-date">{formatDate(match.date)}</span>
-                                  <span className="fixture-time">{match.time}</span>
+                                <div className="fixture-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                  {/* Date+Time at the left, match status at the right */}
+                                  <div className="fixture-datetime" style={{ background: '#dc2626', border: '2px solid #dc2626', borderRadius: 14, padding: '1.5px 8px', display: 'inline-block', minWidth: 0 }}>
+                                    <span className="fixture-date" style={{ fontSize: '0.82rem', fontWeight: 400, color: '#fff', letterSpacing: '0.2px', textShadow: 'none' }}>{formatDate(match.date)}</span>
+                                    <span className="fixture-time" style={{ fontSize: '0.82rem', fontWeight: 400, color: '#fff', marginLeft: 6, textShadow: 'none' }}>{match.time}</span>
+                                  </div>
+                                  <div className="fixture-status">
+                                    <span className={`status-badge ${match.isPlayed ? 'completed' : 'upcoming'}`}>
+                                      {match.isPlayed ? 'FT' : 'Scheduled'}
+                                    </span>
+                                  </div>
                                 </div>
-                                <div className="fixture-status">
-                                  <span className={`status-badge ${match.isPlayed ? 'completed' : 'upcoming'}`}>
-                                    {match.isPlayed ? 'FT' : 'Scheduled'}
-                                  </span>
-                                </div>
-                              </div>
                               
                               <div className="fixture-teams">
                                 <div className="team-section home">
@@ -1099,17 +1100,13 @@ const UserView = ({ competitions, selectedCompetition, refreshKey, isAdmin }) =>
                           )}
                           <span className="team-name">{match.awayTeam.name}</span>
                         </div>
-                        {match.isPlayed && (
-                          <div className="team-score">{match.awayScore}</div>
-                        )}
+                                  {match.isPlayed && (
+                                    <div className="team-score">{match.awayScore}</div>
+                                  )}
                       </div>
                     </div>
                     
-                    {(match.stage && match.stage !== 'regular') && (
-                      <div className="fixture-stage">
-                        {formatStage(match.stage, selectedCompetition)}
-                      </div>
-                    )}
+                              {/* Stage and penalties removed for clean re-implementation */}
                   </div>
                 ))}
               </div>

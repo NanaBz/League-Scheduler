@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+
 import UserView from './components/UserView';
 import AdminPanel from './components/AdminPanel';
 import AdminAuth from './components/AdminAuth';
@@ -9,9 +10,17 @@ import './index.css';
 function App() {
   const [activeTab, setActiveTab] = useState('user');
   const [selectedCompetition, setSelectedCompetition] = useState('league');
+  // Expose setSelectedCompetition globally for Footer quick links
+  React.useEffect(() => {
+    window.setSelectedCompetition = (comp) => {
+      setActiveTab('user');
+      setSelectedCompetition(comp);
+    };
+    return () => { delete window.setSelectedCompetition; };
+  }, []);
   const [isAdmin, setIsAdmin] = useState(false);
-  const [adminData, setAdminData] = useState(null);
   const [adminToken, setAdminToken] = useState(null);
+  const [adminData, setAdminData] = useState(null);
   const [showLogin, setShowLogin] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [dataRefreshKey, setDataRefreshKey] = useState(0);
