@@ -1022,13 +1022,13 @@ code {
 
   /* === Mobile improvements for fixture/results section === */
   @media (max-width: 768px) {
-    /* Improve fixture date/time clarity on mobile */
-    .fixture-date, .fixture-time {
-      font-size: 1.1rem !important;
-      color: #fff !important;
-      text-shadow: 0 1px 4px rgba(0,0,0,0.5);
-      font-weight: bold !important;
-    }
+     .fixture-date,
+     .fixture-time {
+       color: #000 !important;       /* solid black for readability */
+       font-weight: 600 !important;  /* make it bolder */
+       text-shadow: none !important; /* remove any washed-out shadow */
+  }
+}
 
     /* Make VS background darker and more visible on mobile */
     .vs {
