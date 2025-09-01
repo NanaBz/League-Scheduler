@@ -41,7 +41,7 @@ const matchSchema = new mongoose.Schema({
   },
   competition: {
     type: String,
-    enum: ['league', 'cup', 'super-cup'],
+    enum: ['league', 'cup', 'super-cup', 'acwpl'],
     required: true
   },
   stage: {

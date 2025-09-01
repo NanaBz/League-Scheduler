@@ -148,6 +148,13 @@ function App() {
                 <span className="comp-icon">⭐</span>
                 <span className="comp-text">Super Cup</span>
               </button>
+              <button
+                className={`comp-nav-btn ${selectedCompetition === 'acwpl' ? 'active' : ''}`}
+                onClick={() => setSelectedCompetition('acwpl')}
+              >
+                <span className="comp-icon">👧</span>
+                <span className="comp-text">Girls League</span>
+              </button>
             </div>
           )}
         </nav>
@@ -178,19 +185,12 @@ function App() {
                 <div className="mobile-nav-icon">⭐</div>
                 <div>Super</div>
               </button>
-              {/* Menu button for admin access */}
               <button
-                className="mobile-nav-item"
-                onClick={() => {
-                  if (isAdmin) {
-                    setActiveTab('admin');
-                  } else {
-                    setShowLogin(true);
-                  }
-                }}
+                className={`mobile-nav-item ${selectedCompetition === 'acwpl' ? 'active' : ''}`}
+                onClick={() => setSelectedCompetition('acwpl')}
               >
-                <div className="mobile-nav-icon">{isAdmin ? '⚙️' : '🔐'}</div>
-                <div>{isAdmin ? 'Admin' : 'Login'}</div>
+                <div className="mobile-nav-icon">👧</div>
+                <div>Girls</div>
               </button>
             </>
           )}

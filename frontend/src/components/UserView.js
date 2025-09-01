@@ -43,11 +43,90 @@ const getTeamColors = (teamName) => {
 };
 
 const UserView = ({ competitions, selectedCompetition, refreshKey, isAdmin }) => {
+
+  // React state/hooks FIRST
   const [teams, setTeams] = useState([]);
   const [matches, setMatches] = useState([]);
   const [selectedMatchweek, setSelectedMatchweek] = useState('');
   const [winners, setWinners] = useState({});
   const [selectedSeason, setSelectedSeason] = useState(null); // null = current season
+
+  // ACWPL description and helpers AFTER hooks
+  const acwplDescription = (
+    <div className="acwpl-description" style={{marginBottom: '1.2rem', background: '#fff6f6', border: '1.5px solid #dc2626', borderRadius: 10, padding: '1rem 1.2rem', color: '#b91c1c', fontWeight: 500, fontSize: '1.08rem'}}>
+      <strong>ACWPL (Girls League):</strong> The ACWPL is a 5-game series between Orion and Firestorm. The team with the most points after all 5 games is crowned champion. All matches are played as regular fixtures, and the table below updates live as results are entered.
+    </div>
+  );
+  // ACWPL standings calculation (Orion & Firestorm only)
+  // ACWPL team colors
+  const acwplTeamColors = {
+    'Orion': { primary: '#000', secondary: '#b0b3b8' }, // Black, ash/grey
+    'Firestorm': { primary: '#2563eb', secondary: '#ec4899' } // Blue, pink
+  };
+  // ACWPL teams and strict filter
+  const acwplTeams = teams.filter(team => team.competition === 'acwpl');
+  // If teams are not tagged, fallback to name check
+  const acwplTeamsStrict = acwplTeams.length === 2 ? acwplTeams : teams.filter(team => ['Orion','Firestorm'].includes(team.name));
+  // Calculate stats from matches
+  function getAcwplTable() {
+    // Start with base stats
+    const base = acwplTeamsStrict.map(team => ({
+      ...team,
+      played: 0, won: 0, drawn: 0, lost: 0, goalsFor: 0, goalsAgainst: 0, goalDifference: 0, points: 0, form: []
+    }));
+    // Only use ACWPL matches
+    const acwplMatches = matches.filter(m => m.homeTeam && m.awayTeam && ['Orion','Firestorm'].includes(m.homeTeam.name) && ['Orion','Firestorm'].includes(m.awayTeam.name));
+    for (const match of acwplMatches) {
+      if (!match.isPlayed) continue;
+      const home = base.find(t => t.name === match.homeTeam.name);
+      const away = base.find(t => t.name === match.awayTeam.name);
+      if (!home || !away) continue;
+      home.played++;
+      away.played++;
+      home.goalsFor += match.homeScore;
+      home.goalsAgainst += match.awayScore;
+      away.goalsFor += match.awayScore;
+      away.goalsAgainst += match.homeScore;
+      home.goalDifference = home.goalsFor - home.goalsAgainst;
+      away.goalDifference = away.goalsFor - away.goalsAgainst;
+      if (match.homeScore > match.awayScore) {
+        home.won++; home.points += 3; home.form.unshift('W');
+        away.lost++; away.form.unshift('L');
+      } else if (match.homeScore < match.awayScore) {
+        away.won++; away.points += 3; away.form.unshift('W');
+        home.lost++; home.form.unshift('L');
+      } else {
+        home.drawn++; away.drawn++;
+        home.points += 1; away.points += 1;
+        home.form.unshift('D'); away.form.unshift('D');
+      }
+    }
+    // Sort by points, then GD, then GF
+    return base.sort((a, b) => b.points - a.points || b.goalDifference - a.goalDifference || b.goalsFor - a.goalsFor);
+  }
+  // ACWPL winner detection (most points after 5 games)
+  const acwplTable = getAcwplTable();
+  let acwplWinner = null;
+  if (acwplTable.length === 2 && acwplTable[0].played === 5 && acwplTable[1].played === 5) {
+    if (acwplTable[0].points > acwplTable[1].points) {
+      acwplWinner = acwplTable[0].name;
+    } else if (acwplTable[1].points > acwplTable[0].points) {
+      acwplWinner = acwplTable[1].name;
+    } else {
+      // If tied on points, use goal difference, then goals for
+      if (acwplTable[0].goalDifference > acwplTable[1].goalDifference) {
+        acwplWinner = acwplTable[0].name;
+      } else if (acwplTable[1].goalDifference > acwplTable[0].goalDifference) {
+        acwplWinner = acwplTable[1].name;
+      } else if (acwplTable[0].goalsFor > acwplTable[1].goalsFor) {
+        acwplWinner = acwplTable[0].name;
+      } else if (acwplTable[1].goalsFor > acwplTable[0].goalsFor) {
+        acwplWinner = acwplTable[1].name;
+      } else {
+        acwplWinner = null; // True tie
+      }
+    }
+  }
 
   const handleSeasonSelect = (season) => {
     setSelectedSeason(season);
@@ -65,12 +144,12 @@ const UserView = ({ competitions, selectedCompetition, refreshKey, isAdmin }) =>
       console.error('Error fetching teams:', error);
       // Fallback to mock data if backend is unavailable
       setTeams([
-        { _id: '1', name: 'Vikings', played: 0, won: 0, drawn: 0, lost: 0, goalsFor: 0, goalsAgainst: 0, goalDifference: 0, points: 0 },
-        { _id: '2', name: 'Warriors', played: 0, won: 0, drawn: 0, lost: 0, goalsFor: 0, goalsAgainst: 0, goalDifference: 0, points: 0 },
-        { _id: '3', name: 'Lions', played: 0, won: 0, drawn: 0, lost: 0, goalsFor: 0, goalsAgainst: 0, goalDifference: 0, points: 0 },
-        { _id: '4', name: 'Elites', played: 0, won: 0, drawn: 0, lost: 0, goalsFor: 0, goalsAgainst: 0, goalDifference: 0, points: 0 },
-        { _id: '5', name: 'Falcons', played: 0, won: 0, drawn: 0, lost: 0, goalsFor: 0, goalsAgainst: 0, goalDifference: 0, points: 0 },
-        { _id: '6', name: 'Dragons', played: 0, won: 0, drawn: 0, lost: 0, goalsFor: 0, goalsAgainst: 0, goalDifference: 0, points: 0 }
+        { _id: '1', name: 'Vikings', logo: '/logos/vikings-logo.png', played: 0, won: 0, drawn: 0, lost: 0, goalsFor: 0, goalsAgainst: 0, goalDifference: 0, points: 0 },
+        { _id: '2', name: 'Warriors', logo: '/logos/warriors-logo.png', played: 0, won: 0, drawn: 0, lost: 0, goalsFor: 0, goalsAgainst: 0, goalDifference: 0, points: 0 },
+        { _id: '3', name: 'Lions', logo: '/logos/lions-logo.png', played: 0, won: 0, drawn: 0, lost: 0, goalsFor: 0, goalsAgainst: 0, goalDifference: 0, points: 0 },
+        { _id: '4', name: 'Elites', logo: '/logos/elites-logo.png', played: 0, won: 0, drawn: 0, lost: 0, goalsFor: 0, goalsAgainst: 0, goalDifference: 0, points: 0 },
+        { _id: '5', name: 'Falcons', logo: '/logos/falcons-logo.png', played: 0, won: 0, drawn: 0, lost: 0, goalsFor: 0, goalsAgainst: 0, goalDifference: 0, points: 0 },
+        { _id: '6', name: 'Dragons', logo: '/logos/dragons-logo.png', played: 0, won: 0, drawn: 0, lost: 0, goalsFor: 0, goalsAgainst: 0, goalDifference: 0, points: 0 }
       ]);
     }
   };
@@ -150,7 +229,37 @@ const UserView = ({ competitions, selectedCompetition, refreshKey, isAdmin }) =>
   };
 
   return (
-    <div>
+  <div>
+      {/* Only render the empty bar for non-ACWPL competitions */}
+      {selectedCompetition !== 'acwpl' && (
+        <div style={{height: 48, background: 'rgba(255,255,255,0.95)', borderRadius: 16, margin: '0 0 18px 0'}}></div>
+      )}
+      {selectedCompetition === 'acwpl' && (
+        <div style={{
+          background: 'rgba(231,76,60,0.08)',
+          borderRadius: '15px',
+          padding: '18px 18px 10px 18px',
+          margin: '0 0 18px 0',
+          textAlign: 'center',
+          boxShadow: '0 2px 8px rgba(231,76,60,0.08)'
+        }}>
+          <div style={{
+            color: '#e74c3c',
+            fontWeight: 700,
+            fontSize: '1.35rem',
+            marginBottom: 6
+          }}>
+            ACWPL (Girls League)
+          </div>
+          <div style={{
+            color: '#222',
+            fontSize: '1.05rem',
+            fontWeight: 400
+          }}>
+            The ACWPL is a 5-game series between Orion and Firestorm. The team with the most points after all 5 games is crowned champion. All matches are played as regular fixtures, and the table below updates live as results are entered.
+          </div>
+        </div>
+  )}
       {/* Season Selector */}
       <SeasonSelector 
         onSeasonSelect={handleSeasonSelect} 
@@ -159,7 +268,21 @@ const UserView = ({ competitions, selectedCompetition, refreshKey, isAdmin }) =>
         isAdmin={isAdmin}
       />
       
-      {/* Winner Banners - Only show for current competition */}
+  {/* Winner Banners - Only show for current competition */}
+      {selectedCompetition === 'acwpl' && acwplWinner && (
+        <div
+          className="banner"
+          style={{
+            backgroundColor: acwplTeamColors[acwplWinner]?.primary || '#000',
+            color: acwplTeamColors[acwplWinner]?.secondary || '#fff',
+            border: `3px solid ${acwplTeamColors[acwplWinner]?.secondary || '#fff'}`,
+            fontWeight: 'bold',
+            textShadow: '1px 1px 2px rgba(0,0,0,0.3)'
+          }}
+        >
+          🏆 ACWPL Champions: {acwplWinner}! Congratulations!
+        </div>
+      )}
       {selectedCompetition === 'league' && winners.league && (
         <div 
           className="banner" 
@@ -206,7 +329,7 @@ const UserView = ({ competitions, selectedCompetition, refreshKey, isAdmin }) =>
       )}
 
       {/* Competition-specific displays */}
-      {selectedCompetition === 'league' && (
+  {selectedCompetition === 'league' && (
         <>
           {/* League Table */}
           <div className="card" id="standings">
@@ -261,17 +384,15 @@ const UserView = ({ competitions, selectedCompetition, refreshKey, isAdmin }) =>
                   </tr>
                 </thead>
                 <tbody>
-                  {teams.map((team, index) => {
+                  {teams.filter(team => team.competition === 'league').map((team, index) => {
                     const position = index + 1;
                     let rowClass = '';
-                    
                     // Add position-based styling
                     if (position <= 4) {
                       rowClass = 'champions-league-qualification'; // Top 4 - Green (Agha Cup)
                     } else if (position >= 5) {
                       rowClass = 'relegation-zone'; // Bottom 2 (positions 5-6) - Red (Miss Agha Cup)
                     }
-                    
                     return (
                       <tr key={team._id} className={rowClass}>
                         <td>{position}</td>
@@ -306,17 +427,15 @@ const UserView = ({ competitions, selectedCompetition, refreshKey, isAdmin }) =>
             {/* Mobile Card View */}
             <div className="mobile-only">
               <div className="league-cards">
-                {teams.map((team, index) => {
+                {teams.filter(team => team.competition === 'league').map((team, index) => {
                   const position = index + 1;
                   let cardClass = 'league-card';
-                  
                   // Add position-based styling
                   if (position <= 4) {
                     cardClass += ' qualified'; // Top 4 - Green (Agha Cup)
                   } else if (position >= 5) {
                     cardClass += ' not-qualified'; // Bottom 2 (positions 5-6) - Red (Miss Agha Cup)
                   }
-                  
                   return (
                     <div key={team._id} className={cardClass}>
                       <div className="league-card-header">
@@ -341,7 +460,6 @@ const UserView = ({ competitions, selectedCompetition, refreshKey, isAdmin }) =>
                           <div className="points-label">PTS</div>
                         </div>
                       </div>
-                      
                       <div className="league-card-stats">
                         <div className="stat-group">
                           <div className="stat-item">
@@ -361,7 +479,6 @@ const UserView = ({ competitions, selectedCompetition, refreshKey, isAdmin }) =>
                             <span className="stat-value">{team.lost}</span>
                           </div>
                         </div>
-                        
                         <div className="stat-group">
                           <div className="stat-item">
                             <span className="stat-label">GF</span>
@@ -390,7 +507,7 @@ const UserView = ({ competitions, selectedCompetition, refreshKey, isAdmin }) =>
         </>
       )}
 
-      {selectedCompetition === 'cup' && (
+  {selectedCompetition === 'cup' && (
         <>
           {/* Cup Tournament Bracket */}
           <div className="card" id="cup">
@@ -497,7 +614,7 @@ const UserView = ({ competitions, selectedCompetition, refreshKey, isAdmin }) =>
         </>
       )}
 
-      {selectedCompetition === 'super-cup' && (
+  {selectedCompetition === 'super-cup' && (
         <>
           {/* Super Cup Display */}
           <div className="card" id="archives">
@@ -577,7 +694,7 @@ const UserView = ({ competitions, selectedCompetition, refreshKey, isAdmin }) =>
 
       {/* Fixtures/Results */}
   <div className="card" id="fixtures">
-        <h2>📅 Fixtures & Results</h2>
+  <h2>📅 Fixtures & Results</h2>
         
         <div className="filter-section">
           {selectedCompetition === 'league' && (
@@ -593,7 +710,110 @@ const UserView = ({ competitions, selectedCompetition, refreshKey, isAdmin }) =>
           )}
         </div>
 
-        {/* Desktop Table View */}
+        {/* ACWPL Table & Description (Desktop) */}
+        {/* ACWPL Table (Desktop & Mobile) */}
+        {selectedCompetition === 'acwpl' && (
+          <div className="card" id="acwpl-standings">
+            <h2>📊 ACWPL Table</h2>
+            <div className="desktop-only">
+              <table className="table">
+                <thead>
+                  <tr>
+                    <th>Pos</th>
+                    <th>Team</th>
+                    <th>P</th>
+                    <th>W</th>
+                    <th>D</th>
+                    <th>L</th>
+                    <th>GF</th>
+                    <th>GA</th>
+                    <th>GD</th>
+                    <th>Pts</th>
+                    <th>Form</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {getAcwplTable().map((team, idx) => (
+                    <tr key={team._id || team.name}
+                      style={idx === 0 ? { background: '#f0fdf4' } : idx === 1 ? { background: '#fef2f2' } : {}}>
+                      <td>{idx+1}</td>
+                      <td>
+                        <div className="team-info">
+                          {team.logo && (
+                            <img src={team.logo} alt={team.name} className={getTeamLogoClass(team.name)} />
+                          )}
+                          <strong>{team.name}</strong>
+                        </div>
+                      </td>
+                      <td>{team.played}</td>
+                      <td>{team.won}</td>
+                      <td>{team.drawn}</td>
+                      <td>{team.lost}</td>
+                      <td>{team.goalsFor}</td>
+                      <td>{team.goalsAgainst}</td>
+                      <td>{team.goalDifference > 0 ? '+' : ''}{team.goalDifference}</td>
+                      <td><strong>{team.points}</strong></td>
+                      <td>{renderForm(team.form)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            {/* Mobile Card View */}
+            <div className="mobile-only">
+              <div className="league-cards">
+                {getAcwplTable().map((team, idx) => (
+                  <div
+                    key={team._id || team.name}
+                    className="league-card"
+                    style={
+                      idx === 0
+                        ? { border: '2.5px solid #22c55e', boxShadow: '0 0 0 2px #bbf7d0', background: '#f0fdf4' }
+                        : idx === 1
+                        ? { border: '2.5px solid #dc2626', boxShadow: '0 0 0 2px #fee2e2', background: '#fef2f2' }
+                        : {}
+                    }
+                  >
+                    <div className="league-card-header">
+                      <div className="position-badge" style={{
+                        background: idx === 0 ? '#22c55e' : '#dc2626',
+                        color: '#fff',
+                        fontWeight: 700
+                      }}>{idx+1}</div>
+                      <div className="team-info">
+                        {team.logo && (
+                          <img src={team.logo} alt={team.name} className={getTeamLogoClass(team.name)} />
+                        )}
+                        <div className="team-details">
+                          <h3>{team.name}</h3>
+                        </div>
+                      </div>
+                      <div className="points-display">
+                        <div className="points">{team.points}</div>
+                        <div className="points-label">PTS</div>
+                      </div>
+                    </div>
+                    <div className="league-card-stats">
+                      <div className="stat-group">
+                        <div className="stat-item"><span className="stat-label">P</span><span className="stat-value">{team.played}</span></div>
+                        <div className="stat-item"><span className="stat-label">W</span><span className="stat-value">{team.won}</span></div>
+                        <div className="stat-item"><span className="stat-label">D</span><span className="stat-value">{team.drawn}</span></div>
+                        <div className="stat-item"><span className="stat-label">L</span><span className="stat-value">{team.lost}</span></div>
+                      </div>
+                      <div className="stat-group">
+                        <div className="stat-item"><span className="stat-label">GF</span><span className="stat-value">{team.goalsFor}</span></div>
+                        <div className="stat-item"><span className="stat-label">GA</span><span className="stat-value">{team.goalsAgainst}</span></div>
+                        <div className="stat-item"><span className="stat-label">GD</span><span className="stat-value">{team.goalDifference > 0 ? '+' : ''}{team.goalDifference}</span></div>
+                        {/* Show only last 3 form results for mobile */}
+                        <div className="stat-item"><span className="stat-label">Form</span><span className="stat-value form-display">{renderForm(team.form.slice(0, 3))}</span></div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
         <div className="desktop-only">
           {/* Table header */}
           <div className="match-header">
@@ -735,7 +955,7 @@ const UserView = ({ competitions, selectedCompetition, refreshKey, isAdmin }) =>
               );
             })}
           </>
-        ) : selectedCompetition === 'super-cup' ? (
+  ) : selectedCompetition === 'super-cup' ? (
           // Group Super Cup match by final
           <>
             {matches.length > 0 && (
@@ -797,6 +1017,60 @@ const UserView = ({ competitions, selectedCompetition, refreshKey, isAdmin }) =>
                 ))}
               </div>
             )}
+          </>
+        ) : selectedCompetition === 'acwpl' ? (
+          // ACWPL: Show all 5 fixtures as a simple list (desktop)
+          <>
+            <div className="matchweek-group acwpl-fixtures-bg">
+              <div className="matchweek-header">
+                <h3>ACWPL Fixtures</h3>
+              </div>
+              {matches.map(match => (
+                <div key={match._id} className="match-row">
+                  <div>{formatDate(match.date)}</div>
+                  <div>{match.time}</div>
+                  <div>
+                    <div className="team-info">
+                      {match.homeTeam.logo && (
+                        <img 
+                          src={match.homeTeam.logo} 
+                          alt={match.homeTeam.name} 
+                          className={getTeamLogoClass(match.homeTeam.name)}
+                          style={{ width: '20px', height: '20px' }}
+                        />
+                      )}
+                      <strong>{match.homeTeam.name}</strong>
+                    </div>
+                  </div>
+                  <div className="score-display">
+                    {match.isPlayed ? (
+                      <span><strong>{match.homeScore} - {match.awayScore}</strong></span>
+                    ) : (
+                      <span>vs</span>
+                    )}
+                  </div>
+                  <div>
+                    <div className="team-info">
+                      {match.awayTeam.logo && (
+                        <img 
+                          src={match.awayTeam.logo} 
+                          alt={match.awayTeam.name} 
+                          className={getTeamLogoClass(match.awayTeam.name)}
+                          style={{ width: '20px', height: '20px' }}
+                        />
+                      )}
+                      <strong>{match.awayTeam.name}</strong>
+                    </div>
+                  </div>
+                  <div>Fixture</div>
+                  <div>
+                    <span className={`badge ${match.isPlayed ? 'badge-success' : 'badge-warning'}`}>
+                      {match.isPlayed ? 'Played' : 'Scheduled'}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
           </>
         ) : (
           // Fallback display for other competitions
@@ -864,7 +1138,7 @@ const UserView = ({ competitions, selectedCompetition, refreshKey, isAdmin }) =>
         </div> {/* Close fixtures-container */}
         </div> {/* Close desktop-only */}
 
-        {/* Mobile Card View */}
+  {/* Mobile Card View */}
         <div className="mobile-only">
           <div className="fixtures-mobile">
             {selectedCompetition === 'league' ? (
@@ -882,19 +1156,19 @@ const UserView = ({ competitions, selectedCompetition, refreshKey, isAdmin }) =>
                           .filter(match => match.matchweek === week)
                           .map(match => (
                             <div key={match._id} className={`fixture-card ${match.isPlayed ? 'played' : 'scheduled'}`}>
-                                <div className="fixture-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                  {/* Date+Time at the left, match status at the right */}
-                                  <div className="fixture-datetime" style={{ background: '#dc2626', border: '2px solid #dc2626', borderRadius: 14, padding: '1.5px 8px', display: 'inline-block', minWidth: 0 }}>
-                                    <span className="fixture-date" style={{ fontSize: '0.82rem', fontWeight: 400, color: '#fff', letterSpacing: '0.2px', textShadow: 'none' }}>{formatDate(match.date)}</span>
-                                    <span className="fixture-time" style={{ fontSize: '0.82rem', fontWeight: 400, color: '#fff', marginLeft: 6, textShadow: 'none' }}>{match.time}</span>
-                                  </div>
-                                  <div className="fixture-status">
-                                    <span className={`status-badge ${match.isPlayed ? 'completed' : 'upcoming'}`}>
-                                      {match.isPlayed ? 'FT' : 'Scheduled'}
-                                    </span>
-                                  </div>
+                              <div className="fixture-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                {/* Date+Time at the left, match status at the right */}
+                                <div className="fixture-datetime" style={{ background: '#dc2626', border: '2px solid #dc2626', borderRadius: 14, padding: '1.5px 8px', display: 'inline-block', minWidth: 0 }}>
+                                  <span className="fixture-date" style={{ fontSize: '0.82rem', fontWeight: 400, color: '#fff', letterSpacing: '0.2px', textShadow: 'none' }}>{formatDate(match.date)}</span>
+                                  <span className="fixture-time" style={{ fontSize: '0.82rem', fontWeight: 400, color: '#fff', marginLeft: 6, textShadow: 'none' }}>{match.time}</span>
                                 </div>
-                              
+                                <div className="fixture-status">
+                                  <span className={`status-badge ${match.isPlayed ? 'completed' : 'upcoming'}`}>
+                                    {match.isPlayed ? 'FT' : 'Scheduled'}
+                                  </span>
+                                </div>
+                              </div>
+
                               <div className="fixture-teams">
                                 <div className="team-section home">
                                   <div className="team-info">
@@ -911,17 +1185,23 @@ const UserView = ({ competitions, selectedCompetition, refreshKey, isAdmin }) =>
                                     <div className="team-score">{match.homeScore}</div>
                                   )}
                                 </div>
-                                
+
                                 <div className="vs-section">
                                   {match.isPlayed ? (
                                     <div className="final-score">
                                       <span className="score-display">{match.homeScore} - {match.awayScore}</span>
+                                      {/* Penalties for all competitions, mobile */}
+                                      {match.homePenalties !== undefined && match.awayPenalties !== undefined && match.homePenalties !== null && match.awayPenalties !== null && (
+                                        <div className="penalties-display-mobile" style={{ fontSize: '0.85em', color: '#666', marginTop: 2 }}>
+                                          ({match.homePenalties} - {match.awayPenalties} pens)
+                                        </div>
+                                      )}
                                     </div>
                                   ) : (
                                     <div className="vs-display">VS</div>
                                   )}
                                 </div>
-                                
+
                                 <div className="team-section away">
                                   <div className="team-info">
                                     {match.awayTeam.logo && (
@@ -938,7 +1218,7 @@ const UserView = ({ competitions, selectedCompetition, refreshKey, isAdmin }) =>
                                   )}
                                 </div>
                               </div>
-                              
+
                               {(match.stage && match.stage !== 'regular') && (
                                 <div className="fixture-stage">
                                   {formatStage(match.stage, selectedCompetition)}
@@ -982,7 +1262,7 @@ const UserView = ({ competitions, selectedCompetition, refreshKey, isAdmin }) =>
                                   </span>
                                 </div>
                               </div>
-                              
+
                               <div className="fixture-teams">
                                 <div className="team-section home">
                                   <div className="team-info">
@@ -999,13 +1279,14 @@ const UserView = ({ competitions, selectedCompetition, refreshKey, isAdmin }) =>
                                     <div className="team-score">{match.homeScore}</div>
                                   )}
                                 </div>
-                                
+
                                 <div className="vs-section">
                                   {match.isPlayed ? (
                                     <div className="final-score">
                                       <span className="score-display">{match.homeScore} - {match.awayScore}</span>
-                                      {match.homePenalties !== undefined && match.awayPenalties !== undefined && (
-                                        <div className="penalties-display">
+                                      {/* Penalties for all competitions, mobile */}
+                                      {match.homePenalties !== undefined && match.awayPenalties !== undefined && match.homePenalties !== null && match.awayPenalties !== null && (
+                                        <div className="penalties-display-mobile" style={{ fontSize: '0.85em', color: '#666', marginTop: 2 }}>
                                           ({match.homePenalties} - {match.awayPenalties} pens)
                                         </div>
                                       )}
@@ -1014,7 +1295,7 @@ const UserView = ({ competitions, selectedCompetition, refreshKey, isAdmin }) =>
                                     <div className="vs-display">VS</div>
                                   )}
                                 </div>
-                                
+
                                 <div className="team-section away">
                                   <div className="team-info">
                                     {match.awayTeam.logo && (
@@ -1031,7 +1312,7 @@ const UserView = ({ competitions, selectedCompetition, refreshKey, isAdmin }) =>
                                   )}
                                 </div>
                               </div>
-                              
+
                               {(match.stage && match.stage !== 'regular') && (
                                 <div className="fixture-stage">
                                   {formatStage(match.stage, selectedCompetition)}
@@ -1045,11 +1326,11 @@ const UserView = ({ competitions, selectedCompetition, refreshKey, isAdmin }) =>
                   });
                 })()}
               </>
-            ) : (
-              // For other competitions, show simple cards
-              <div className="matches-cards">
+            ) : selectedCompetition === 'acwpl' ? (
+              // ACWPL: Show 5 fixtures as cards (mobile)
+              <div className="matches-cards acwpl-fixtures-bg">
                 {matches.map(match => (
-                  <div key={match._id} className={`fixture-card ${match.isPlayed ? 'played' : 'scheduled'} ${selectedCompetition === 'super-cup' ? 'super-cup' : ''}`}>
+                  <div key={match._id} className={`fixture-card ${match.isPlayed ? 'played' : 'scheduled'}`}>
                     <div className="fixture-header">
                       <div className="fixture-datetime">
                         <span className="fixture-date">{formatDate(match.date)}</span>
@@ -1061,7 +1342,7 @@ const UserView = ({ competitions, selectedCompetition, refreshKey, isAdmin }) =>
                         </span>
                       </div>
                     </div>
-                    
+
                     <div className="fixture-teams">
                       <div className="team-section home">
                         <div className="team-info">
@@ -1078,7 +1359,7 @@ const UserView = ({ competitions, selectedCompetition, refreshKey, isAdmin }) =>
                           <div className="team-score">{match.homeScore}</div>
                         )}
                       </div>
-                      
+
                       <div className="vs-section">
                         {match.isPlayed ? (
                           <div className="final-score">
@@ -1088,7 +1369,7 @@ const UserView = ({ competitions, selectedCompetition, refreshKey, isAdmin }) =>
                           <div className="vs-display">VS</div>
                         )}
                       </div>
-                      
+
                       <div className="team-section away">
                         <div className="team-info">
                           {match.awayTeam.logo && (
@@ -1100,13 +1381,80 @@ const UserView = ({ competitions, selectedCompetition, refreshKey, isAdmin }) =>
                           )}
                           <span className="team-name">{match.awayTeam.name}</span>
                         </div>
-                                  {match.isPlayed && (
-                                    <div className="team-score">{match.awayScore}</div>
-                                  )}
+                        {match.isPlayed && (
+                          <div className="team-score">{match.awayScore}</div>
+                        )}
                       </div>
                     </div>
-                    
-                              {/* Stage and penalties removed for clean re-implementation */}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              // For other competitions, show simple cards
+              <div className="matches-cards">
+                {matches.map(match => (
+                  <div key={match._id} className={`fixture-card ${match.isPlayed ? 'played' : 'scheduled'} ${selectedCompetition === 'super-cup' ? 'super-cup' : ''}`}>
+                    <div className="fixture-header">
+                      <div className="fixture-datetime">
+                        <span className="fixture-date">{formatDate(match.date)}</span>
+                        <span className="fixture-time">{match.time}</span>
+                      </div>
+                      <div className="fixture-status">
+                        <span className={`status-badge ${match.isPlayed ? 'completed' : 'upcoming'}`}>
+                          {match.isPlayed ? 'FT' : 'Scheduled'}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="fixture-teams">
+                      <div className="team-section home">
+                        <div className="team-info">
+                          {match.homeTeam.logo && (
+                            <img 
+                              src={match.homeTeam.logo} 
+                              alt={match.homeTeam.name} 
+                              className={getTeamLogoClass(match.homeTeam.name)}
+                            />
+                          )}
+                          <span className="team-name">{match.homeTeam.name}</span>
+                        </div>
+                        {match.isPlayed && (
+                          <div className="team-score">{match.homeScore}</div>
+                        )}
+                      </div>
+
+                      <div className="vs-section">
+                        {match.isPlayed ? (
+                          <div className="final-score">
+                            <span className="score-display">{match.homeScore} - {match.awayScore}</span>
+                            {/* Penalties for all competitions, mobile */}
+                            {match.homePenalties !== undefined && match.awayPenalties !== undefined && match.homePenalties !== null && match.awayPenalties !== null && (
+                              <div className="penalties-display-mobile" style={{ fontSize: '0.85em', color: '#666', marginTop: 2 }}>
+                                ({match.homePenalties} - {match.awayPenalties} pens)
+                              </div>
+                            )}
+                          </div>
+                        ) : (
+                          <div className="vs-display">VS</div>
+                        )}
+                      </div>
+
+                      <div className="team-section away">
+                        <div className="team-info">
+                          {match.awayTeam.logo && (
+                            <img 
+                              src={match.awayTeam.logo} 
+                              alt={match.awayTeam.name} 
+                              className={getTeamLogoClass(match.awayTeam.name)}
+                            />
+                          )}
+                          <span className="team-name">{match.awayTeam.name}</span>
+                        </div>
+                        {match.isPlayed && (
+                          <div className="team-score">{match.awayScore}</div>
+                        )}
+                      </div>
+                    </div>
                   </div>
                 ))}
               </div>

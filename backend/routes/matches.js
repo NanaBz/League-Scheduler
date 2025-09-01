@@ -1,8 +1,48 @@
+console.log('matches.js loaded');
 const express = require('express');
 const router = express.Router();
 const Match = require('../models/Match');
 const Team = require('../models/Team');
 
+// ACWPL best-of-5 series route (moved to top for guaranteed registration)
+router.post('/generate-acwpl', async (req, res) => {
+  console.log('ACWPL route hit');
+  try {
+    const teams = await Team.find({ competition: 'acwpl' });
+    if (teams.length !== 2) {
+      return res.status(400).json({ message: 'Exactly 2 teams required for ACWPL best-of-5 series' });
+    }
+    await Match.deleteMany({ competition: 'acwpl' });
+    const fixtures = [];
+    const teamIds = teams.map(team => team._id);
+    let baseDate = new Date();
+    baseDate.setDate(baseDate.getDate() + 7);
+    for (let week = 0; week < 5; week++) {
+      const isHomeOrion = week % 2 === 0;
+      const homeTeamId = isHomeOrion ? teamIds[0] : teamIds[1];
+      const awayTeamId = isHomeOrion ? teamIds[1] : teamIds[0];
+      const matchDate = new Date(baseDate);
+      matchDate.setDate(matchDate.getDate() + (week * 7));
+      const match = new Match({
+        homeTeam: homeTeamId,
+        awayTeam: awayTeamId,
+        date: matchDate,
+        time: '15:00',
+        matchweek: week + 1,
+        competition: 'acwpl'
+      });
+      fixtures.push(match);
+    }
+    await Match.insertMany(fixtures);
+    res.json({
+      message: 'ACWPL best-of-5 series fixtures generated',
+      count: fixtures.length,
+      matchweeks: 5
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
 // Get all matches
 router.get('/', async (req, res) => {
   try {
@@ -311,6 +351,46 @@ router.post('/generate-cup', async (req, res) => {
 
 // Generate super cup fixtures with explicit winner selection
 router.post('/generate-super-cup', async (req, res) => {
+// Generate ACWPL (girls league) fixtures
+// --- ACWPL fixture generation route moved above module.exports ---
+router.post('/generate-acwpl', async (req, res) => {
+  console.log('ACWPL route hit');
+  try {
+    const teams = await Team.find({ competition: 'acwpl' });
+    if (teams.length !== 2) {
+      return res.status(400).json({ message: 'Exactly 2 teams required for ACWPL best-of-5 series' });
+    }
+    await Match.deleteMany({ competition: 'acwpl' });
+    const fixtures = [];
+    const teamIds = teams.map(team => team._id);
+    let baseDate = new Date();
+    baseDate.setDate(baseDate.getDate() + 7);
+    for (let week = 0; week < 5; week++) {
+      const isHomeOrion = week % 2 === 0;
+      const homeTeamId = isHomeOrion ? teamIds[0] : teamIds[1];
+      const awayTeamId = isHomeOrion ? teamIds[1] : teamIds[0];
+      const matchDate = new Date(baseDate);
+      matchDate.setDate(matchDate.getDate() + (week * 7));
+      const match = new Match({
+        homeTeam: homeTeamId,
+        awayTeam: awayTeamId,
+        date: matchDate,
+        time: '15:00',
+        matchweek: week + 1,
+        competition: 'acwpl'
+      });
+      fixtures.push(match);
+    }
+    await Match.insertMany(fixtures);
+    res.json({
+      message: 'ACWPL best-of-5 series fixtures generated',
+      count: fixtures.length,
+      matchweeks: 5
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
   try {
     const { leagueWinnerId, cupWinnerId } = req.body; // Explicit winner selection
     
@@ -364,7 +444,7 @@ router.post('/save-fixtures', async (req, res) => {
   try {
     const { competition } = req.body;
     
-    if (!competition || !['league', 'cup', 'super-cup'].includes(competition)) {
+    if (!competition || !['league', 'cup', 'super-cup', 'acwpl'].includes(competition)) {
       return res.status(400).json({ message: 'Valid competition required' });
     }
 
@@ -385,7 +465,7 @@ router.post('/reset-fixtures', async (req, res) => {
   try {
     const { competition } = req.body;
     
-    if (!competition || !['league', 'cup', 'super-cup'].includes(competition)) {
+    if (!competition || !['league', 'cup', 'super-cup', 'acwpl'].includes(competition)) {
       return res.status(400).json({ message: 'Valid competition required' });
     }
 
@@ -403,12 +483,15 @@ router.get('/fixture-status', async (req, res) => {
   try {
     const leagueCount = await Match.countDocuments({ competition: 'league' });
     const leaguePublished = await Match.countDocuments({ competition: 'league', isPublished: true });
-    
+
     const cupCount = await Match.countDocuments({ competition: 'cup' });
     const cupPublished = await Match.countDocuments({ competition: 'cup', isPublished: true });
-    
+
     const superCupCount = await Match.countDocuments({ competition: 'super-cup' });
     const superCupPublished = await Match.countDocuments({ competition: 'super-cup', isPublished: true });
+
+    const acwplCount = await Match.countDocuments({ competition: 'acwpl' });
+    const acwplPublished = await Match.countDocuments({ competition: 'acwpl', isPublished: true });
 
     res.json({
       league: {
@@ -428,6 +511,12 @@ router.get('/fixture-status', async (req, res) => {
         isPublished: superCupPublished > 0,
         totalMatches: superCupCount,
         publishedMatches: superCupPublished
+      },
+      acwpl: {
+        hasFixtures: acwplCount > 0,
+        isPublished: acwplPublished > 0,
+        totalMatches: acwplCount,
+        publishedMatches: acwplPublished
       }
     });
   } catch (error) {

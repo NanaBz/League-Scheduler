@@ -10,6 +10,12 @@ const teamSchema = new mongoose.Schema({
     type: String,
     default: ''
   },
+  competition: {
+    type: String,
+    enum: ['league', 'acwpl'],
+    required: true,
+    default: 'league'
+  },
   played: {
     type: Number,
     default: 0

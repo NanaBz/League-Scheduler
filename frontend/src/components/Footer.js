@@ -26,6 +26,7 @@ const Footer = ({ isAdmin, onLoginClick, onAdminClick, onLogoutClick, onBackToLe
             <button className="footer-link" onClick={() => window.setSelectedCompetition && window.setSelectedCompetition('super-cup')}>⭐ Super Cup</button>
             <button className="footer-link" onClick={() => window.setSelectedCompetition && window.setSelectedCompetition('league')}>📊 Current Standings</button>
             <button className="footer-link" onClick={() => window.setSelectedCompetition && window.setSelectedCompetition('fixtures')}>📅 Fixtures & Results</button>
+            <button className="footer-link" onClick={() => window.setSelectedCompetition && window.setSelectedCompetition('acwpl')}>👧 ACWPL (Girls League)</button>
             {/* Admin Access */}
             <div className="admin-access">
               {!isAdmin ? (

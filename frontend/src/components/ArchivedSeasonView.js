@@ -86,8 +86,19 @@ const ArchivedSeasonView = ({ season, onBackToLive }) => {
         <div className="mobile-league-cards">
           {season.finalStandings.map((standing, index) => {
             const teamName = getTeamDisplayName(standing);
-            const teamLogo = getTeamLogo(standing);
-            
+            let teamLogo = getTeamLogo(standing);
+            // Fallback: if teamLogo is falsy, use default path
+            if (!teamLogo) {
+              const defaultLogos = {
+                'Warriors': '/logos/warriors-logo.png',
+                'Falcons': '/logos/falcons-logo.png',
+                'Lions': '/logos/lions-logo.png',
+                'Vikings': '/logos/vikings-logo.png',
+                'Elites': '/logos/elites-logo.png',
+                'Dragons': '/logos/dragons-logo.png'
+              };
+              teamLogo = defaultLogos[teamName] || `https://via.placeholder.com/32x32/667eea/ffffff?text=${teamName.charAt(0)}`;
+            }
             return (
               <div 
                 key={standing.team?._id || standing.team || `team-${index}`}

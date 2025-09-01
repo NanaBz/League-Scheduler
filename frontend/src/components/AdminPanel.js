@@ -23,6 +23,19 @@ const AdminPanel = ({ onDataChange }) => {
   const [savingMatches, setSavingMatches] = useState(new Set()); // Track which matches are being saved
   const [fixtureStatus, setFixtureStatus] = useState({}); // Track fixture publication status
 
+  // ACWPL fixture generation
+  const generateACWPLFixtures = async () => {
+    setLoading(true);
+    try {
+      await api.post('/matches/generate-acwpl');
+      await fetchMatches();
+      alert('ACWPL fixtures generated successfully!');
+    } catch (error) {
+      alert('Error generating ACWPL fixtures: ' + error.message);
+    }
+    setLoading(false);
+  };
+
   const fetchTeams = async () => {
     try {
       const response = await api.get('/teams');
@@ -31,12 +44,12 @@ const AdminPanel = ({ onDataChange }) => {
       console.error('Error fetching teams:', error);
       // Fallback to mock data if backend is unavailable
       setTeams([
-        { _id: '1', name: 'Vikings', played: 0, won: 0, drawn: 0, lost: 0, goalsFor: 0, goalsAgainst: 0, goalDifference: 0, points: 0 },
-        { _id: '2', name: 'Warriors', played: 0, won: 0, drawn: 0, lost: 0, goalsFor: 0, goalsAgainst: 0, goalDifference: 0, points: 0 },
-        { _id: '3', name: 'Lions', played: 0, won: 0, drawn: 0, lost: 0, goalsFor: 0, goalsAgainst: 0, goalDifference: 0, points: 0 },
-        { _id: '4', name: 'Elites', played: 0, won: 0, drawn: 0, lost: 0, goalsFor: 0, goalsAgainst: 0, goalDifference: 0, points: 0 },
-        { _id: '5', name: 'Falcons', played: 0, won: 0, drawn: 0, lost: 0, goalsFor: 0, goalsAgainst: 0, goalDifference: 0, points: 0 },
-        { _id: '6', name: 'Dragons', played: 0, won: 0, drawn: 0, lost: 0, goalsFor: 0, goalsAgainst: 0, goalDifference: 0, points: 0 }
+        { _id: '1', name: 'Vikings', logo: '/logos/vikings-logo.png', played: 0, won: 0, drawn: 0, lost: 0, goalsFor: 0, goalsAgainst: 0, goalDifference: 0, points: 0 },
+        { _id: '2', name: 'Warriors', logo: '/logos/warriors-logo.png', played: 0, won: 0, drawn: 0, lost: 0, goalsFor: 0, goalsAgainst: 0, goalDifference: 0, points: 0 },
+        { _id: '3', name: 'Lions', logo: '/logos/lions-logo.png', played: 0, won: 0, drawn: 0, lost: 0, goalsFor: 0, goalsAgainst: 0, goalDifference: 0, points: 0 },
+        { _id: '4', name: 'Elites', logo: '/logos/elites-logo.png', played: 0, won: 0, drawn: 0, lost: 0, goalsFor: 0, goalsAgainst: 0, goalDifference: 0, points: 0 },
+        { _id: '5', name: 'Falcons', logo: '/logos/falcons-logo.png', played: 0, won: 0, drawn: 0, lost: 0, goalsFor: 0, goalsAgainst: 0, goalDifference: 0, points: 0 },
+        { _id: '6', name: 'Dragons', logo: '/logos/dragons-logo.png', played: 0, won: 0, drawn: 0, lost: 0, goalsFor: 0, goalsAgainst: 0, goalDifference: 0, points: 0 }
       ]);
     }
   };
@@ -249,7 +262,13 @@ const AdminPanel = ({ onDataChange }) => {
   };
 
   const shouldShowPenalties = (match) => {
-    return (selectedCompetition === 'cup' || selectedCompetition === 'super-cup') && isMatchDrawn(match);
+    // Show penalties if: (1) it's a cup/super-cup and drawn, OR (2) penalties have already been entered
+    const penaltiesEntered = getMatchValue(match, 'homePenalties') !== null && getMatchValue(match, 'homePenalties') !== undefined;
+    const penaltiesEntered2 = getMatchValue(match, 'awayPenalties') !== null && getMatchValue(match, 'awayPenalties') !== undefined;
+    return (
+      ((selectedCompetition === 'cup' || selectedCompetition === 'super-cup') && isMatchDrawn(match)) ||
+      penaltiesEntered || penaltiesEntered2
+    );
   };
 
   const saveFixtures = async (competition) => {
@@ -342,6 +361,14 @@ const AdminPanel = ({ onDataChange }) => {
             disabled={loading}
           >
             Set Super Cup Fixtures
+          </button>
+          <button 
+            className="btn btn-acwpl" 
+            style={{ backgroundColor: '#222', color: '#fff', border: '1px solid #222' }}
+            onClick={generateACWPLFixtures}
+            disabled={loading}
+          >
+            Set ACWPL Fixtures
           </button>
           <button 
             className="btn btn-danger" 
@@ -523,6 +550,7 @@ const AdminPanel = ({ onDataChange }) => {
             <option value="league">League</option>
             <option value="cup">Cup</option>
             <option value="super-cup">Super Cup</option>
+            <option value="acwpl">ACWPL</option>
           </select>
           
           {selectedCompetition === 'league' && (
@@ -582,17 +610,24 @@ const AdminPanel = ({ onDataChange }) => {
                 placeholder="Enter score"
               />
               {shouldShowPenalties(match) && (
-                <input
-                  type="number"
-                  min="0"
-                  max="10"
-                  value={getMatchValue(match, 'homePenalties')}
-                  onChange={(e) => handleMatchEdit(match._id, 'homePenalties', e.target.value)}
-                  className="input"
-                  placeholder="P"
-                  style={{ width: '40px', marginLeft: '5px' }}
-                  title="Penalty shootout score"
-                />
+                <>
+                  <input
+                    type="number"
+                    min="0"
+                    max="10"
+                    value={
+                      getMatchValue(match, 'homePenalties') === null || getMatchValue(match, 'homePenalties') === undefined || getMatchValue(match, 'homePenalties') === ''
+                        ? ''
+                        : String(getMatchValue(match, 'homePenalties'))
+                    }
+                    onChange={(e) => handleMatchEdit(match._id, 'homePenalties', e.target.value)}
+                    className="input penalty-input"
+                    placeholder="P"
+                    style={{ width: '40px', marginLeft: '5px', border: '2px solid #dc2626', background: '#fff6f6', color: '#222', fontWeight: 600, textAlign: 'center' }}
+                    title="Penalty shootout score"
+                  />
+                  <span style={{ marginLeft: 2, color: '#dc2626', fontWeight: 600, fontSize: '0.95em' }}>P</span>
+                </>
               )}
             </div>
             <div>
@@ -606,17 +641,24 @@ const AdminPanel = ({ onDataChange }) => {
                 placeholder="Enter score"
               />
               {shouldShowPenalties(match) && (
-                <input
-                  type="number"
-                  min="0"
-                  max="10"
-                  value={getMatchValue(match, 'awayPenalties')}
-                  onChange={(e) => handleMatchEdit(match._id, 'awayPenalties', e.target.value)}
-                  className="input"
-                  placeholder="P"
-                  style={{ width: '40px', marginLeft: '5px' }}
-                  title="Penalty shootout score"
-                />
+                <>
+                  <input
+                    type="number"
+                    min="0"
+                    max="10"
+                    value={
+                      getMatchValue(match, 'awayPenalties') === null || getMatchValue(match, 'awayPenalties') === undefined || getMatchValue(match, 'awayPenalties') === ''
+                        ? ''
+                        : String(getMatchValue(match, 'awayPenalties'))
+                    }
+                    onChange={(e) => handleMatchEdit(match._id, 'awayPenalties', e.target.value)}
+                    className="input penalty-input"
+                    placeholder="P"
+                    style={{ width: '40px', marginLeft: '5px', border: '2px solid #dc2626', background: '#fff6f6', color: '#222', fontWeight: 600, textAlign: 'center' }}
+                    title="Penalty shootout score"
+                  />
+                  <span style={{ marginLeft: 2, color: '#dc2626', fontWeight: 600, fontSize: '0.95em' }}>P</span>
+                </>
               )}
             </div>
             <div><strong>{match.awayTeam.name}</strong></div>
@@ -681,7 +723,7 @@ const AdminPanel = ({ onDataChange }) => {
             </tr>
           </thead>
           <tbody>
-            {teams.map((team, index) => (
+            {teams.filter(team => team.competition === 'league').map((team, index) => (
               <tr key={team._id}>
                 <td>{index + 1}</td>
                 <td><strong>{team.name}</strong></td>
@@ -793,6 +835,37 @@ const AdminPanel = ({ onDataChange }) => {
                   disabled={loading}
                 >
                   Reset Super Cup
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* ACWPL Fixtures */}
+          <div className="fixture-management-card">
+            <h3>👧 ACWPL Fixtures</h3>
+            <div className="status-info">
+              <p>Status: <span className={`status-badge ${getFixtureStatusForCompetition('acwpl').isPublished ? 'published' : 'draft'}`}>
+                {getFixtureStatusForCompetition('acwpl').isPublished ? 'Published' : getFixtureStatusForCompetition('acwpl').hasFixtures ? 'Draft' : 'Not Generated'}
+              </span></p>
+              <p>Matches: {getFixtureStatusForCompetition('acwpl').totalMatches}/5</p>
+            </div>
+            <div className="fixture-actions">
+              {getFixtureStatusForCompetition('acwpl').hasFixtures && !getFixtureStatusForCompetition('acwpl').isPublished && (
+                <button 
+                  className="btn btn-success btn-small" 
+                  onClick={() => saveFixtures('acwpl')}
+                  disabled={loading}
+                >
+                  Save ACWPL Fixtures
+                </button>
+              )}
+              {getFixtureStatusForCompetition('acwpl').hasFixtures && (
+                <button 
+                  className="btn btn-danger btn-small" 
+                  onClick={() => resetFixtures('acwpl')}
+                  disabled={loading}
+                >
+                  Reset ACWPL
                 </button>
               )}
             </div>
