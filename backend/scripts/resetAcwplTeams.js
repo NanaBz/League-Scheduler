@@ -1,8 +1,9 @@
 const mongoose = require('mongoose');
-require('dotenv').config({ path: '../.env' });
+require('dotenv').config({ path: require('path').resolve(__dirname, '../.env') });
 const Team = require('../models/Team');
 
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/league-scheduler';
+console.log('Connecting to:', MONGODB_URI);
 
 async function resetAcwplTeams() {
   await mongoose.connect(MONGODB_URI, { useNewUrlParser: true, useUnifiedTopology: true });
