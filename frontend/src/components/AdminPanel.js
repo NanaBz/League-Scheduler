@@ -667,6 +667,7 @@ const AdminPanel = ({ onDataChange }) => {
               <span className={`badge ${match.isPlayed ? 'badge-success' : 'badge-warning'}`}>
                 {match.isPlayed ? 'Played' : 'Scheduled'}
               </span>
+
             </div>
             <div>
               {hasUnsavedChanges(match._id) && (
@@ -693,6 +694,24 @@ const AdminPanel = ({ onDataChange }) => {
                   Cancel
                 </button>
               )}
+              <button
+                onClick={async () => {
+                  if(window.confirm('Reset this match score?')) {
+                    try {
+                      await api.post(`/matches/${match._id}/reset-score`);
+                      await fetchMatches();
+                      alert('Match score reset!');
+                    } catch (err) {
+                      alert('Failed to reset match score.');
+                    }
+                  }
+                }}
+                className="btn btn-danger btn-small"
+                style={{ marginLeft: '5px' }}
+                title="Reset this match's score to blank"
+              >
+                Reset
+              </button>
             </div>
           </div>
         ))}

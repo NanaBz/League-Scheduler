@@ -1,8 +1,30 @@
+
 console.log('matches.js loaded');
 const express = require('express');
 const router = express.Router();
 const Match = require('../models/Match');
 const Team = require('../models/Team');
+
+// Reset match score
+router.post('/:id/reset-score', async (req, res) => {
+  try {
+    const match = await Match.findById(req.params.id);
+    if (!match) {
+      return res.status(404).json({ message: 'Match not found' });
+    }
+    match.homeScore = null;
+    match.awayScore = null;
+    match.homePenalties = null;
+    match.awayPenalties = null;
+    match.isPlayed = false;
+    await match.save();
+    await match.populate('homeTeam', 'name logo');
+    await match.populate('awayTeam', 'name logo');
+    res.json({ message: 'Match score reset', match });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
 
 // ACWPL best-of-5 series route (moved to top for guaranteed registration)
 router.post('/generate-acwpl', async (req, res) => {

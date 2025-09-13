@@ -5262,7 +5262,7 @@ code {
 .password-strength.medium {
   background: #fffbeb;
   border: 1px solid #fed7aa;
-  color: #d97  node backend/scripts/resetAcwplTeams.js06;
+  color: #d97706;
 }
 
 .password-strength.strong {
