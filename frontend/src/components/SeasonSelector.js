@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Calendar, ChevronDown, ChevronUp, BarChart3, Trash2, Check, X, Cog, AlertTriangle, Folder } from 'lucide-react';
 import api from '../utils/api';
 
 const SeasonSelector = ({ onSeasonSelect, currentSeason, showArchived = true, isAdmin = false }) => {
@@ -57,13 +58,13 @@ const SeasonSelector = ({ onSeasonSelect, currentSeason, showArchived = true, is
         className="season-button"
         onClick={() => setIsOpen(!isOpen)}
       >
-        📅 {currentSeason ? `Season ${currentSeason.seasonNumber}` : 'Current Season'} ▼
+        <Calendar size={16} /> {currentSeason ? `Season ${currentSeason.seasonNumber}` : 'Current Season'} {isOpen ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
       </button>
       
       {isOpen && (
         <div className="season-dropdown">
           <div className="season-option current" onClick={() => handleSeasonSelect(null)}>
-            🔴 Current Season (Live)
+            Current Season (Live)
           </div>
           
           {showArchived && seasons.length > 0 && (
@@ -75,10 +76,10 @@ const SeasonSelector = ({ onSeasonSelect, currentSeason, showArchived = true, is
                   className="season-option archived"
                 >
                   <div onClick={() => handleSeasonSelect(season)} className="season-info">
-                    📊 Season {season.seasonNumber}
+                    <BarChart3 size={14} /> Season {season.seasonNumber}
                     <small>
-                      {season.winners.league && ` • League: ${season.winners.league.name}`}
-                      {season.winners.cup && ` • Cup: ${season.winners.cup.name}`}
+                      {season.winners && season.winners.league && ` • League: ${season.winners.league.name}`}
+                      {season.winners && season.winners.cup && ` • Cup: ${season.winners.cup.name}`}
                     </small>
                   </div>
                   {isAdmin && (
@@ -90,14 +91,14 @@ const SeasonSelector = ({ onSeasonSelect, currentSeason, showArchived = true, is
                             onClick={() => deleteSeason(season.seasonNumber)}
                             title="Confirm Delete"
                           >
-                            ✓
+                            <Check size={14} />
                           </button>
                           <button 
                             className="cancel-delete"
                             onClick={() => setDeleteConfirm(null)}
                             title="Cancel"
                           >
-                            ✗
+                            <X size={14} />
                           </button>
                         </div>
                       ) : (
@@ -109,7 +110,7 @@ const SeasonSelector = ({ onSeasonSelect, currentSeason, showArchived = true, is
                           }}
                           title="Delete Season"
                         >
-                          🗑️
+                          <Trash2 size={14} />
                         </button>
                       )}
                     </div>
@@ -126,7 +127,7 @@ const SeasonSelector = ({ onSeasonSelect, currentSeason, showArchived = true, is
                 className="season-option admin"
                 onClick={() => setShowAdminPanel(!showAdminPanel)}
               >
-                ⚙️ Admin Panel {showAdminPanel ? '▲' : '▼'}
+                <Cog size={14} /> Admin Panel {showAdminPanel ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
               </div>
               
               {showAdminPanel && (
@@ -135,10 +136,10 @@ const SeasonSelector = ({ onSeasonSelect, currentSeason, showArchived = true, is
                     className="admin-action delete-all"
                     onClick={deleteAllSeasons}
                   >
-                    🗑️ Delete All Seasons
+                    <Trash2 size={14} /> Delete All Seasons
                   </button>
                   <small className="admin-warning">
-                    ⚠️ Use for test data cleanup
+                    <AlertTriangle size={12} /> Use for test data cleanup
                   </small>
                 </div>
               )}
@@ -147,7 +148,7 @@ const SeasonSelector = ({ onSeasonSelect, currentSeason, showArchived = true, is
           
           {seasons.length === 0 && showArchived && (
             <div className="season-option disabled">
-              📁 No archived seasons yet
+              <Folder size={14} /> No archived seasons yet
             </div>
           )}
         </div>

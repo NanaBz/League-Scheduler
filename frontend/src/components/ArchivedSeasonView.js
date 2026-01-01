@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Calendar, Trophy, Star, BarChart3, ClipboardList, ArrowLeft } from 'lucide-react';
 
 const ArchivedSeasonView = ({ season, onBackToLive }) => {
   const [selectedCompetition, setSelectedCompetition] = useState('league');
@@ -80,7 +81,7 @@ const ArchivedSeasonView = ({ season, onBackToLive }) => {
   const renderArchivedLeagueTable = () => {
     return (
       <div className="table-container responsive-table">
-        <div className="archived-badge">📊 Archived Season {season.seasonNumber}</div>
+        <div className="archived-badge"><BarChart3 size={18} style={{verticalAlign:'middle',marginRight:6}} />Archived Season {season.seasonNumber}</div>
         
         {/* Mobile Card Layout */}
         <div className="mobile-league-cards">
@@ -405,11 +406,11 @@ const ArchivedSeasonView = ({ season, onBackToLive }) => {
                   <div key={match._id} className={`mobile-fixture-card archived ${competition === 'super-cup' ? 'super-cup-responsive' : ''}`}>
                     <div className="fixture-card-header">
                       <div className="fixture-info">
-                        <span className="fixture-date">{formatDate(match.date)}</span>
+                        <span className="fixture-date"><Calendar size={14} style={{verticalAlign:'middle',marginRight:4}} />{formatDate(match.date)}</span>
                         <span className="fixture-time">{match.time}</span>
                       </div>
                       {competition === 'super-cup' && (
-                        <div className="super-cup-badge">⭐ SUPER CUP</div>
+                        <div className="super-cup-badge"><Star size={14} style={{verticalAlign:'middle',marginRight:4}} />SUPER CUP</div>
                       )}
                     </div>
                     <div className="fixture-teams">
@@ -460,32 +461,33 @@ const ArchivedSeasonView = ({ season, onBackToLive }) => {
 
   return (
     <div className="archived-season-view">
-      <div className="season-header">
-        {/* Back Button */}
-        <button className="back-to-live-btn" onClick={onBackToLive}>
-          ← Back to Live Season
-        </button>
-        
-        <h1>📊 Season {season.seasonNumber} Archive</h1>
-        <div className="season-info">
-          <span>📅 {formatDate(season.startDate)} - {formatDate(season.endDate)}</span>
+
+      <div className="season-header archived-header-flex">
+        <div className="archived-header-left">
+          <button className="back-to-live-btn" onClick={onBackToLive}>
+            <ArrowLeft size={18} style={{verticalAlign:'middle',marginRight:6}} /> Back to Live Season
+          </button>
         </div>
-        
-        {/* Winners Summary */}
-        <div className="winners-summary">
+        <div className="archived-header-center">
+          <h1>Season {season.seasonNumber} Archive</h1>
+          <div className="season-info">
+            <span><Calendar size={18} style={{verticalAlign:'middle',marginRight:6}} />{formatDate(season.startDate)} - {formatDate(season.endDate)}</span>
+          </div>
+        </div>
+        <div className="archived-header-right winners-summary">
           {season.winners.league && (
             <div className="winner-badge league-winner">
-              🏆 League Champion: {season.winners.league.name}
+              <Trophy size={16} style={{verticalAlign:'middle',marginRight:4}} /> League Champion: {season.winners.league.name}
             </div>
           )}
           {season.winners.cup && (
             <div className="winner-badge cup-winner">
-              🏆 Cup Winner: {season.winners.cup.name}
+              <Trophy size={16} style={{verticalAlign:'middle',marginRight:4}} /> Cup Winner: {season.winners.cup.name}
             </div>
           )}
           {season.winners.superCup && (
             <div className="winner-badge supercup-winner">
-              🏆 Super Cup Winner: {season.winners.superCup.name}
+              <Trophy size={16} style={{verticalAlign:'middle',marginRight:4}} /> Super Cup Winner: {season.winners.superCup.name}
             </div>
           )}
         </div>
@@ -497,19 +499,19 @@ const ArchivedSeasonView = ({ season, onBackToLive }) => {
           className={selectedCompetition === 'league' ? 'active' : ''}
           onClick={() => setSelectedCompetition('league')}
         >
-          🏆 League
+          <Trophy size={16} style={{verticalAlign:'middle',marginRight:4}} /> League
         </button>
         <button 
           className={selectedCompetition === 'cup' ? 'active' : ''}
           onClick={() => setSelectedCompetition('cup')}
         >
-          🏆 Cup
+          <Trophy size={16} style={{verticalAlign:'middle',marginRight:4}} /> Cup
         </button>
         <button 
           className={selectedCompetition === 'super-cup' ? 'active' : ''}
           onClick={() => setSelectedCompetition('super-cup')}
         >
-          ⭐ Super Cup
+          <Star size={16} style={{verticalAlign:'middle',marginRight:4}} /> Super Cup
         </button>
       </div>
 
@@ -517,23 +519,23 @@ const ArchivedSeasonView = ({ season, onBackToLive }) => {
       <div className="competition-content">
         {selectedCompetition === 'league' && (
           <div className="league-section">
-            <h2>📊 Final League Table</h2>
+            <h2><BarChart3 size={18} style={{verticalAlign:'middle',marginRight:6}} /> Final League Table</h2>
             {renderArchivedLeagueTable()}
-            <h2>📋 League Fixtures & Results</h2>
+            <h2><ClipboardList size={18} style={{verticalAlign:'middle',marginRight:6}} /> League Fixtures & Results</h2>
             {renderArchivedMatches('league')}
           </div>
         )}
 
         {selectedCompetition === 'cup' && (
           <div className="cup-section">
-            <h2>🏆 Cup Tournament</h2>
+            <h2><Trophy size={18} style={{verticalAlign:'middle',marginRight:6}} /> Cup Tournament</h2>
             {renderArchivedMatches('cup')}
           </div>
         )}
 
         {selectedCompetition === 'super-cup' && (
           <div className="super-cup-section">
-            <h2>⭐ Super Cup</h2>
+            <h2><Star size={18} style={{verticalAlign:'middle',marginRight:6}} /> Super Cup</h2>
             {renderArchivedMatches('super-cup')}
           </div>
         )}

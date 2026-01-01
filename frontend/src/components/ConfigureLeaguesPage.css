@@ -1,0 +1,121 @@
+.configure-leagues-container {
+  max-width: 480px;
+  margin: 0 auto;
+  background: #fff;
+  border-radius: 18px;
+  box-shadow: 0 2px 16px rgba(0,0,0,0.07);
+  padding: 24px 18px 28px 18px;
+}
+.configure-leagues-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+.configure-leagues-header h2 {
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: #1e293b;
+  margin: 0;
+}
+.back-btn {
+  background: none;
+  border: none;
+  font-size: 1.3rem;
+  color: #6d28d9;
+  cursor: pointer;
+  margin-right: 2px;
+}
+.configure-leagues-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-bottom: 28px;
+}
+.league-action {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 1.08rem;
+  font-weight: 600;
+  background: #f3f4f6;
+  color: #6d28d9;
+  border: none;
+  border-radius: 14px;
+  padding: 13px 0 13px 16px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.league-action:hover {
+  background: #ede9fe;
+}
+.classic-leagues-section {
+  margin-top: 10px;
+}
+.classic-leagues-section h3 {
+  font-size: 1.13rem;
+  font-weight: 700;
+  color: #1e293b;
+  margin-bottom: 10px;
+}
+.classic-leagues-table {
+  background: #f9fafb;
+  border-radius: 12px;
+  padding: 8px 0;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.03);
+}
+.classic-leagues-header, .classic-leagues-row {
+  display: grid;
+  grid-template-columns: 2.2fr 1fr 1fr 0.5fr;
+  align-items: center;
+  padding: 5px 8px;
+}
+.classic-leagues-header {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #64748b;
+  border-bottom: 1px solid #e5e7eb;
+}
+.classic-leagues-row {
+  font-size: 0.82rem;
+  color: #1e293b;
+  border-bottom: 1px solid #e5e7eb;
+}
+.league-rank {
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+.exit-league-btn {
+  background: none;
+  border: none;
+  color: #6d28d9;
+  cursor: pointer;
+  padding: 2px;
+  border-radius: 50%;
+  transition: background 0.15s;
+  justify-self: end;
+}
+.classic-leagues-row:last-child {
+  border-bottom: none;
+}
+.league-name {
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.league-rank {
+  text-align: center;
+}
+.exit-league-btn {
+  background: none;
+  border: none;
+  color: #6d28d9;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 50%;
+  transition: background 0.15s;
+}
+.exit-league-btn:hover {
+  background: #ede9fe;
+}

@@ -1,0 +1,38 @@
+.overall-league { background: #1b0f2b; color: #f6f3ff; border-radius: 14px; box-shadow: 0 8px 24px rgba(0,0,0,0.25); width: 100%; max-width: 100%; box-sizing: border-box; }
+.ol-header { padding: 14px 16px; border-bottom: 1px solid rgba(255,255,255,0.08); font-weight: 600; }
+.ol-updated { opacity: 0.85; }
+
+.ol-table-wrap { overflow-x: hidden; overflow-y: auto; max-height: 70vh; -webkit-overflow-scrolling: touch; }
+.ol-table { width: 100%; border-collapse: collapse; min-width: 420px; }
+.ol-table th, .ol-table td { padding: 10px 12px; border-bottom: 1px solid rgba(255,255,255,0.08); font-size: 0.95rem; }
+.ol-table th { text-align: left; font-weight: 700; letter-spacing: 0.02em; color: #e9e3ff; font-size: 0.95rem; }
+
+.ol-pos { width: 64px; }
+.ol-pos-badge { display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: 50%; font-weight: 800; color: #fff; }
+.ol-pos-badge.up { background: linear-gradient(135deg,#12b886,#2f9e44); }
+.ol-pos-badge.down { background: linear-gradient(135deg,#e03131,#c92a2a); }
+.ol-pos-badge.same { background: linear-gradient(135deg,#868e96,#495057); }
+
+.ol-team { max-width: 0; }
+.ol-team-line { display:flex; align-items:center; gap:8px; }
+.ol-team-name { font-weight: 700; color:#fff; font-size: 0.9rem; }
+.ol-delta { color:#c3b8ff; font-size: 0.9rem; }
+.ol-user-sub { font-size: 0.8rem; color: #cbbcff; opacity: 0.9; }
+
+.ol-gw, .ol-total { font-weight: 700; color:#fff; width: 70px; text-align: center; }
+
+.ol-row { cursor: pointer; }
+.ol-row:hover { background: rgba(255,255,255,0.06); }
+
+@media (max-width: 640px) {
+  .overall-league { border-radius: 12px; }
+  .ol-table th, .ol-table td { padding: 6px 8px; font-size: 0.85rem; }
+  .ol-table th { font-size: 0.85rem; }
+  .ol-team-name { font-size: 0.8rem; }
+  .ol-user-sub { font-size: 0.7rem; }
+  .ol-pos { width: 52px; }
+  .ol-pos-badge { width: 28px; height: 28px; font-size: 0.85rem; }
+  .ol-gw, .ol-total { width: 52px; font-size: 0.85rem; }
+  .ol-delta { font-size: 0.75rem; }
+  .ol-table { min-width: 100%; }
+}

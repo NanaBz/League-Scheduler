@@ -1,5 +1,10 @@
 import React, { useState, useEffect } from 'react';
+import { Trophy, Award, RefreshCcw, Edit3, Save, FileDown, FileBarChart2 } from 'lucide-react';
+import PropTypes from 'prop-types';
 import api from '../utils/api';
+import GoalScorerSelector from './GoalScorerSelector';
+import TeamSelection from './TeamSelection';
+import PlayerPriceEditor from './PlayerPriceEditor';
 
 // Helper function to get team logo CSS class
 const getTeamLogoClass = (teamName) => {
@@ -8,7 +13,7 @@ const getTeamLogoClass = (teamName) => {
   return `${baseClass} ${teamClass}`;
 };
 
-const AdminPanel = ({ onDataChange }) => {
+const AdminPanel = ({ onDataChange, isAdmin }) => {
   const [teams, setTeams] = useState([]);
   const [matches, setMatches] = useState([]);
   const [selectedCompetition, setSelectedCompetition] = useState('league');
@@ -17,12 +22,35 @@ const AdminPanel = ({ onDataChange }) => {
   const [cupTeams, setCupTeams] = useState([]);
   const [leagueWinnerId, setLeagueWinnerId] = useState('');
   const [cupWinnerId, setCupWinnerId] = useState('');
+  const [showRunnerUpSelection, setShowRunnerUpSelection] = useState(false);
+  const [runnerUpId, setRunnerUpId] = useState('');
   const [showCupSelection, setShowCupSelection] = useState(false);
   const [showSuperCupSelection, setShowSuperCupSelection] = useState(false);
+  const [showPriceEditor, setShowPriceEditor] = useState(false);
   const [editedMatches, setEditedMatches] = useState({}); // Store local edits
   const [savingMatches, setSavingMatches] = useState(new Set()); // Track which matches are being saved
   const [fixtureStatus, setFixtureStatus] = useState({}); // Track fixture publication status
+  const [goalscorerData, setGoalscorerData] = useState({}); // Track goalscorer + cards/clean sheets per match
+  const [selectedMatchForLineup, setSelectedMatchForLineup] = useState(null); // Track match being edited for lineups
 
+  useEffect(() => {
+    if (isAdmin) {
+      fetchTeams();
+      fetchMatches();
+      fetchFixtureStatus();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAdmin]);
+
+  useEffect(() => {
+    if (isAdmin) {
+      fetchMatches();
+      fetchFixtureStatus();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAdmin, selectedCompetition, selectedMatchweek]);
+
+  if (!isAdmin) return null;
   // ACWPL fixture generation
   const generateACWPLFixtures = async () => {
     setLoading(true);
@@ -39,18 +67,21 @@ const AdminPanel = ({ onDataChange }) => {
   const fetchTeams = async () => {
     try {
       const response = await api.get('/teams');
-      setTeams(response.data);
+      
+      // Filter out null teams and log
+      const validTeams = response.data.filter(team => {
+        if (!team || !team.name) {
+          console.warn('⚠️ Invalid team detected in AdminPanel:', team);
+          return false;
+        }
+        return true;
+      });
+      
+      console.log(`✅ Fetched ${validTeams.length}/${response.data.length} valid teams for admin`);
+      setTeams(validTeams);
     } catch (error) {
       console.error('Error fetching teams:', error);
-      // Fallback to mock data if backend is unavailable
-      setTeams([
-        { _id: '1', name: 'Vikings', logo: '/logos/vikings-logo.png', played: 0, won: 0, drawn: 0, lost: 0, goalsFor: 0, goalsAgainst: 0, goalDifference: 0, points: 0 },
-        { _id: '2', name: 'Warriors', logo: '/logos/warriors-logo.png', played: 0, won: 0, drawn: 0, lost: 0, goalsFor: 0, goalsAgainst: 0, goalDifference: 0, points: 0 },
-        { _id: '3', name: 'Lions', logo: '/logos/lions-logo.png', played: 0, won: 0, drawn: 0, lost: 0, goalsFor: 0, goalsAgainst: 0, goalDifference: 0, points: 0 },
-        { _id: '4', name: 'Elites', logo: '/logos/elites-logo.png', played: 0, won: 0, drawn: 0, lost: 0, goalsFor: 0, goalsAgainst: 0, goalDifference: 0, points: 0 },
-        { _id: '5', name: 'Falcons', logo: '/logos/falcons-logo.png', played: 0, won: 0, drawn: 0, lost: 0, goalsFor: 0, goalsAgainst: 0, goalDifference: 0, points: 0 },
-        { _id: '6', name: 'Dragons', logo: '/logos/dragons-logo.png', played: 0, won: 0, drawn: 0, lost: 0, goalsFor: 0, goalsAgainst: 0, goalDifference: 0, points: 0 }
-      ]);
+      setTeams([]);
     }
   };
 
@@ -61,10 +92,20 @@ const AdminPanel = ({ onDataChange }) => {
       if (selectedMatchweek) params.append('matchweek', selectedMatchweek);
       params.append('includeUnpublished', 'true'); // Admin sees all fixtures
       const response = await api.get(`/matches?${params}`);
-      setMatches(response.data);
+      
+      // Filter out null matches
+      const validMatches = response.data.filter(match => {
+        if (!match || !match.homeTeam || !match.awayTeam) {
+          console.warn('⚠️ Invalid match detected in AdminPanel:', match);
+          return false;
+        }
+        return true;
+      });
+      
+      console.log(`✅ Fetched ${validMatches.length}/${response.data.length} valid matches for admin`);
+      setMatches(validMatches);
     } catch (error) {
       console.error('Error fetching matches:', error);
-      // Fallback to empty matches if backend is unavailable
       setMatches([]);
     }
   };
@@ -79,18 +120,7 @@ const AdminPanel = ({ onDataChange }) => {
     }
   };
 
-  useEffect(() => {
-    fetchTeams();
-    fetchMatches();
-    fetchFixtureStatus();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  useEffect(() => {
-    fetchMatches();
-    fetchFixtureStatus();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedCompetition, selectedMatchweek]);
+  // (No unconditional useEffect hooks)
 
   const initializeTeams = async () => {
     setLoading(true);
@@ -141,12 +171,11 @@ const AdminPanel = ({ onDataChange }) => {
       alert('Please select both League Winner and Cup Winner');
       return;
     }
-    
+    // If same team selected for both, prompt for runner-up selection
     if (leagueWinnerId === cupWinnerId) {
-      alert('League Winner and Cup Winner must be different teams');
+      setShowRunnerUpSelection(true);
       return;
     }
-    
     setLoading(true);
     try {
       await api.post('/matches/generate-super-cup', { 
@@ -158,6 +187,31 @@ const AdminPanel = ({ onDataChange }) => {
       setShowSuperCupSelection(false);
       setLeagueWinnerId('');
       setCupWinnerId('');
+    } catch (error) {
+      alert('Error generating super cup fixtures: ' + error.message);
+    }
+    setLoading(false);
+  };
+
+  const handleRunnerUpConfirm = async () => {
+    if (!runnerUpId) {
+      alert('Please select a runner-up team.');
+      return;
+    }
+    setLoading(true);
+    try {
+      await api.post('/matches/generate-super-cup', { 
+        leagueWinnerId, 
+        cupWinnerId: runnerUpId,
+        originalDoubleWinnerId: leagueWinnerId // for backend record
+      });
+      await fetchMatches();
+      alert('Super Cup fixture generated successfully!');
+      setShowSuperCupSelection(false);
+      setShowRunnerUpSelection(false);
+      setLeagueWinnerId('');
+      setCupWinnerId('');
+      setRunnerUpId('');
     } catch (error) {
       alert('Error generating super cup fixtures: ' + error.message);
     }
@@ -193,14 +247,104 @@ const AdminPanel = ({ onDataChange }) => {
   };
 
   const saveMatch = async (matchId) => {
-    const edits = editedMatches[matchId];
-    if (!edits) return;
+    // Allow saving even if only goalscorers/assisters were edited
+    const edits = editedMatches[matchId] || {};
+
+    // Validate goalscorers if there are goals either from scores or selectors
+    const scorerDataForValidation = goalscorerData[matchId];
+    const goalData = scorerDataForValidation?.goals || scorerDataForValidation || { home: [], away: [] };
+    const totalGoalsFromScores = (parseInt(edits.homeScore) || 0) + (parseInt(edits.awayScore) || 0);
+    const totalGoalsFromSelectors = goalData
+      ? (goalData.home.length + goalData.away.length)
+      : 0;
+    const totalGoals = Math.max(totalGoalsFromScores, totalGoalsFromSelectors);
+
+    if (totalGoals > 0) {
+      if (!scorerDataForValidation) {
+        alert('Please select goalscorers for all goals before saving');
+        return;
+      }
+
+      const homeGoalsFilled = goalData.home.every(g => g.scorerId !== '');
+      const awayGoalsFilled = goalData.away.every(g => g.scorerId !== '');
+
+      if (!homeGoalsFilled || !awayGoalsFilled) {
+        alert('Please select a goalscorer for each goal before saving');
+        return;
+      }
+    }
 
     console.log('💾 Saving match with edits:', edits);
     setSavingMatches(prev => new Set([...prev, matchId]));
     try {
+      // Build events array from goalscorer data
+      const events = [];
+      const scorerData = goalscorerData[matchId];
+      const goals = scorerData?.goals || scorerData || { home: [], away: [] };
+      const cards = scorerData?.cards || { home: [], away: [] };
+      const cleanSheets = scorerData?.cleanSheets || { home: { enabled: false, playerId: '' }, away: { enabled: false, playerId: '' } };
+      
+      if (goals) {
+        // Add home team goals
+        for (const goal of goals.home) {
+          if (goal.scorerId) {
+            events.push({
+              type: 'GOAL',
+              side: 'home',
+              player: goal.scorerId,
+              ownGoal: goal.isOwnGoal,
+              ...(goal.assistId && !goal.isOwnGoal && { assistPlayer: goal.assistId })
+            });
+          }
+        }
+
+        // Add away team goals
+        for (const goal of goals.away) {
+          if (goal.scorerId) {
+            events.push({
+              type: 'GOAL',
+              side: 'away',
+              player: goal.scorerId,
+              ownGoal: goal.isOwnGoal,
+              ...(goal.assistId && !goal.isOwnGoal && { assistPlayer: goal.assistId })
+            });
+          }
+        }
+      }
+
+      // Cards
+      ['home', 'away'].forEach(side => {
+        (cards[side] || []).forEach(card => {
+          if (card.playerId) {
+            events.push({
+              type: card.type,
+              side,
+              player: card.playerId
+            });
+          }
+        });
+      });
+
+      // Clean sheets
+      ['home', 'away'].forEach(side => {
+        if (cleanSheets[side]?.enabled && cleanSheets[side].playerId) {
+          events.push({
+            type: 'CLEAN_SHEET',
+            side,
+            player: cleanSheets[side].playerId
+          });
+        }
+      });
+
+      // First save the match with scores
       const response = await api.put(`/matches/${matchId}`, edits);
       console.log('✅ Match saved successfully:', response.data);
+
+      // Then save events if there are any
+      if (events.length > 0) {
+        await api.post(`/matches/${matchId}/events`, { events });
+        console.log('✅ Match events saved successfully');
+      }
       
       // Refresh data in parallel for better performance
       await Promise.all([
@@ -211,7 +355,13 @@ const AdminPanel = ({ onDataChange }) => {
       // Trigger UserView refresh without page reload
       onDataChange();
       
-      // Remove from edited matches after successful save
+      // Clear goalscorer data and edited matches
+      setGoalscorerData(prev => {
+        const newData = { ...prev };
+        delete newData[matchId];
+        return newData;
+      });
+
       setEditedMatches(prev => {
         const newEdited = { ...prev };
         delete newEdited[matchId];
@@ -221,8 +371,9 @@ const AdminPanel = ({ onDataChange }) => {
       console.log('✅ Match data refreshed successfully');
       
     } catch (error) {
-      console.error('❌ Error saving match:', error);
-      alert('Error saving match: ' + error.message);
+      console.error('❌ Error saving match:', error.response?.data || error.message);
+      const msg = error.response?.data?.message || error.message;
+      alert('Error saving match: ' + msg);
     } finally {
       setSavingMatches(prev => {
         const newSaving = new Set(prev);
@@ -244,7 +395,7 @@ const AdminPanel = ({ onDataChange }) => {
 
   const getMatchValue = (match, field) => {
     const editedMatch = editedMatches[match._id];
-    if (editedMatch && editedMatch.hasOwnProperty(field)) {
+    if (editedMatch && Object.prototype.hasOwnProperty.call(editedMatch, field)) {
       return editedMatch[field];
     }
     // Return the original match value, or null if it doesn't exist
@@ -252,7 +403,15 @@ const AdminPanel = ({ onDataChange }) => {
   };
 
   const hasUnsavedChanges = (matchId) => {
-    return editedMatches[matchId] && Object.keys(editedMatches[matchId]).length > 0;
+    const hasEdits = editedMatches[matchId] && Object.keys(editedMatches[matchId]).length > 0;
+    const data = goalscorerData[matchId];
+    const goals = data?.goals || data;
+    const cards = data?.cards;
+    const cleanSheets = data?.cleanSheets;
+    const hasGoalscorers = goals && ((goals.home && goals.home.length > 0) || (goals.away && goals.away.length > 0));
+    const hasCards = cards && ((cards.home && cards.home.length > 0) || (cards.away && cards.away.length > 0));
+    const hasCleanSheets = cleanSheets && ((cleanSheets.home?.enabled && cleanSheets.home.playerId) || (cleanSheets.away?.enabled && cleanSheets.away.playerId));
+    return hasEdits || hasGoalscorers || hasCards || hasCleanSheets;
   };
 
   const isMatchDrawn = (match) => {
@@ -302,6 +461,91 @@ const AdminPanel = ({ onDataChange }) => {
     setLoading(false);
   };
 
+  // Export fixtures to JSON
+  const exportFixturesToJSON = async () => {
+    try {
+          const response = await api.get('/matches?includeUnpublished=true');
+          const allMatches = response.data;
+      
+          const dataStr = JSON.stringify(allMatches, null, 2);
+          const dataBlob = new Blob([dataStr], { type: 'application/json' });
+          const url = URL.createObjectURL(dataBlob);
+          const link = document.createElement('a');
+          link.href = url;
+          link.download = `fixtures-backup-${new Date().toISOString().split('T')[0]}.json`;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          URL.revokeObjectURL(url);
+      
+          alert('Fixtures exported successfully as JSON!');
+        } catch (error) {
+          alert('Error exporting fixtures: ' + error.message);
+        }
+  };
+
+  // Export fixtures to CSV
+  const exportFixturesToCSV = async () => {
+      try {
+          const response = await api.get('/matches?includeUnpublished=true');
+          const allMatches = response.data;
+      
+          // CSV headers
+          const headers = [
+            'Competition',
+            'Matchweek',
+            'Date',
+            'Time',
+            'Home Team',
+            'Away Team',
+            'Home Score',
+            'Away Score',
+            'Home Penalties',
+            'Away Penalties',
+            'Stage',
+            'Status',
+            'Published'
+          ];
+      
+          // CSV rows
+          const rows = allMatches.map(match => [
+            match.competition || '',
+            match.matchweek || '',
+            new Date(match.date).toLocaleDateString() || '',
+            match.time || '',
+            match.homeTeam?.name || '',
+            match.awayTeam?.name || '',
+            match.homeScore !== null ? match.homeScore : '',
+            match.awayScore !== null ? match.awayScore : '',
+            match.homePenalties !== null ? match.homePenalties : '',
+            match.awayPenalties !== null ? match.awayPenalties : '',
+            match.stage || '',
+            match.isPlayed ? 'Played' : 'Scheduled',
+            match.isPublished ? 'Yes' : 'No'
+          ]);
+      
+          // Combine headers and rows
+          const csvContent = [
+            headers.join(','),
+            ...rows.map(row => row.map(cell => `"${cell}"`).join(','))
+          ].join('\n');
+      
+          const dataBlob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+          const url = URL.createObjectURL(dataBlob);
+          const link = document.createElement('a');
+          link.href = url;
+          link.download = `fixtures-backup-${new Date().toISOString().split('T')[0]}.csv`;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          URL.revokeObjectURL(url);
+      
+          alert('Fixtures exported successfully as CSV!');
+        } catch (error) {
+          alert('Error exporting fixtures: ' + error.message);
+        }
+  };
+
   const handleRefreshFixtures = async () => {
     setLoading(true);
     try {
@@ -329,7 +573,20 @@ const AdminPanel = ({ onDataChange }) => {
   };
 
   return (
+    <>
     <div>
+      {/* Admin Getting Started Guide */}
+      <div className="card" style={{ marginBottom: '12px' }}>
+        <h2>📘 Getting Started</h2>
+        <ol style={{ margin: 0, paddingLeft: '1.2rem' }}>
+          <li>Initialize Teams to create the six league teams.</li>
+          <li>Set League Fixtures to generate 10 matchweeks (home and away).
+          </li>
+          <li>Open Fixture Management below and click &quot;Save League Fixtures&quot; to publish them to users.</li>
+          <li>Edit Matches to enter scores; add goals, assists, cards, and clean sheets under &quot;Select Goalscorers &amp; Events&quot;.</li>
+          <li>Use Refresh Fixtures to sync the admin and user views.</li>
+        </ol>
+      </div>
       {/* Admin Controls */}
       <div className="card">
         <h2>⚙️ Admin Controls</h2>
@@ -377,6 +634,7 @@ const AdminPanel = ({ onDataChange }) => {
           >
             Reset Season
           </button>
+          {/* Removed Player Prices button as requested */}
           <button 
             className="btn" 
             onClick={handleRefreshFixtures}
@@ -388,7 +646,7 @@ const AdminPanel = ({ onDataChange }) => {
             }}
             title="Refresh fixtures data without page reload"
           >
-            🔄 Refresh Fixtures
+            <RefreshCcw size={18} style={{ marginRight: 6, verticalAlign: 'middle' }} /> Refresh Fixtures
           </button>
         </div>
       </div>
@@ -400,7 +658,7 @@ const AdminPanel = ({ onDataChange }) => {
             <h3>Select 4 Teams for Cup</h3>
             <p>Choose exactly 4 teams to participate in the Cup competition:</p>
             <div className="team-selection">
-              {teams.map(team => (
+              {teams?.filter(team => team && team._id && team.name && team.name !== 'Orion' && team.name !== 'Firestorm').map(team => (
                 <button
                   key={team._id}
                   className={`team-select-btn ${cupTeams.find(t => t._id === team._id) ? 'selected' : ''}`}
@@ -411,12 +669,12 @@ const AdminPanel = ({ onDataChange }) => {
                     {team.logo && (
                       <img 
                         src={team.logo} 
-                        alt={team.name} 
-                        className={getTeamLogoClass(team.name)}
+                        alt={team?.name || 'Team'} 
+                        className={getTeamLogoClass(team?.name || 'Unknown')}
                         style={{ width: '20px', height: '20px' }}
                       />
                     )}
-                    {team.name}
+                    {team?.name || 'Unknown Team'}
                   </div>
                 </button>
               ))}
@@ -424,7 +682,7 @@ const AdminPanel = ({ onDataChange }) => {
             <div className="selected-teams">
               <strong>Selected: {cupTeams.length}/4</strong>
               {cupTeams.length > 0 && (
-                <div>{cupTeams.map(t => t.name).join(', ')}</div>
+                <div>{cupTeams.filter(t => t && t.name).map(t => t?.name).join(', ')}</div>
               )}
             </div>
             <div className="modal-actions">
@@ -453,9 +711,8 @@ const AdminPanel = ({ onDataChange }) => {
       {showSuperCupSelection && (
         <div className="modal-overlay">
           <div className="modal">
-            <h3>🏆 Configure Super Cup Final</h3>
+            <h3><Trophy size={18} style={{ marginRight: 6, verticalAlign: 'middle' }} />Configure Super Cup Final</h3>
             <p>Select the League Winner and Cup Winner for the Super Cup:</p>
-            
             <div className="super-cup-selection">
               <div className="winner-selection">
                 <label htmlFor="league-winner">🥇 League Winner:</label>
@@ -466,20 +723,18 @@ const AdminPanel = ({ onDataChange }) => {
                   className="team-dropdown"
                 >
                   <option value="">Select League Winner</option>
-                  {teams.map(team => (
+                  {teams?.filter(team => team && team._id && team.name && team.name !== 'Orion' && team.name !== 'Firestorm').map(team => (
                     <option 
                       key={team._id} 
                       value={team._id}
-                      disabled={team._id === cupWinnerId}
                     >
-                      {team.name}
+                      {team?.name || 'Unknown'}
                     </option>
                   ))}
                 </select>
               </div>
-
               <div className="winner-selection">
-                <label htmlFor="cup-winner">🏆 Cup Winner:</label>
+                <label htmlFor="cup-winner"><Award size={16} style={{ marginRight: 4, verticalAlign: 'middle' }} />Cup Winner:</label>
                 <select
                   id="cup-winner"
                   value={cupWinnerId}
@@ -487,39 +742,79 @@ const AdminPanel = ({ onDataChange }) => {
                   className="team-dropdown"
                 >
                   <option value="">Select Cup Winner</option>
-                  {teams.map(team => (
+                  {teams?.filter(team => team && team._id && team.name && team.name !== 'Orion' && team.name !== 'Firestorm').map(team => (
                     <option 
                       key={team._id} 
                       value={team._id}
-                      disabled={team._id === leagueWinnerId}
                     >
-                      {team.name}
+                      {team?.name || 'Unknown'}
                     </option>
                   ))}
                 </select>
               </div>
             </div>
-
-            {leagueWinnerId && cupWinnerId && (
-              <div className="super-cup-preview">
-                <h4>Super Cup Final Preview:</h4>
-                <div className="fixture-preview">
-                  <span className="league-winner">
-                    {teams.find(t => t._id === leagueWinnerId)?.name} (League Winner)
-                  </span>
-                  <span className="vs">VS</span>
-                  <span className="cup-winner">
-                    {teams.find(t => t._id === cupWinnerId)?.name} (Cup Winner)
-                  </span>
+            {/* Show runner-up modal immediately if both winners are the same */}
+            {leagueWinnerId && cupWinnerId && leagueWinnerId === cupWinnerId ? (
+              <>
+                <div className="modal-overlay">
+                  <div className="modal">
+                    <h3><Trophy size={18} style={{ marginRight: 6, verticalAlign: 'middle' }} />Double Winner Detected</h3>
+                    <p>The same team was selected as both League Winner and Cup Winner. Please select a runner-up team to play in the Super Cup:</p>
+                    <select
+                      value={runnerUpId}
+                      onChange={e => setRunnerUpId(e.target.value)}
+                      className="team-dropdown"
+                    >
+                      <option value="">Select Runner-up</option>
+                      {teams?.filter(team => team && team._id && team.name && team._id !== leagueWinnerId && team.name !== 'Orion' && team.name !== 'Firestorm').map(team => (
+                        <option key={team._id} value={team._id}>{team.name}</option>
+                      ))}
+                    </select>
+                    <div className="modal-actions">
+                      <button 
+                        className="btn btn-success" 
+                        onClick={handleRunnerUpConfirm}
+                        disabled={!runnerUpId || loading}
+                      >
+                        Confirm Runner-up
+                      </button>
+                      <button 
+                        className="btn btn-secondary" 
+                        onClick={() => {
+                          setShowSuperCupSelection(false);
+                          setShowRunnerUpSelection(false);
+                          setLeagueWinnerId('');
+                          setCupWinnerId('');
+                          setRunnerUpId('');
+                        }}
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
                 </div>
-              </div>
+              </>
+            ) : (
+              leagueWinnerId && cupWinnerId && (
+                <div className="super-cup-preview">
+                  <h4>Super Cup Final Preview:</h4>
+                  <div className="fixture-preview">
+                    <span className="league-winner">
+                      {teams.find(t => t._id === leagueWinnerId)?.name} (League Winner)
+                    </span>
+                    <span className="vs">VS</span>
+                    <span className="cup-winner">
+                      {teams.find(t => t._id === cupWinnerId)?.name} (Cup Winner)
+                    </span>
+                  </div>
+                </div>
+              )
             )}
-
             <div className="modal-actions">
               <button 
                 className="btn btn-success" 
                 onClick={generateSuperCupFixtures}
-                disabled={!leagueWinnerId || !cupWinnerId || loading}
+                disabled={!leagueWinnerId || !cupWinnerId || (leagueWinnerId === cupWinnerId && !runnerUpId) || loading}
               >
                 Generate Super Cup Fixture
               </button>
@@ -529,6 +824,45 @@ const AdminPanel = ({ onDataChange }) => {
                   setShowSuperCupSelection(false);
                   setLeagueWinnerId('');
                   setCupWinnerId('');
+                  setRunnerUpId('');
+                }}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Runner-up Selection Modal */}
+      {showRunnerUpSelection && (
+        <div className="modal-overlay">
+          <div className="modal">
+            <h3><Trophy size={18} style={{ marginRight: 6, verticalAlign: 'middle' }} />Double Winner Detected</h3>
+            <p>The same team was selected as both League Winner and Cup Winner. Please select a runner-up team to play in the Super Cup:</p>
+            <select
+              value={runnerUpId}
+              onChange={e => setRunnerUpId(e.target.value)}
+              className="team-dropdown"
+            >
+              <option value="">Select Runner-up</option>
+              {teams?.filter(team => team && team._id && team.name && team._id !== leagueWinnerId && team.name !== 'Orion' && team.name !== 'Firestorm').map(team => (
+                <option key={team._id} value={team._id}>{team.name}</option>
+              ))}
+            </select>
+            <div className="modal-actions">
+              <button 
+                className="btn btn-success" 
+                onClick={handleRunnerUpConfirm}
+                disabled={!runnerUpId || loading}
+              >
+                Confirm Runner-up
+              </button>
+              <button 
+                className="btn btn-secondary" 
+                onClick={() => {
+                  setShowRunnerUpSelection(false);
+                  setRunnerUpId('');
                 }}
               >
                 Cancel
@@ -540,7 +874,30 @@ const AdminPanel = ({ onDataChange }) => {
 
       {/* Match Editor */}
       <div className="card">
-        <h2>📝 Edit Matches</h2>
+        <h2><Edit3 size={22} style={{ marginRight: 8, verticalAlign: 'middle' }} />Edit Matches</h2>
+        
+          <div style={{ marginBottom: '20px', padding: '15px', backgroundColor: '#f8f9fa', borderRadius: '6px', border: '1px solid #dee2e6' }}>
+            <h3 style={{ marginBottom: '10px', fontSize: '16px', fontWeight: 600 }}><Save size={18} style={{ marginRight: 6, verticalAlign: 'middle' }} />Backup & Export</h3>
+            <p style={{ marginBottom: '12px', fontSize: '13px', color: '#666' }}>
+              Download all fixtures as a backup. JSON format can be re-imported, CSV can be opened in Excel.
+            </p>
+            <div style={{ display: 'flex', gap: '10px' }}>
+                <button 
+                  onClick={exportFixturesToJSON}
+                  className="btn btn-primary btn-small"
+                  title="Export all fixtures as JSON file"
+                >
+                  <FileDown size={16} style={{ marginRight: 4, verticalAlign: 'middle' }} />Export JSON
+                </button>
+                <button 
+                  onClick={exportFixturesToCSV}
+                  className="btn btn-success btn-small"
+                  title="Export all fixtures as CSV file"
+                >
+                  <FileBarChart2 size={16} style={{ marginRight: 4, verticalAlign: 'middle' }} />Export CSV
+                </button>
+            </div>
+          </div>
         
         <div className="filter-section">
           <select
@@ -579,7 +936,8 @@ const AdminPanel = ({ onDataChange }) => {
         </div>
 
         {matches.map(match => (
-          <div key={match._id} className={`match-row ${hasUnsavedChanges(match._id) ? 'match-row-edited' : ''}`}>
+          <>
+            <div key={match._id} className={`match-row ${hasUnsavedChanges(match._id) ? 'match-row-edited' : ''}`}>
             <div>
               <input
                 type="date"
@@ -712,8 +1070,18 @@ const AdminPanel = ({ onDataChange }) => {
               >
                 Reset
               </button>
+              {/* Team Selection feature temporarily disabled - will be implemented in fantasy section */}
             </div>
           </div>
+
+          {/* Goalscorer Selection - appears below the match row when scores are set */}
+          <GoalScorerSelector
+            match={match}
+            homeScore={getMatchValue(match, 'homeScore')}
+            awayScore={getMatchValue(match, 'awayScore')}
+            onGoalscorerData={(data) => setGoalscorerData(prev => ({ ...prev, [match._id]: data }))}
+          />
+          </>
         ))}
 
         {matches.length === 0 && (
@@ -722,8 +1090,6 @@ const AdminPanel = ({ onDataChange }) => {
           </div>
         )}
       </div>
-
-      {/* Current League Table */}
       <div className="card">
         <h2>📊 Current League Table</h2>
         <table className="table">
@@ -742,18 +1108,18 @@ const AdminPanel = ({ onDataChange }) => {
             </tr>
           </thead>
           <tbody>
-            {teams.filter(team => team.competition === 'league').map((team, index) => (
-              <tr key={team._id}>
+            {teams?.filter(team => team && team.competition === 'league').map((team, index) => (
+              <tr key={team?._id}>
                 <td>{index + 1}</td>
-                <td><strong>{team.name}</strong></td>
-                <td>{team.played}</td>
-                <td>{team.won}</td>
-                <td>{team.drawn}</td>
-                <td>{team.lost}</td>
-                <td>{team.goalsFor}</td>
-                <td>{team.goalsAgainst}</td>
-                <td>{team.goalDifference}</td>
-                <td><strong>{team.points}</strong></td>
+                <td><strong>{team?.name || 'Unknown'}</strong></td>
+                <td>{team?.played || 0}</td>
+                <td>{team?.won || 0}</td>
+                <td>{team?.drawn || 0}</td>
+                <td>{team?.lost || 0}</td>
+                <td>{team?.goalsFor || 0}</td>
+                <td>{team?.goalsAgainst || 0}</td>
+                <td>{team?.goalDifference || 0}</td>
+                <td><strong>{team?.points || 0}</strong></td>
               </tr>
             ))}
           </tbody>
@@ -768,7 +1134,7 @@ const AdminPanel = ({ onDataChange }) => {
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1rem' }}>
           {/* League Fixtures */}
           <div className="fixture-management-card">
-            <h3>🏆 League Fixtures</h3>
+            <h3><Trophy size={18} style={{ marginRight: 6, verticalAlign: 'middle' }} />League Fixtures</h3>
             <div className="status-info">
               <p>Status: <span className={`status-badge ${getFixtureStatusForCompetition('league').isPublished ? 'published' : 'draft'}`}>
                 {getFixtureStatusForCompetition('league').isPublished ? 'Published' : getFixtureStatusForCompetition('league').hasFixtures ? 'Draft' : 'Not Generated'}
@@ -799,7 +1165,7 @@ const AdminPanel = ({ onDataChange }) => {
 
           {/* Cup Fixtures */}
           <div className="fixture-management-card">
-            <h3>🏅 Cup Fixtures</h3>
+            <h3><Award size={18} style={{ marginRight: 6, verticalAlign: 'middle' }} />Cup Fixtures</h3>
             <div className="status-info">
               <p>Status: <span className={`status-badge ${getFixtureStatusForCompetition('cup').isPublished ? 'published' : 'draft'}`}>
                 {getFixtureStatusForCompetition('cup').isPublished ? 'Published' : getFixtureStatusForCompetition('cup').hasFixtures ? 'Draft' : 'Not Generated'}
@@ -830,7 +1196,7 @@ const AdminPanel = ({ onDataChange }) => {
 
           {/* Super Cup Fixtures */}
           <div className="fixture-management-card">
-            <h3>⭐ Super Cup Fixtures</h3>
+            <h3><Award size={18} style={{ marginRight: 6, verticalAlign: 'middle' }} />Super Cup Fixtures</h3>
             <div className="status-info">
               <p>Status: <span className={`status-badge ${getFixtureStatusForCompetition('super-cup').isPublished ? 'published' : 'draft'}`}>
                 {getFixtureStatusForCompetition('super-cup').isPublished ? 'Published' : getFixtureStatusForCompetition('super-cup').hasFixtures ? 'Draft' : 'Not Generated'}
@@ -861,7 +1227,7 @@ const AdminPanel = ({ onDataChange }) => {
 
           {/* ACWPL Fixtures */}
           <div className="fixture-management-card">
-            <h3>👧 ACWPL Fixtures</h3>
+            <h3><Trophy size={18} style={{ marginRight: 6, verticalAlign: 'middle' }} />ACWPL Fixtures</h3>
             <div className="status-info">
               <p>Status: <span className={`status-badge ${getFixtureStatusForCompetition('acwpl').isPublished ? 'published' : 'draft'}`}>
                 {getFixtureStatusForCompetition('acwpl').isPublished ? 'Published' : getFixtureStatusForCompetition('acwpl').hasFixtures ? 'Draft' : 'Not Generated'}
@@ -891,8 +1257,62 @@ const AdminPanel = ({ onDataChange }) => {
           </div>
         </div>
       </div>
+
+      {/* Team Selection Modal */}
+      {selectedMatchForLineup && (
+        <div style={styles.modalOverlay} onClick={() => setSelectedMatchForLineup(null)}>
+          <div style={styles.modalContent} onClick={(e) => e.stopPropagation()}>
+            <TeamSelection
+              match={selectedMatchForLineup}
+              onSave={() => {
+                setSelectedMatchForLineup(null);
+                fetchMatches();
+              }}
+              onClose={() => setSelectedMatchForLineup(null)}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Player Price Editor Modal */}
+      {showPriceEditor && (
+        <div style={styles.modalOverlay} onClick={() => setShowPriceEditor(false)}>
+          <div style={styles.modalContent} onClick={(e) => e.stopPropagation()}>
+            <PlayerPriceEditor onBack={() => setShowPriceEditor(false)} />
+          </div>
+        </div>
+      )}
     </div>
+  </>
   );
+};
+
+const styles = {
+  modalOverlay: {
+    position: 'fixed',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 1000
+  },
+  modalContent: {
+    backgroundColor: '#fff',
+    borderRadius: '8px',
+    maxWidth: '90%',
+    maxHeight: '90vh',
+    overflow: 'auto',
+    boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)'
+  }
+};
+
+AdminPanel.propTypes = {
+  onDataChange: PropTypes.func.isRequired,
+  isAdmin: PropTypes.bool.isRequired
 };
 
 export default AdminPanel;

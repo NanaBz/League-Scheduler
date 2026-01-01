@@ -1,12 +1,15 @@
-
 console.log('matches.js loaded');
 const express = require('express');
 const router = express.Router();
 const Match = require('../models/Match');
 const Team = require('../models/Team');
+const Player = require('../models/Player');
+const PlayerStats = require('../models/PlayerStats');
+const Season = require('../models/Season');
+const { authenticateAdmin } = require('../middleware/auth');
 
 // Reset match score
-router.post('/:id/reset-score', async (req, res) => {
+router.post('/:id/reset-score', authenticateAdmin, async (req, res) => {
   try {
     const match = await Match.findById(req.params.id);
     if (!match) {
@@ -27,7 +30,7 @@ router.post('/:id/reset-score', async (req, res) => {
 });
 
 // ACWPL best-of-5 series route (moved to top for guaranteed registration)
-router.post('/generate-acwpl', async (req, res) => {
+router.post('/generate-acwpl', authenticateAdmin, async (req, res) => {
   console.log('ACWPL route hit');
   try {
     const teams = await Team.find({ competition: 'acwpl' });
@@ -82,6 +85,8 @@ router.get('/', async (req, res) => {
     const matches = await Match.find(filter)
       .populate('homeTeam', 'name logo')
       .populate('awayTeam', 'name logo')
+      .populate('events.player', 'name number')
+      .populate('events.assistPlayer', 'name number')
       .sort({ matchweek: 1, date: 1 });
     
     res.json(matches);
@@ -91,7 +96,7 @@ router.get('/', async (req, res) => {
 });
 
 // Create a new match
-router.post('/', async (req, res) => {
+router.post('/', authenticateAdmin, async (req, res) => {
   const match = new Match(req.body);
 
   try {
@@ -105,7 +110,7 @@ router.post('/', async (req, res) => {
 });
 
 // Update match score and details
-router.put('/:id', async (req, res) => {
+router.put('/:id', authenticateAdmin, async (req, res) => {
   try {
     const match = await Match.findById(req.params.id);
     if (!match) {
@@ -151,7 +156,7 @@ router.put('/:id', async (req, res) => {
 });
 
 // Delete a match
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', authenticateAdmin, async (req, res) => {
   try {
     const match = await Match.findById(req.params.id);
     if (!match) {
@@ -166,7 +171,7 @@ router.delete('/:id', async (req, res) => {
 });
 
 // Generate league fixtures
-router.post('/generate-league', async (req, res) => {
+router.post('/generate-league', authenticateAdmin, async (req, res) => {
   try {
     const teams = await Team.find();
     if (teams.length !== 6) {
@@ -313,7 +318,7 @@ router.post('/generate-league', async (req, res) => {
 });
 
 // Generate cup fixtures with manual team selection
-router.post('/generate-cup', async (req, res) => {
+router.post('/generate-cup', authenticateAdmin, async (req, res) => {
   try {
     const { teamIds } = req.body; // Expect array of 4 team IDs
     
@@ -372,8 +377,8 @@ router.post('/generate-cup', async (req, res) => {
 });
 
 // Generate super cup fixtures with explicit winner selection
-router.post('/generate-super-cup', async (req, res) => {
-// Generate ACWPL (girls league) fixtures
+router.post('/generate-super-cup', authenticateAdmin, async (req, res) => {
+  // Generate ACWPL (girls league) fixtures
 // --- ACWPL fixture generation route moved above module.exports ---
 router.post('/generate-acwpl', async (req, res) => {
   console.log('ACWPL route hit');
@@ -414,47 +419,40 @@ router.post('/generate-acwpl', async (req, res) => {
   }
 });
   try {
-    const { leagueWinnerId, cupWinnerId } = req.body; // Explicit winner selection
-    
+    const { leagueWinnerId, cupWinnerId, originalDoubleWinnerId } = req.body; // Explicit winner selection
     if (!leagueWinnerId || !cupWinnerId) {
       return res.status(400).json({ message: 'Both league winner and cup winner IDs required' });
     }
-
-    if (leagueWinnerId === cupWinnerId) {
-      return res.status(400).json({ message: 'League winner and cup winner must be different teams' });
-    }
-
     // Verify both teams exist
     const [leagueWinner, cupWinner] = await Promise.all([
       Team.findById(leagueWinnerId),
       Team.findById(cupWinnerId)
     ]);
-
     if (!leagueWinner || !cupWinner) {
       return res.status(400).json({ message: 'One or more teams not found' });
     }
-
     // Clear existing super cup matches
     await Match.deleteMany({ competition: 'super-cup' });
-
+    // If double winner, store originalDoubleWinnerId for frontend display
     const superCupMatch = new Match({
       homeTeam: leagueWinnerId, // League winner is always home
-      awayTeam: cupWinnerId,    // Cup winner is always away
+      awayTeam: cupWinnerId,    // Cup winner or runner-up is always away
       date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
       time: '18:00',
       matchweek: 1,
       competition: 'super-cup',
       round: 'final',
       leagueWinner: leagueWinnerId,  // Store for display purposes
-      cupWinner: cupWinnerId         // Store for display purposes
+      cupWinner: cupWinnerId,        // Store for display purposes
+      originalDoubleWinnerId: originalDoubleWinnerId || null // Store if double winner
     });
-
     await superCupMatch.save();
     res.json({ 
       message: 'Super Cup fixture generated successfully', 
-      fixture: `${leagueWinner.name} (League Winner) vs ${cupWinner.name} (Cup Winner)`,
+      fixture: `${leagueWinner.name} (League Winner) vs ${cupWinner.name} (Cup Winner${originalDoubleWinnerId ? ' / Runner-up' : ''})`,
       leagueWinner: leagueWinner.name,
-      cupWinner: cupWinner.name
+      cupWinner: cupWinner.name,
+      runnerUp: originalDoubleWinnerId ? cupWinner.name : null
     });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -462,7 +460,7 @@ router.post('/generate-acwpl', async (req, res) => {
 });
 
 // Save fixtures for a competition (publish them)
-router.post('/save-fixtures', async (req, res) => {
+router.post('/save-fixtures', authenticateAdmin, async (req, res) => {
   try {
     const { competition } = req.body;
     
@@ -483,7 +481,7 @@ router.post('/save-fixtures', async (req, res) => {
 });
 
 // Reset fixtures for a competition (delete them)
-router.post('/reset-fixtures', async (req, res) => {
+router.post('/reset-fixtures', authenticateAdmin, async (req, res) => {
   try {
     const { competition } = req.body;
     
@@ -692,3 +690,99 @@ async function updateTeamStats(match, oldHomeScore, oldAwayScore, wasPlayed) {
 }
 
 module.exports = router;
+
+// Record or replace match events for stats aggregation
+router.post('/:id/events', authenticateAdmin, async (req, res) => {
+  try {
+    const match = await Match.findById(req.params.id);
+    if (!match) return res.status(404).json({ message: 'Match not found' });
+
+    // Ensure there is an active season so event stats have a season bucket
+    let season = await Season.findOne({ isActive: true });
+    if (!season) {
+      const lastSeason = await Season.findOne().sort({ seasonNumber: -1 });
+      const nextSeasonNumber = lastSeason ? lastSeason.seasonNumber + 1 : 1;
+      season = new Season({
+        seasonNumber: nextSeasonNumber,
+        name: `Season ${nextSeasonNumber}`,
+        startDate: new Date(),
+        endDate: new Date(Date.now() + 120 * 24 * 60 * 60 * 1000),
+        isActive: true
+      });
+      await season.save();
+    }
+    const seasonNumber = season.seasonNumber;
+
+    const { events } = req.body;
+    if (!Array.isArray(events)) return res.status(400).json({ message: 'events array required' });
+
+    const allowedTypes = ['GOAL', 'CLEAN_SHEET', 'YELLOW_CARD', 'RED_CARD'];
+    const allowedSides = ['home', 'away'];
+
+    // Helper to adjust stats for an event (delta=+1 or -1)
+    const adjustStatsForEvent = async (ev, delta) => {
+      if (!allowedTypes.includes(ev.type)) throw new Error('Invalid event type');
+      if (!allowedSides.includes(ev.side)) throw new Error('Invalid event side');
+      if (!ev.player) throw new Error('Event must include player');
+
+      const player = await Player.findById(ev.player).lean();
+      if (!player) throw new Error('Player not found');
+
+      const competition = match.competition;
+
+      // Upsert the PlayerStats doc
+      const statsDoc = await PlayerStats.findOneAndUpdate(
+        { player: player._id, team: player.team, seasonNumber, competition },
+        {},
+        { upsert: true, new: true, setDefaultsOnInsert: true }
+      );
+
+      const update = {};
+      if (ev.type === 'GOAL') {
+        if (ev.ownGoal) {
+          update.ownGoals = (statsDoc.ownGoals || 0) + delta;
+        } else {
+          update.goals = (statsDoc.goals || 0) + delta;
+          if (ev.assistPlayer) {
+            const assistPlayer = await Player.findById(ev.assistPlayer).lean();
+            if (assistPlayer) {
+              await PlayerStats.findOneAndUpdate(
+                { player: assistPlayer._id, team: assistPlayer.team, seasonNumber, competition },
+                { $inc: { assists: delta } },
+                { upsert: true, new: true, setDefaultsOnInsert: true }
+              );
+            }
+          }
+        }
+      } else if (ev.type === 'CLEAN_SHEET') {
+        update.cleanSheets = (statsDoc.cleanSheets || 0) + delta;
+      } else if (ev.type === 'YELLOW_CARD') {
+        update.yellowCards = (statsDoc.yellowCards || 0) + delta;
+      } else if (ev.type === 'RED_CARD') {
+        update.redCards = (statsDoc.redCards || 0) + delta;
+      }
+
+      await PlayerStats.updateOne(
+        { _id: statsDoc._id },
+        { $set: update }
+      );
+    };
+
+    // Reverse previous events
+    for (const ev of match.events || []) {
+      await adjustStatsForEvent(ev, -1);
+    }
+
+    // Validate and apply new events
+    for (const ev of events) {
+      await adjustStatsForEvent(ev, +1);
+    }
+
+    match.events = events;
+    await match.save();
+
+    res.json({ message: 'Match events updated', matchId: match._id, eventsCount: events.length });
+  } catch (error) {
+    res.status(400).json({ message: error.message });
+  }
+});

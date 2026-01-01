@@ -3,6 +3,8 @@ const router = express.Router();
 const Season = require('../models/Season');
 const Team = require('../models/Team');
 const Match = require('../models/Match');
+const { authenticateAdmin } = require('../middleware/auth');
+const AuditLog = require('../models/AuditLog');
 
 // Get all seasons
 router.get('/', async (req, res) => {
@@ -52,8 +54,16 @@ router.get('/:seasonNumber', async (req, res) => {
 });
 
 // Archive current season and start new one
-router.post('/reset', async (req, res) => {
+router.post('/reset', authenticateAdmin, async (req, res) => {
   try {
+    // Audit log
+    await AuditLog.create({
+      action: 'reset_season',
+      admin: { id: req.admin._id, email: req.admin.email },
+      details: {},
+      ip: req.ip,
+      userAgent: req.headers['user-agent']
+    });
     // Get current season number (highest + 1)
     const lastSeason = await Season.findOne().sort({ seasonNumber: -1 });
     const nextSeasonNumber = lastSeason ? lastSeason.seasonNumber + 1 : 1;
@@ -325,8 +335,15 @@ router.post('/reset', async (req, res) => {
 });
 
 // Utility route to clean up duplicate seasons (for debugging)
-router.delete('/cleanup-duplicates', async (req, res) => {
+router.delete('/cleanup-duplicates', authenticateAdmin, async (req, res) => {
   try {
+    await AuditLog.create({
+      action: 'cleanup_duplicate_seasons',
+      admin: { id: req.admin._id, email: req.admin.email },
+      details: {},
+      ip: req.ip,
+      userAgent: req.headers['user-agent']
+    });
     const seasons = await Season.find().sort({ seasonNumber: 1, createdAt: 1 });
     const seenNumbers = new Set();
     const duplicatesToDelete = [];
@@ -355,10 +372,16 @@ router.delete('/cleanup-duplicates', async (req, res) => {
 });
 
 // Delete a specific season (admin feature)
-router.delete('/:seasonNumber', async (req, res) => {
+router.delete('/:seasonNumber', authenticateAdmin, async (req, res) => {
   try {
     const seasonNumber = parseInt(req.params.seasonNumber);
-    
+    await AuditLog.create({
+      action: 'delete_season',
+      admin: { id: req.admin._id, email: req.admin.email },
+      details: { seasonNumber },
+      ip: req.ip,
+      userAgent: req.headers['user-agent']
+    });
     console.log(`🗑️ Admin request to delete Season ${seasonNumber}`);
     
     const seasonToDelete = await Season.findOne({ seasonNumber });
@@ -383,8 +406,15 @@ router.delete('/:seasonNumber', async (req, res) => {
 });
 
 // Delete all seasons (admin feature for complete reset)
-router.delete('/', async (req, res) => {
+router.delete('/', authenticateAdmin, async (req, res) => {
   try {
+    await AuditLog.create({
+      action: 'delete_all_seasons',
+      admin: { id: req.admin._id, email: req.admin.email },
+      details: {},
+      ip: req.ip,
+      userAgent: req.headers['user-agent']
+    });
     console.log('🗑️ Admin request to delete ALL seasons');
     
     const result = await Season.deleteMany({});

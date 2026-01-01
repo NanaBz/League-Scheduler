@@ -1,0 +1,161 @@
+/* Fantasy Dashboard - Red/Black/White only */
+
+.fantasy-card {
+  background: var(--red-gradient);
+  color: var(--white);
+  border-radius: 16px;
+  padding: 16px;
+  box-shadow: 0 10px 20px rgba(0,0,0,0.15);
+  overflow: hidden;
+  min-height: 60vh; /* 60-70% mobile screen */
+  display: flex;
+  flex-direction: column;
+}
+
+.fantasy-card .top-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.fantasy-card .user-block {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.fantasy-card .avatar {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: #111;
+  border: 2px solid rgba(255,255,255,0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+}
+
+.fantasy-card .names {
+  display: flex;
+  flex-direction: column;
+}
+
+.fantasy-card .names .team {
+  font-weight: 800;
+  font-size: 1.05rem;
+  letter-spacing: 0.2px;
+}
+
+.fantasy-card .names .manager {
+  font-size: .9rem;
+  opacity: 0.9;
+}
+
+.fantasy-card .divider {
+  margin: 14px 0;
+  height: 1px;
+  background: rgba(255,255,255,0.25);
+}
+
+.fantasy-card .gw-header {
+  text-align: center;
+  font-weight: 700;
+  opacity: 0.95;
+}
+
+.fantasy-card .metrics {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 6px;
+  align-items: stretch;
+  text-align: center;
+  margin-top: 10px;
+}
+
+.fantasy-card .metric {
+  background: rgba(0,0,0,0.35);
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 12px;
+  padding: 12px 8px;
+  cursor: default;
+}
+
+.fantasy-card .metric.clickable {
+  cursor: pointer;
+}
+
+.fantasy-card .metric .label {
+  font-size: .78rem;
+  opacity: .9;
+}
+
+.fantasy-card .metric .value {
+  font-size: 1.6rem;
+  font-weight: 900;
+  letter-spacing: .5px;
+}
+
+.fantasy-card .deadline {
+  margin-top: 14px;
+  background: #111;
+  color: #fff;
+  border-radius: 12px;
+  border: 1px solid rgba(255,255,255,0.12);
+  padding: 12px;
+}
+
+.fantasy-card .deadline .title {
+  font-size: .85rem;
+  opacity: .85;
+  margin-bottom: 6px;
+}
+
+.fantasy-card .deadline .time {
+  font-size: 1rem;
+  font-weight: 800;
+}
+
+.fantasy-card .actions {
+  margin-top: auto;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+}
+
+.fantasy-card .btn-pill {
+  width: 100%;
+  padding: 14px 16px;
+  border-radius: 999px;
+  border: 2px solid rgba(255,255,255,0.2);
+  font-weight: 800;
+  letter-spacing: .3px;
+  cursor: pointer;
+  transition: transform .15s ease, box-shadow .15s ease, background .15s ease;
+}
+
+.fantasy-card .btn-pill.white {
+  background: var(--white);
+  color: #000;
+}
+
+.fantasy-card .btn-pill.dark {
+  background: #000;
+  color: #fff;
+}
+
+.fantasy-card .btn-pill:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 14px rgba(0,0,0,0.22);
+}
+
+/* Desktop tweaks */
+@media (min-width: 769px) {
+  .fantasy-card {
+    min-height: 420px;
+    padding: 24px 28px;
+  }
+  .fantasy-card .actions {
+    grid-template-columns: 1fr 1fr;
+  }
+}

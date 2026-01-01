@@ -1,0 +1,13 @@
+{
+  "name": "lint",
+  "version": "1.0.0",
+  "description": "ESLint script for League Scheduler frontend",
+  "main": "index.js",
+  "scripts": {
+    "lint": "eslint src --ext .js,.jsx"
+  },
+  "devDependencies": {
+    "eslint": "^8.0.0",
+    "eslint-plugin-react": "^7.0.0"
+  }
+}

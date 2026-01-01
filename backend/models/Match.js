@@ -68,6 +68,78 @@ const matchSchema = new mongoose.Schema({
   isPublished: {
     type: Boolean,
     default: false
+  },
+  // Stores the original double winner team ID for Super Cup runner-up logic
+  originalDoubleWinnerId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Team',
+    default: null
+  },
+  events: [{
+    type: {
+      type: String,
+      enum: ['GOAL', 'CLEAN_SHEET', 'YELLOW_CARD', 'RED_CARD'],
+      required: true
+    },
+    side: {
+      type: String,
+      enum: ['home', 'away'],
+      required: true
+    },
+    player: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Player',
+      required: true
+    },
+    assistPlayer: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Player'
+    },
+    ownGoal: {
+      type: Boolean,
+      default: false
+    },
+    minute: {
+      type: Number
+    }
+  }],
+  startingLineup: {
+    homeTeam: {
+      gk: [{
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Player'
+      }],
+      df: [{
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Player'
+      }],
+      mf: [{
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Player'
+      }],
+      att: [{
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Player'
+      }]
+    },
+    awayTeam: {
+      gk: [{
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Player'
+      }],
+      df: [{
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Player'
+      }],
+      mf: [{
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Player'
+      }],
+      att: [{
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Player'
+      }]
+    }
   }
 }, {
   timestamps: true

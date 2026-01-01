@@ -1,0 +1,340 @@
+/* Player Price Editor - Admin feature */
+
+.price-editor-container {
+  background: var(--white);
+  border-radius: 16px;
+  padding: 16px;
+}
+
+.price-editor-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.price-back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 2px;
+  background: transparent;
+  border: none;
+  color: var(--primary-red);
+  font-weight: 800;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: color 0.15s ease, transform 0.15s ease;
+  align-self: flex-start;
+}
+
+.price-back-link svg { stroke-width: 2.25; }
+.price-back-link:hover { color: var(--primary-red-dark); }
+.price-back-link:active { transform: translateY(1px); }
+
+.price-editor-title-block {
+  text-align: center;
+  flex: 1;
+}
+
+.price-editor-title {
+  margin: 0;
+  color: var(--primary-red);
+  font-size: 1.4rem;
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+.price-editor-subtitle {
+  font-size: 0.8rem;
+  color: #64748b;
+  margin-top: 4px;
+  font-weight: 600;
+}
+
+/* Team Selection */
+.price-team-selection {
+  margin-bottom: 16px;
+}
+
+.price-team-label {
+  margin: 0 0 8px 0;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #1f2937;
+}
+
+.price-team-cards {
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  padding-bottom: 6px;
+  flex-wrap: wrap;
+}
+
+.price-team-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 10px;
+  border: 2px solid #e5e7eb;
+  border-radius: 12px;
+  background: #f9fafb;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  min-width: 70px;
+}
+
+.price-team-card img {
+  width: 40px;
+  height: 40px;
+  object-fit: contain;
+  border-radius: 6px;
+}
+
+.price-team-card span {
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-align: center;
+  color: #555;
+}
+
+.price-team-card p {
+  margin: 0;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #1f2937;
+  text-align: center;
+  line-height: 1.2;
+}
+
+.price-team-card:hover {
+  border-color: var(--primary-red);
+  background: #fef2f2;
+}
+
+.price-team-card.active {
+  border-color: var(--primary-red);
+  background: var(--primary-red);
+  color: #fff;
+}
+
+.price-team-card.active p {
+  color: #fff;
+}
+
+/* Editor Content */
+.price-editor-content {
+  padding: 12px 0;
+}
+
+.price-error {
+  background: #fee;
+  color: #c00;
+  padding: 10px 12px;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  margin-bottom: 12px;
+  border-left: 4px solid #c00;
+}
+
+.price-success {
+  background: #efe;
+  color: #060;
+  padding: 10px 12px;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  margin-bottom: 12px;
+  border-left: 4px solid #060;
+}
+
+.price-loading,
+.price-empty {
+  text-align: center;
+  color: #64748b;
+  font-size: 0.95rem;
+  padding: 20px;
+}
+
+/* Position Groups */
+.price-editor-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 16px;
+}
+
+.price-position-group {
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 12px;
+  overflow: hidden;
+}
+
+.price-position-title {
+  margin: 0 0 10px 0;
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: var(--primary-red);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.price-position-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.price-player-row {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  gap: 8px;
+  align-items: center;
+  padding: 8px;
+  background: #fff;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+}
+
+.price-player-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.price-player-name {
+  margin: 0;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #1f2937;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.price-player-number {
+  margin: 0;
+  font-size: 0.75rem;
+  color: #64748b;
+  font-weight: 600;
+}
+
+.price-input-group {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: #f3f4f6;
+  border-radius: 6px;
+  padding: 4px 8px;
+  border: 1px solid #e5e7eb;
+}
+
+.price-input {
+  width: 60px;
+  border: none;
+  background: transparent;
+  font-size: 0.9rem;
+  font-weight: 700;
+  text-align: center;
+  padding: 0;
+  color: #1f2937;
+}
+
+.price-input:focus {
+  outline: none;
+  color: var(--primary-red);
+}
+
+.price-input::placeholder {
+  color: #cbd5e0;
+}
+
+.price-currency {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #64748b;
+}
+
+.price-save-btn {
+  padding: 6px 12px;
+  background: var(--primary-red);
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  font-weight: 800;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.price-save-btn:hover:not(:disabled) {
+  background: var(--primary-red-dark);
+  transform: translateY(-1px);
+}
+
+.price-save-btn:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.price-save-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+@media (max-width: 768px) {
+  .price-editor-container {
+    padding: 10px;
+  }
+
+  .price-editor-header {
+    margin-bottom: 10px;
+  }
+
+  .price-editor-title {
+    font-size: 1.2rem;
+  }
+
+  .price-editor-subtitle {
+    font-size: 0.75rem;
+  }
+
+  .price-team-cards {
+    gap: 8px;
+    overflow-x: auto;
+    scroll-behavior: smooth;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .price-team-card {
+    min-width: 65px;
+    padding: 6px 8px;
+  }
+
+  .price-editor-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .price-player-row {
+    grid-template-columns: 1fr auto auto;
+    padding: 6px;
+  }
+
+  .price-input-group {
+    padding: 3px 6px;
+  }
+
+  .price-input {
+    width: 50px;
+    font-size: 0.85rem;
+  }
+
+  .price-save-btn {
+    padding: 5px 10px;
+    font-size: 0.75rem;
+  }
+}

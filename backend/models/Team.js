@@ -6,6 +6,13 @@ const teamSchema = new mongoose.Schema({
     required: true,
     unique: true
   },
+  // Team category: boys or girls
+  category: {
+    type: String,
+    enum: ['boys', 'girls'],
+    default: 'boys',
+    required: true
+  },
   logo: {
     type: String,
     default: ''
@@ -20,6 +27,7 @@ const teamSchema = new mongoose.Schema({
     type: Number,
     default: 0
   },
+  
   won: {
     type: Number,
     default: 0
@@ -57,7 +65,19 @@ const teamSchema = new mongoose.Schema({
       },
       message: 'Form array can only contain up to 3 results'
     }
-  }
+  },
+  staff: [{
+    role: {
+      type: String,
+      enum: ['Coach', 'Assistant'],
+      required: true
+    },
+    name: {
+      type: String,
+      required: true,
+      trim: true
+    }
+  }]
 }, {
   timestamps: true
 });

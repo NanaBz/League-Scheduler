@@ -1,29 +1,41 @@
 import React, { useState, useEffect } from 'react';
+import { Trophy, Award, Star, Users, Zap, Cog, LogOut } from 'lucide-react';
 
 import UserView from './components/UserView';
 import AdminPanel from './components/AdminPanel';
+import PlayerManagement from './components/PlayerManagement';
 import AdminAuth from './components/AdminAuth';
 import Footer from './components/Footer';
+import Sidebar from './components/Sidebar';
+import AdminSidebar from './components/AdminSidebar';
+import StatsPage from './components/StatsPage';
+import TeamsPage from './components/TeamsPage';
+import GirlsTeamsPage from './components/GirlsTeamsPage';
+import FantasyManagement from './components/FantasyManagement';
 import axios from 'axios';
 import './index.css';
 
 function App() {
   const [activeTab, setActiveTab] = useState('user');
+  const [activeSection, setActiveSection] = useState('fixtures'); // fixtures | stats | teams | acwpl | fantasy
   const [selectedCompetition, setSelectedCompetition] = useState('league');
   // Expose setSelectedCompetition globally for Footer quick links
   React.useEffect(() => {
     window.setSelectedCompetition = (comp) => {
       setActiveTab('user');
+      setActiveSection('fixtures');
       setSelectedCompetition(comp);
     };
     return () => { delete window.setSelectedCompetition; };
   }, []);
   const [isAdmin, setIsAdmin] = useState(false);
   const [adminToken, setAdminToken] = useState(null);
+  // eslint-disable-next-line no-unused-vars
   const [adminData, setAdminData] = useState(null);
   const [showLogin, setShowLogin] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [dataRefreshKey, setDataRefreshKey] = useState(0);
+  const [adminSection, setAdminSection] = useState('fixtures-mgmt'); // fixtures-mgmt | players-mgmt | fantasy-mgmt
   const [competitions] = useState({
     league: { name: 'League', description: 'Circle Method league' },
     cup: { name: 'Agha Cup', description: 'Knockout cup for top 4 teams' },
@@ -98,12 +110,14 @@ function App() {
     console.log('Data changed - triggering UserView refresh');
   };
 
+  const [girlsTeamsActive, setGirlsTeamsActive] = useState(false);
+
   if (isLoading) {
     return (
       <div className="loading-screen">
-        <div className="loading-content">
+          <div className="loading-content">
           <div className="loading-spinner"></div>
-          <h2>⚽ Acity League Scheduler</h2>
+          <h2>Acity Premier League</h2>
           <p>Loading your football management system...</p>
           <div className="loading-bar">
             <div className="loading-progress"></div>
@@ -120,77 +134,102 @@ function App() {
         <nav className="unified-top-nav">
           {/* Left Section: Brand */}
           <div className="nav-brand">
-            <h1>⚽ Acity League Scheduler</h1>
-            <p>Football League Management System</p>
+            <img src="/logos/acity-sports-logo.jpg" alt="Acity Sports" className="nav-logo" style={{ borderRadius: '50%' }} />
+            <h1>Acity Premier League</h1>
           </div>
           
-          {/* Center Section: Competition Navigation (only when in user view) */}
-          {activeTab === 'user' && (
+          {/* Center Section: Competition Navigation (only when on Fixtures section) */}
+          {activeTab === 'user' && activeSection === 'fixtures' && (
             <div className="nav-competitions">
               <button
                 className={`comp-nav-btn ${selectedCompetition === 'league' ? 'active' : ''}`}
                 onClick={() => setSelectedCompetition('league')}
               >
-                <span className="comp-icon">🏆</span>
+                <Trophy size={16} />
                 <span className="comp-text">League</span>
               </button>
               <button
                 className={`comp-nav-btn ${selectedCompetition === 'cup' ? 'active' : ''}`}
                 onClick={() => setSelectedCompetition('cup')}
               >
-                <span className="comp-icon">🏅</span>
+                <Award size={16} />
                 <span className="comp-text">Agha Cup</span>
               </button>
               <button
                 className={`comp-nav-btn ${selectedCompetition === 'super-cup' ? 'active' : ''}`}
                 onClick={() => setSelectedCompetition('super-cup')}
               >
-                <span className="comp-icon">⭐</span>
+                <Star size={16} />
                 <span className="comp-text">Super Cup</span>
               </button>
               <button
                 className={`comp-nav-btn ${selectedCompetition === 'acwpl' ? 'active' : ''}`}
                 onClick={() => setSelectedCompetition('acwpl')}
               >
-                <span className="comp-icon">👧</span>
-                <span className="comp-text">Girls League</span>
+                <Users size={16} />
+                <span className="comp-text">ACWPL</span>
               </button>
             </div>
           )}
         </nav>
 
+        {/* Desktop Sidebar */}
+        <div className="layout-with-sidebar">
+          <div className="desktop-only">
+            {activeTab === 'user' ? (
+              <Sidebar
+                activeSection={activeSection}
+                onSelect={(id) => {
+                  setActiveTab('user');
+                  if (id === 'acwpl') { setActiveSection('fixtures'); setSelectedCompetition('acwpl'); }
+                  else setActiveSection(id);
+                }}
+              />
+            ) : isAdmin ? (
+              <AdminSidebar
+                activeSection={adminSection}
+                onSelect={(id) => setAdminSection(id)}
+                onSwitchToUser={() => setActiveTab('user')}
+                isAdmin={isAdmin}
+              />
+            ) : null}
+          </div>
+
+          {/* Content Area */}
+          <div className="content-area">
+
         {/* Mobile Bottom Navigation */}
         <nav className="mobile-nav">
-          {/* League Sub-Navigation when on user tab */}
+          {/* App Sections on mobile */}
           {activeTab === 'user' && (
             <>
               <button
-                className={`mobile-nav-item ${selectedCompetition === 'league' ? 'active' : ''}`}
-                onClick={() => setSelectedCompetition('league')}
+                className={`mobile-nav-item ${activeSection === 'fixtures' ? 'active' : ''}`}
+                onClick={() => setActiveSection('fixtures')}
               >
-                <div className="mobile-nav-icon">🏆</div>
-                <div>League</div>
+                <div className="mobile-nav-icon"><Trophy size={20} /></div>
+                <div>Fixtures</div>
               </button>
               <button
-                className={`mobile-nav-item ${selectedCompetition === 'cup' ? 'active' : ''}`}
-                onClick={() => setSelectedCompetition('cup')}
+                className={`mobile-nav-item ${activeSection === 'stats' ? 'active' : ''}`}
+                onClick={() => setActiveSection('stats')}
               >
-                <div className="mobile-nav-icon">🏅</div>
-                <div>Cup</div>
+                <div className="mobile-nav-icon"><Zap size={20} /></div>
+                <div>Stats</div>
               </button>
               <button
-                className={`mobile-nav-item ${selectedCompetition === 'super-cup' ? 'active' : ''}`}
-                onClick={() => setSelectedCompetition('super-cup')}
+                className={`mobile-nav-item ${activeSection === 'teams' ? 'active' : ''}`}
+                onClick={() => setActiveSection('teams')}
               >
-                <div className="mobile-nav-icon">⭐</div>
-                <div>Super</div>
+                <div className="mobile-nav-icon"><Users size={20} /></div>
+                <div>Teams</div>
               </button>
               <button
-                className={`mobile-nav-item ${selectedCompetition === 'acwpl' ? 'active' : ''}`}
-                onClick={() => setSelectedCompetition('acwpl')}
+                className={`mobile-nav-item ${activeSection === 'fantasy' ? 'active' : ''}`}
+                onClick={() => setActiveSection('fantasy')}
               >
-                <div className="mobile-nav-icon">👧</div>
-                <div>Girls</div>
+                <div className="mobile-nav-icon"><Star size={20} /></div>
+                <div>Fantasy</div>
               </button>
             </>
           )}
@@ -202,20 +241,20 @@ function App() {
                 className="mobile-nav-item"
                 onClick={() => setActiveTab('user')}
               >
-                <div className="mobile-nav-icon">🏆</div>
+                <Trophy size={18} />
                 <div>League</div>
               </button>
               <button
                 className="mobile-nav-item active"
               >
-                <div className="mobile-nav-icon">⚙️</div>
+                <Cog size={18} />
                 <div>Admin</div>
               </button>
               <button
                 className="mobile-nav-item"
                 onClick={handleLogout}
               >
-                <div className="mobile-nav-icon">🚪</div>
+                <LogOut size={18} />
                 <div>Logout</div>
               </button>
             </>
@@ -230,7 +269,8 @@ function App() {
           />
         )}
 
-        {/* Competition Info Banner */}
+        {/* Competition Info Banner (only fixtures) */}
+        {activeTab === 'user' && activeSection === 'fixtures' && (
         <div className="competition-info">
           <h3>{competitions[selectedCompetition]?.name}</h3>
           <p>
@@ -244,19 +284,62 @@ function App() {
               'Single match between the League champion and Cup winner. If the same team wins both, the runner-up plays instead.'
             }
           </p>
-        </div>
+        </div>) }
 
         {/* Main Content */}
         {activeTab === 'user' ? (
-          <UserView 
-            competitions={competitions}
-            selectedCompetition={selectedCompetition}
-            refreshKey={dataRefreshKey}
-            isAdmin={isAdmin}
-          />
+          activeSection === 'fixtures' ? (
+            <UserView 
+              competitions={competitions}
+              selectedCompetition={selectedCompetition}
+              refreshKey={dataRefreshKey}
+              isAdmin={isAdmin}
+            />
+          ) : activeSection === 'stats' ? (
+            <StatsPage />
+          ) : activeSection === 'teams' ? (
+            girlsTeamsActive ? (
+              <GirlsTeamsPage />
+            ) : (
+              <TeamsPage refreshKey={dataRefreshKey} onNavigateToGirlsTeams={() => setGirlsTeamsActive(true)} />
+            )
+          ) : activeSection === 'fantasy' ? (
+            <div style={{
+              display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+              minHeight: '40vh', textAlign: 'center', color: '#64748b', padding: '2rem'
+            }}>
+              <Star size={48} color="#fbbf24" style={{ marginBottom: 16 }} />
+              <h2 style={{ fontWeight: 700, fontSize: '2rem', marginBottom: 8 }}>Fantasy Premier League</h2>
+              <p style={{ fontSize: '1.2rem', marginBottom: 16 }}>Coming Soon!</p>
+              <p style={{ fontSize: '1rem', color: '#94a3b8' }}>The Fantasy feature will be available in a future update. Stay tuned!</p>
+            </div>
+          ) : null
         ) : isAdmin ? (
-          <AdminPanel onDataChange={handleDataChange} />
+          adminSection === 'fixtures-mgmt' ? (
+            <AdminPanel onDataChange={handleDataChange} isAdmin={isAdmin} />
+          ) : adminSection === 'players-mgmt' ? (
+            <PlayerManagement onDataChange={handleDataChange} isAdmin={isAdmin} />
+          ) : adminSection === 'fantasy-mgmt' ? (
+            <FantasyManagement isAdmin={isAdmin} />
+          ) : null
         ) : null}
+
+
+        {/* If on Girls Teams, add a back button to Boys Teams */}
+        {activeTab === 'user' && activeSection === 'teams' && girlsTeamsActive && (
+          <div style={{ margin: '16px 0 0 0' }}>
+            <button
+              className="btn btn-secondary"
+              style={{ fontWeight: 600, padding: '8px 18px', borderRadius: 8, background: '#f1f5f9', color: '#1e293b', border: '1px solid #e2e8f0' }}
+              onClick={() => setGirlsTeamsActive(false)}
+            >
+              ← Back to Boys Teams
+            </button>
+          </div>
+        )}
+
+        </div>{/* content-area */}
+        </div>{/* layout-with-sidebar */}
 
         {/* Footer */}
         <Footer 

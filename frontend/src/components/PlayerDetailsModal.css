@@ -1,0 +1,220 @@
+.pdm-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.pdm-modal {
+  background: white;
+  border-radius: 12px;
+  width: 90%;
+  max-width: 500px;
+  max-height: 85vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+}
+
+.pdm-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.pdm-header h3 {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #111;
+}
+
+.pdm-close {
+  background: none;
+  border: none;
+  font-size: 2rem;
+  line-height: 1;
+  cursor: pointer;
+  color: #6b7280;
+  padding: 0;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  transition: background 0.2s;
+}
+
+.pdm-close:hover {
+  background: #f3f4f6;
+}
+
+.pdm-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.pdm-player-info {
+  text-align: center;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.pdm-name {
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: #111;
+  margin-bottom: 6px;
+}
+
+.pdm-meta {
+  color: #6b7280;
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.pdm-stats {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.pdm-stat-item {
+  background: #f9fafb;
+  padding: 12px;
+  border-radius: 8px;
+  text-align: center;
+}
+
+.pdm-stat-label {
+  font-size: 0.85rem;
+  color: #6b7280;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.pdm-stat-value {
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: #111;
+}
+
+.pdm-past-games h4,
+.pdm-upcoming h4 {
+  margin: 0 0 12px 0;
+  font-size: 1rem;
+  font-weight: 700;
+  color: #111;
+}
+
+.pdm-game-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  background: #f9fafb;
+  border-radius: 6px;
+  margin-bottom: 8px;
+}
+
+.pdm-game-gw {
+  font-weight: 700;
+  color: #111;
+  min-width: 50px;
+}
+
+.pdm-game-opponent {
+  flex: 1;
+  color: #374151;
+  font-weight: 600;
+}
+
+.pdm-game-points {
+  font-weight: 800;
+  color: #059669;
+}
+
+.pdm-upcoming {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.pdm-fixture-pill {
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  padding: 8px 12px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #334155;
+}
+
+.pdm-empty {
+  color: #9ca3af;
+  font-style: italic;
+  text-align: center;
+  padding: 12px;
+}
+
+.pdm-actions {
+  display: flex;
+  gap: 12px;
+  padding: 16px 20px;
+  border-top: 1px solid #e5e7eb;
+}
+
+.pdm-btn {
+  flex: 1;
+  padding: 12px 20px;
+  border: none;
+  border-radius: 8px;
+  font-weight: 700;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.pdm-btn-replace {
+  background: #3b82f6;
+  color: white;
+}
+
+.pdm-btn-replace:hover {
+  background: #2563eb;
+}
+
+.pdm-btn-remove {
+  background: #ef4444;
+  color: white;
+}
+
+.pdm-btn-remove:hover {
+  background: #dc2626;
+}
+
+@media (max-width: 768px) {
+  .pdm-modal {
+    width: 95%;
+    max-height: 90vh;
+  }
+
+  .pdm-actions {
+    flex-direction: column;
+  }
+
+  .pdm-btn {
+    width: 100%;
+  }
+}

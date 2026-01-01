@@ -1,0 +1,102 @@
+/* Player Picker Modal */
+.ppm-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.6); display:flex; align-items:center; justify-content:center; z-index: 1000; }
+.ppm-modal { background: #fff; width: 90%; max-width: 800px; border-radius: 12px; overflow:hidden; box-shadow: 0 10px 25px rgba(0,0,0,0.2); }
+.ppm-header { display:flex; align-items:center; justify-content: space-between; padding: 12px 14px; border-bottom: 1px solid #eee; }
+.ppm-header h3 { margin: 0; font-size: 1.1rem; font-weight: 700; }
+.ppm-close { background:none; border:none; font-size: 1.4rem; cursor:pointer; color:#444; padding: 0; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; }
+.ppm-controls { padding: 10px 12px; border-bottom: 1px solid #eee; }
+.ppm-search { width: 100%; padding: 9px 11px; border: 1px solid #d4d4d8; border-radius: 8px; margin-bottom: 8px; font-size: 0.9rem; }
+.ppm-search::placeholder { color: #999; }
+
+/* Filter buttons layout - horizontal and compact */
+.ppm-filters { display: flex; gap: 6px; flex-wrap: wrap; }
+.ppm-filter-group { position: relative; }
+.ppm-filter-btn { 
+  padding: 3px 6px; 
+  border: 1px solid #d4d4d8; 
+  border-radius: 6px; 
+  background: transparent; 
+  cursor: pointer; 
+  font-weight: 600; 
+  font-size: 0.75rem; 
+  color: #fff;
+  background: #2d2d3d;
+  min-width: auto;
+  white-space: nowrap;
+  transition: all 0.2s ease;
+  line-height: 1;
+}
+.ppm-filter-btn:hover:not(:disabled) { background: #3d3d4d; border-color: #555; }
+.ppm-filter-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* Dropdown menu */
+.ppm-filter-dropdown { 
+  position: absolute; 
+  top: 100%; 
+  left: 0; 
+  background: #fff; 
+  border: 1px solid #d4d4d8; 
+  border-radius: 6px; 
+  margin-top: 2px; 
+  min-width: 140px; 
+  max-height: 180px; 
+  overflow-y: auto; 
+  display: none; 
+  flex-direction: column; 
+  z-index: 10;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+.ppm-filter-group:hover .ppm-filter-dropdown { display: flex; }
+.ppm-filter-item { 
+  padding: 8px 10px; 
+  border: none; 
+  background: transparent; 
+  cursor: pointer; 
+  text-align: left; 
+  font-size: 0.85rem;
+  color: #333;
+  font-weight: 600;
+  transition: background 0.15s;
+}
+.ppm-filter-item:hover { background: #f1f5f9; }
+.ppm-filter-item.active { background: #e5e7eb; color: #111; font-weight: 700; }
+.ppm-filter-item:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* Club dropdown specific styling */
+.ppm-clubs-dropdown { min-width: 160px; }
+.ppm-club-item { 
+  display: flex; 
+  align-items: center; 
+  gap: 6px; 
+  padding: 8px 10px; 
+  border: none; 
+  background: transparent; 
+  cursor: pointer; 
+  font-size: 0.85rem;
+  color: #333;
+  font-weight: 600;
+}
+.ppm-club-item:hover { background: #f1f5f9; }
+.ppm-club-item input { cursor: pointer; }
+
+.ppm-list { max-height: 60vh; overflow:auto; }
+.ppm-row-item { display:grid; grid-template-columns: 1.5fr 1fr; gap:8px; align-items:center; padding:10px 12px; border-bottom:1px solid #eee; cursor:pointer; }
+.ppm-row-item:hover { background:#f9fafb; }
+.ppm-row-item.disabled { opacity:0.45; cursor:not-allowed; pointer-events:none; }
+.ppm-row-item.disabled:hover { background:inherit; }
+.ppm-player-main .ppm-name { font-weight:800; color:#111; }
+.ppm-player-main .ppm-sub { color:#64748b; font-size:0.85rem; }
+.ppm-meta { display:flex; flex-direction:column; gap:4px; align-items:flex-end; }
+.ppm-price { font-weight:800; }
+.ppm-stat { color:#334155; font-weight:700; font-size:0.85rem; }
+.ppm-next { display:flex; gap:4px; flex-wrap:wrap; }
+.ppm-next-pill { background:#f1f5f9; border:1px solid #e2e8f0; border-radius:999px; padding:3px 6px; font-size:0.75rem; }
+.ppm-loading { padding: 20px; text-align: center; color: #666; font-weight: 600; }
+.ppm-empty { padding: 20px; text-align: center; color: #666; font-weight: 600; }
+
+@media (max-width: 768px) {
+  .ppm-filters { flex-direction: row; gap: 4px; }
+  .ppm-filter-btn { min-width: auto; padding: 5px 8px; font-size: 0.8rem; }
+  .ppm-row-item { grid-template-columns: 1fr; }
+  .ppm-meta { align-items:flex-start; }
+}

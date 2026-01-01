@@ -1,0 +1,198 @@
+  .create-league-form-container {
+    max-width: 480px;
+    margin: 0 auto;
+    padding: 0 0 24px 0;
+    background: #1a0826;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    position: relative;
+    overflow-x: hidden;
+    overflow-y: auto;
+  }
+.clf-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 24px 0 12px 0;
+  background: #1a0826;
+}
+.clf-back-btn {
+  background: #2d0a4b;
+  border: none;
+  color: #fff;
+  font-size: 1.5rem;
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.clf-title {
+  font-size: 1.18rem;
+  font-weight: 700;
+  color: #fff;
+}
+.clf-card {
+  background: #2d0a4b;
+  border-radius: 20px;
+  margin: 0 8px;
+  padding: 28px 18px 18px 18px;
+  box-shadow: 0 2px 16px rgba(0,0,0,0.09);
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+  .clf-main-title {
+    font-size: 1.25rem;
+    font-weight: 800;
+    color: #fff;
+    margin-bottom: 8px;
+  }
+  .clf-field-group {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+  }
+  .clf-label {
+    font-size: 0.97rem;
+    font-weight: 700;
+    color: #fff;
+  }
+  .clf-subscript {
+    font-size: 0.85rem;
+    color: #c7b8e6;
+    margin-bottom: 2px;
+  }
+  .clf-input {
+    width: 100%;
+    padding: 9px 10px;
+    border-radius: 8px;
+    border: 1.2px solid #a78bfa;
+    background: #1a0826;
+    color: #fff;
+    font-size: 0.98rem;
+    margin-bottom: 2px;
+  }
+  .clf-input::placeholder {
+    color: #a78bfa;
+    opacity: 0.7;
+  }
+  .clf-divider {
+    border: none;
+    border-top: 1px solid #4b256a;
+    margin: 12px 0 8px 0;
+  }
+  .clf-dropdown-wrapper {
+    position: relative;
+    width: 100%;
+  }
+  .clf-dropdown-btn {
+    width: 100%;
+    padding: 9px 10px;
+    border-radius: 8px;
+    border: 1.2px solid #a78bfa;
+    background: #1a0826;
+    color: #fff;
+    font-size: 0.98rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    cursor: pointer;
+  }
+  .clf-dropdown-arrow {
+    margin-left: 8px;
+    font-size: 1rem;
+  }
+  .clf-dropdown-list {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: #2d0a4b;
+    border-radius: 0 0 8px 8px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.13);
+    z-index: 10;
+    max-height: 180px;
+    overflow-y: auto;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .clf-dropdown-list li {
+    padding: 9px 12px;
+    color: #fff;
+    font-size: 0.93rem;
+    cursor: pointer;
+    transition: background 0.13s;
+  }
+  .clf-dropdown-list li.selected,
+  .clf-dropdown-list li:hover {
+    background: #a78bfa;
+    color: #2d0a4b;
+  }
+  .clf-desc {
+    font-size: 0.89rem;
+    color: #e0e7ef;
+    margin-top: 4px;
+  }
+    .clf-create-btn {
+      position: sticky;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      margin: 24px auto 0 auto;
+      max-width: 480px;
+      width: 100%;
+      background: #a78bfa;
+      color: #2d0a4b;
+      font-weight: 700;
+      font-size: 0.98rem;
+      border: none;
+      border-radius: 8px;
+      padding: 10px 0;
+      cursor: pointer;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.09);
+      transition: background 0.15s;
+      z-index: 100;
+      display: block;
+    }
+    .clf-create-btn:hover:enabled {
+      background: #c4b5fd;
+    }
+    @media (max-width: 600px) {
+      .create-league-form-container {
+        max-width: 100vw;
+        padding: 0 0 16vw 0;
+      }
+      .clf-card {
+        margin: 0 2vw;
+        padding: 18px 4vw 12px 4vw;
+      }
+      .clf-create-btn {
+        width: 100%;
+        max-width: 98vw;
+        left: 0;
+        right: 0;
+        margin: 24px 0 0 0;
+      }
+    }
+@media (max-width: 600px) {
+  .create-league-form-container {
+    max-width: 100vw;
+    padding: 0 0 16vw 0;
+  }
+  .clf-card {
+    margin: 0 2vw;
+    padding: 18px 4vw 12px 4vw;
+  }
+  .clf-create-btn {
+    width: calc(100vw - 10vw);
+    max-width: 98vw;
+    left: 5vw;
+    right: 5vw;
+  }
+}

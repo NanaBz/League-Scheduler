@@ -1,0 +1,34 @@
+.pv-modal { max-width: 1200px; }
+.pv-header { display:flex; flex-direction: column; gap: 4px; margin-bottom: 10px; }
+.pv-sub { color:#6b7280; font-size: 0.95rem; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.pv-chip-badge { background: linear-gradient(135deg, #fbbf24 0%, #f97316 100%); color: #1f2937; font-weight: 700; padding: 2px 8px; border-radius: 12px; font-size: 0.8rem; }
+
+.pv-pitch { background: linear-gradient(180deg,#0a8f3f 0%, #0b6f33 100%); border-radius: 14px; padding: 16px; box-shadow: inset 0 0 0 2px rgba(255,255,255,0.15); }
+.pv-row { display:flex; justify-content: center; gap: 6px; margin: 10px 0; flex-wrap: nowrap; }
+
+.pv-player { display:flex; flex-direction: column; align-items:center; background: rgba(255,255,255,0.1); border:1px solid rgba(255,255,255,0.15); border-radius: 8px; padding: 4px 6px; width: 60px; min-width: 60px; height: 84px; box-sizing: border-box; transition: all 0.2s ease; }
+.pv-player[data-captain="true"] { background: rgba(255,215,0,0.2); border-color: rgba(255,215,0,0.4); box-shadow: 0 0 8px rgba(255,215,0,0.3); }
+
+.pv-jersey-wrapper { position: relative; margin-bottom: 3px; }
+.pv-jersey-wrapper svg { display: block; }
+.pv-captain-badge { position: absolute; top: -4px; right: -4px; background: linear-gradient(135deg, #fbbf24 0%, #f97316 100%); color: #1f2937; width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0.8rem; border: 2px solid rgba(255,255,255,0.8); }
+ .pv-vice-badge { position: absolute; top: -4px; left: -4px; background: linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%); color: #1f2937; padding: 2px 6px; border-radius: 12px; font-weight: 700; font-size: 0.72rem; border: 2px solid rgba(255,255,255,0.85); }
+
+.pv-name { font-weight:700; color:#f3f4f6; text-align:center; font-size: 0.72rem; line-height: 1.05; }
+.pv-points { margin-top: 2px; font-size: 0.68rem; color:#e5e7eb; }
+
+.pv-actions { display:flex; justify-content:flex-end; margin-top: 12px; }
+
+.pv-bench { margin-top: 8px; }
+.pv-bench-label { color:#f3f4f6; font-weight:700; margin: 4px 0; }
+
+@media (max-width: 640px) {
+  /* Do NOT wrap rows on mobile; keep all players in one line */
+  .pv-row { flex-wrap: nowrap; }
+  .pv-player { width: 52px; min-width: 52px; padding: 4px 5px; }
+  .pv-jersey-wrapper svg { width: 22px; height: 22px; }
+  .pv-captain-badge { width: 16px; height: 16px; font-size: 0.6rem; }
+  .pv-vice-badge { font-size: 0.58rem; }
+  .pv-name { font-size: 0.65rem; }
+  .pv-points { font-size: 0.6rem; }
+}

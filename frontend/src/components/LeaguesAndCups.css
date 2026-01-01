@@ -1,0 +1,415 @@
+.leagues-cups-container {
+  max-width: 600px;
+  margin: 0 auto;
+  padding: 16px;
+  background: #f9fafb;
+  min-height: 100vh;
+}
+
+.leagues-cups-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.leagues-cups-header h2 {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #111827;
+}
+
+.back-link {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  color: #374151;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.back-link:hover {
+  background: #f9fafb;
+  border-color: #d1d5db;
+}
+
+/* Tabs */
+.lc-tabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.lc-tab {
+  padding: 14px;
+  background: rgba(88, 28, 135, 0.1);
+  border: 2px solid rgba(88, 28, 135, 0.2);
+  border-radius: 12px;
+  color: #581c87;
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.lc-tab:hover {
+  background: rgba(88, 28, 135, 0.15);
+  border-color: rgba(88, 28, 135, 0.3);
+}
+
+.lc-tab.active {
+  background: #581c87;
+  border-color: #581c87;
+  color: white;
+}
+
+/* Overall League Card */
+.league-card {
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+  /* Overall League clickable card */
+  .league-overall-card {
+    background: linear-gradient(135deg, #2a0f4a 0%, #4b1b7e 100%);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 12px;
+    padding: 1rem 1.25rem;
+    color: #f6f3ff;
+    cursor: pointer;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.25);
+  }
+
+  .league-overall-card-header {
+    display:flex;
+    align-items:center;
+    justify-content: space-between;
+    gap: 1rem;
+  }
+
+  .league-overall-card h3 { margin:0; font-weight:700; }
+  .league-overall-sub { margin-top: 6px; opacity:0.85; font-size: 0.95rem; }
+
+  .leagues-cups-subheader { display:flex; flex-direction: column; align-items:flex-start; gap:0.5rem; }
+  .leagues-cups-subheader h3 { margin:0; font-size: 1.25rem; }
+
+  @media (max-width: 640px) {
+    .leagues-cups-subheader h3 { font-size: 1.05rem; }
+  }
+
+.overall-league {
+  background: linear-gradient(135deg, #581c87 0%, #7c3aed 100%);
+  border: none;
+  color: white;
+}
+
+.league-info h3 {
+  margin: 0 0 4px 0;
+  font-size: 1.1rem;
+  font-weight: 700;
+}
+
+.league-subtitle {
+  margin: 0;
+  font-size: 0.85rem;
+  opacity: 0.9;
+}
+
+.league-rank {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+}
+
+.rank-number {
+  font-size: 2rem;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.rank-change {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+/* Invitational Section */
+.invitational-section {
+  margin-bottom: 20px;
+}
+
+.section-title {
+  margin: 0 0 12px 0;
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #111827;
+}
+
+.league-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.action-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 16px;
+  border: 2px solid #e5e7eb;
+  border-radius: 30px;
+  background: white;
+  font-size: 0.9rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.join-btn {
+  color: #581c87;
+  border-color: #581c87;
+}
+
+.join-btn:hover {
+  background: rgba(88, 28, 135, 0.1);
+  transform: translateY(-2px);
+}
+
+.configure-btn {
+  color: #6b7280;
+  border-color: #d1d5db;
+}
+
+.configure-btn:hover {
+  background: #f9fafb;
+  border-color: #9ca3af;
+  transform: translateY(-2px);
+}
+
+/* Invitational Leagues List */
+.invitational-leagues-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.league-item {
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 14px 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.league-item:hover {
+  border-color: #581c87;
+  box-shadow: 0 2px 8px rgba(88, 28, 135, 0.1);
+  transform: translateY(-1px);
+}
+
+.league-item-info h4 {
+  margin: 0 0 4px 0;
+  font-size: 1rem;
+  font-weight: 700;
+  color: #111827;
+}
+
+.league-members {
+  margin: 0;
+  font-size: 0.85rem;
+  color: #6b7280;
+}
+
+.league-item-rank {
+  display: flex;
+  align-items: center;
+}
+
+.item-rank-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #581c87;
+}
+
+/* Cups Content */
+.cups-content {
+  padding-top: 10px;
+}
+
+.cup-upcoming,
+.cup-active,
+.cup-completed {
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 16px;
+  padding: 24px;
+  text-align: center;
+}
+
+.cup-icon {
+  font-size: 3.5rem;
+  margin-bottom: 12px;
+}
+
+.cup-upcoming h3,
+.cup-active h3,
+.cup-completed h3 {
+  margin: 0 0 8px 0;
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: #111827;
+}
+
+.cup-message {
+  margin: 0 0 16px 0;
+  font-size: 0.95rem;
+  color: #6b7280;
+  line-height: 1.5;
+}
+
+.cup-details {
+  background: rgba(88, 28, 135, 0.1);
+  border-radius: 8px;
+  padding: 12px;
+  margin-bottom: 20px;
+}
+
+.cup-details p {
+  margin: 0;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #581c87;
+}
+
+/* Cup Schedule */
+.cup-schedule {
+  margin-top: 20px;
+  text-align: left;
+}
+
+.cup-schedule h4 {
+  margin: 0 0 12px 0;
+  font-size: 1rem;
+  font-weight: 700;
+  color: #111827;
+}
+
+.schedule-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.schedule-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 12px;
+  background: #f9fafb;
+  border-radius: 8px;
+}
+
+.schedule-round {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #374151;
+}
+
+.schedule-gw {
+  font-size: 0.85rem;
+  color: #6b7280;
+}
+
+/* Cup Active Round */
+.cup-round-header {
+  margin-bottom: 24px;
+}
+
+.cup-bracket {
+  padding: 40px 20px;
+  background: #f9fafb;
+  border-radius: 12px;
+  border: 2px dashed #d1d5db;
+}
+
+.bracket-placeholder {
+  margin: 0;
+  font-size: 0.9rem;
+  color: #9ca3af;
+  font-style: italic;
+}
+
+/* Mobile Responsive */
+@media (max-width: 768px) {
+  .leagues-cups-container {
+    padding: 12px;
+  }
+
+  .leagues-cups-header h2 {
+    font-size: 1.3rem;
+  }
+
+  .lc-tabs {
+    gap: 8px;
+  }
+
+  .lc-tab {
+    padding: 12px;
+    font-size: 0.9rem;
+  }
+
+  .league-card {
+    padding: 14px;
+  }
+
+  .league-info h3 {
+    font-size: 1rem;
+  }
+
+  .rank-number {
+    font-size: 1.6rem;
+  }
+
+  .league-actions {
+    gap: 8px;
+  }
+
+  .action-btn {
+    padding: 10px 12px;
+    font-size: 0.85rem;
+  }
+
+  .cup-icon {
+    font-size: 3rem;
+  }
+
+  .cup-upcoming h3,
+  .cup-active h3,
+  .cup-completed h3 {
+    font-size: 1.2rem;
+  }
+}

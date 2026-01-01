@@ -1,4 +1,5 @@
 import React from 'react';
+import { Trophy, Star, BarChart3, Calendar, Users, Lock, Cog, LogOut } from 'lucide-react';
 
 
 const Footer = ({ isAdmin, onLoginClick, onAdminClick, onLogoutClick, onBackToLeagueClick, activeTab }) => {
@@ -7,14 +8,14 @@ const Footer = ({ isAdmin, onLoginClick, onAdminClick, onLogoutClick, onBackToLe
   return (
     <footer className="app-footer">
       <div className="footer-content">
-        {/* System Info */}
+        {/* Project Info */}
         <div className="footer-section">
-          <h4>About League Scheduler</h4>
-          <p>Complete league management system built for Acity league management, organizing competitions, tracking results, and managing seasons.</p>
+          <h4>About Acity Premier League</h4>
+          <p>Modern football league management for Academic City. Organize, track, and enjoy the ACPL experience.</p>
           <div className="footer-features">
-            <span className="feature-tag">League Management</span>
-            <span className="feature-tag">Cup Competitions</span>
-            <span className="feature-tag">Season Archives</span>
+            <span className="feature-tag">Stats</span>
+            <span className="feature-tag">Teams</span>
+            <span className="feature-tag">FPL (Coming Soon)</span>
           </div>
         </div>
 
@@ -22,11 +23,10 @@ const Footer = ({ isAdmin, onLoginClick, onAdminClick, onLogoutClick, onBackToLe
         <div className="footer-section">
           <h4>Quick Access</h4>
           <div className="footer-links">
-            <button className="footer-link" onClick={() => window.setSelectedCompetition && window.setSelectedCompetition('cup')}>🏆 Cup Competitions</button>
-            <button className="footer-link" onClick={() => window.setSelectedCompetition && window.setSelectedCompetition('super-cup')}>⭐ Super Cup</button>
-            <button className="footer-link" onClick={() => window.setSelectedCompetition && window.setSelectedCompetition('league')}>📊 Current Standings</button>
-            <button className="footer-link" onClick={() => window.setSelectedCompetition && window.setSelectedCompetition('fixtures')}>📅 Fixtures & Results</button>
-            <button className="footer-link" onClick={() => window.setSelectedCompetition && window.setSelectedCompetition('acwpl')}>👧 ACWPL (Girls League)</button>
+            <button className="footer-link" onClick={() => window.setSelectedCompetition && window.setSelectedCompetition('stats')}><BarChart3 size={16} /> Stats</button>
+            <button className="footer-link" onClick={() => window.setSelectedCompetition && window.setSelectedCompetition('teams')}><Users size={16} /> Teams</button>
+            <button className="footer-link" onClick={() => window.setSelectedCompetition && window.setSelectedCompetition('fixtures')}><Calendar size={16} /> Fixtures & Results</button>
+            <button className="footer-link" disabled style={{opacity:0.7}}><Star size={16} /> FPL (Coming Soon)</button>
             {/* Admin Access */}
             <div className="admin-access">
               {!isAdmin ? (
@@ -34,7 +34,7 @@ const Footer = ({ isAdmin, onLoginClick, onAdminClick, onLogoutClick, onBackToLe
                   className="footer-admin-btn"
                   onClick={onLoginClick}
                 >
-                  🔐 Admin Login
+                  <Lock size={16} /> Admin Login
                 </button>
               ) : (
                 <div className="admin-controls">
@@ -43,21 +43,21 @@ const Footer = ({ isAdmin, onLoginClick, onAdminClick, onLogoutClick, onBackToLe
                       className="footer-admin-btn"
                       onClick={onBackToLeagueClick}
                     >
-                      🏆 Back to League
+                      <Trophy size={16} /> Back to League
                     </button>
                   ) : (
                     <button 
                       className="footer-admin-btn"
                       onClick={onAdminClick}
                     >
-                      ⚙️ Admin Panel
+                      <Cog size={16} /> Admin Panel
                     </button>
                   )}
                   <button 
                     className="footer-admin-btn logout"
                     onClick={onLogoutClick}
                   >
-                    🚪 Logout
+                    <LogOut size={16} /> Logout
                   </button>
                 </div>
               )}
@@ -84,7 +84,7 @@ const Footer = ({ isAdmin, onLoginClick, onAdminClick, onLogoutClick, onBackToLe
       {/* Copyright */}
       <div className="footer-bottom">
         <div className="footer-bottom-content">
-          <p>&copy; {currentYear} League Scheduler System. Built for Acity league management.</p>
+          <p>&copy; {currentYear} Acity Premier League (ACPL). All rights reserved.</p>
           <div className="footer-meta">
             <span>Version 2.0</span>
             <span>•</span>

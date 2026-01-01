@@ -513,4 +513,66 @@ async function updateTeamStats(match, oldHomeScore, oldAwayScore, wasPlayed) {
   await awayTeam.save();
 }
 
+// Update starting lineup for a match
+router.put('/:id/starting-lineup', async (req, res) => {
+  try {
+    const { homeLineup, awayLineup } = req.body;
+    const match = await Match.findById(req.params.id);
+    
+    if (!match) {
+      return res.status(404).json({ message: 'Match not found' });
+    }
+
+    // Validate lineups
+    const validateLineup = (lineup) => {
+      if (!lineup) return true; // Optional
+      const { gk, df, mf, att } = lineup;
+      
+      const gkCount = (gk || []).length;
+      const dfCount = (df || []).length;
+      const mfCount = (mf || []).length;
+      const attCount = (att || []).length;
+      
+      // Position constraints
+      if (gkCount !== 1) return false; // Exactly 1 GK
+      if (dfCount < 2 || dfCount > 4) return false; // 2-4 DF
+      if (mfCount < 2 || mfCount > 4) return false; // 2-4 MF
+      if (attCount < 1 || attCount > 3) return false; // 1-3 ATT
+      
+      return true;
+    };
+
+    if (homeLineup && !validateLineup(homeLineup)) {
+      return res.status(400).json({ message: 'Invalid home lineup' });
+    }
+
+    if (awayLineup && !validateLineup(awayLineup)) {
+      return res.status(400).json({ message: 'Invalid away lineup' });
+    }
+
+    // Update lineups
+    if (homeLineup) {
+      match.startingLineup.homeTeam = homeLineup;
+    }
+    if (awayLineup) {
+      match.startingLineup.awayTeam = awayLineup;
+    }
+
+    const updatedMatch = await match.save();
+    const populatedMatch = await Match.findById(updatedMatch._id)
+      .populate({
+        path: 'homeTeam awayTeam',
+        select: 'name'
+      })
+      .populate({
+        path: 'startingLineup.homeTeam.gk startingLineup.homeTeam.df startingLineup.homeTeam.mf startingLineup.homeTeam.att startingLineup.awayTeam.gk startingLineup.awayTeam.df startingLineup.awayTeam.mf startingLineup.awayTeam.att',
+        select: 'name position number'
+      });
+
+    res.json(populatedMatch);
+  } catch (error) {
+    res.status(400).json({ message: error.message });
+  }
+});
+
 module.exports = router;

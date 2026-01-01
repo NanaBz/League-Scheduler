@@ -1,0 +1,185 @@
+.vm-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1100;
+}
+
+.vm-modal {
+  background: white;
+  border-radius: 12px;
+  width: 90%;
+  max-width: 420px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  overflow: hidden;
+  animation: vm-slideIn 0.3s ease-out;
+}
+
+@keyframes vm-slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.vm-content {
+  padding: 24px;
+  text-align: center;
+}
+
+.vm-icon {
+  font-size: 3rem;
+  margin-bottom: 12px;
+}
+
+.vm-title {
+  margin: 0 0 8px 0;
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: #111;
+}
+
+.vm-message {
+  margin: 0;
+  color: #374151;
+  font-size: 0.95rem;
+  line-height: 1.5;
+  font-weight: 500;
+}
+
+.vm-error {
+  background: #fef2f2;
+  border-top: 4px solid #ef4444;
+}
+
+.vm-error .vm-title {
+  color: #dc2626;
+}
+
+.vm-warning {
+  background: #fffbeb;
+  border-top: 4px solid #f59e0b;
+}
+
+.vm-warning .vm-title {
+  color: #d97706;
+}
+
+.vm-info {
+  background: #f0f9ff;
+  border-top: 4px solid #3b82f6;
+}
+
+.vm-info .vm-title {
+  color: #1d4ed8;
+}
+
+.vm-success {
+  background: #f0fdf4;
+  border-top: 4px solid #10b981;
+}
+
+.vm-success .vm-title {
+  color: #059669;
+}
+
+.vm-actions {
+  display: flex;
+  gap: 8px;
+  padding: 16px 24px;
+  border-top: 1px solid #e5e7eb;
+  justify-content: center;
+}
+
+.vm-btn {
+  padding: 10px 24px;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.vm-btn-error {
+  background: #ef4444;
+  color: white;
+}
+
+.vm-btn-error:hover {
+  background: #dc2626;
+  transform: translateY(-1px);
+}
+
+.vm-btn-warning {
+  background: #f59e0b;
+  color: white;
+}
+
+.vm-btn-warning:hover {
+  background: #d97706;
+  transform: translateY(-1px);
+}
+
+.vm-btn-info {
+  background: #3b82f6;
+  color: white;
+}
+
+.vm-btn-info:hover {
+  background: #2563eb;
+  transform: translateY(-1px);
+}
+
+.vm-btn-success {
+  background: #10b981;
+  color: white;
+}
+
+.vm-btn-success:hover {
+  background: #059669;
+  transform: translateY(-1px);
+}
+
+.vm-btn:active {
+  transform: translateY(0);
+}
+
+@media (max-width: 768px) {
+  .vm-modal {
+    width: 85%;
+    max-width: none;
+  }
+
+  .vm-content {
+    padding: 20px;
+  }
+
+  .vm-icon {
+    font-size: 2.5rem;
+  }
+
+  .vm-title {
+    font-size: 1.1rem;
+  }
+
+  .vm-message {
+    font-size: 0.9rem;
+  }
+
+  .vm-actions {
+    padding: 12px 20px;
+  }
+
+  .vm-btn {
+    padding: 8px 20px;
+    font-size: 0.9rem;
+  }
+}
