@@ -76,7 +76,7 @@ A comprehensive web application for managing a school's football league system w
 
 ## 🚀 Quick Deployment
 
-**Live Demo**: [Your deployed app URL here]
+**Live Demo**: [https://league-scheduler-bqav.vercel.app/]
 
 For full deployment instructions, see [DEPLOYMENT_GUIDE.md](DEPLOYMENT_GUIDE.md)
 
