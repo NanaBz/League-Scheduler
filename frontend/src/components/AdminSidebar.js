@@ -2,8 +2,8 @@ import React, { useState } from 'react';
 import { ListChecks, Users, Trophy, SidebarOpen, SidebarClose, Eye } from 'lucide-react';
 
 export default function AdminSidebar({ activeSection, onSelect, onSwitchToUser, isAdmin }) {
-  if (!isAdmin) return null;
   const [collapsed, setCollapsed] = useState(false);
+  if (!isAdmin) return null;
 
   const Item = ({ id, icon, label }) => (
     <button
