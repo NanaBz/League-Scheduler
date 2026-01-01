@@ -12,48 +12,25 @@ app.use('/api/leagues', require('./routes/leagues'));
 
 // Middleware
 const TRUSTED_ORIGINS = (process.env.CORS_ORIGINS || '').split(',').map(o => o.trim()).filter(Boolean);
-const isProduction = process.env.NODE_ENV === 'production';
 console.log('TRUSTED_ORIGINS at startup:', TRUSTED_ORIGINS);
-console.log('NODE_ENV:', process.env.NODE_ENV || 'development');
-console.log('CORS: Allowing localhost origins in development mode');
 
-const corsOptions = {
-  origin: function(origin, callback) {
-    // Allow requests with no origin (like mobile apps, curl, etc.)
-    if (!origin) {
-      return callback(null, true);
-    }
-    
-    // In development, allow all localhost origins (any port)
-    if (!isProduction) {
-      if (origin.startsWith('http://localhost:') || origin.startsWith('http://127.0.0.1:')) {
+let corsOptions;
+if (TRUSTED_ORIGINS.length === 0) {
+  // Allow all origins if no CORS_ORIGINS is set
+  corsOptions = {};
+} else {
+  corsOptions = {
+    origin: function(origin, callback) {
+      if (!origin) return callback(null, true);
+      if (TRUSTED_ORIGINS.includes(origin)) {
         return callback(null, true);
       }
-    }
-    
-    // Check against trusted origins
-    if (TRUSTED_ORIGINS.includes(origin)) {
-      return callback(null, true);
-    }
-    
-    // In production, reject unknown origins
-    if (isProduction) {
-      console.log('CORS: Rejected origin in production:', origin);
       return callback(new Error('Not allowed by CORS'), false);
-    }
-    
-    // In development, allow all origins if no trusted origins are set
-    if (TRUSTED_ORIGINS.length === 0) {
-      return callback(null, true);
-    }
-    
-    // Fallback: reject in development if trusted origins are set but origin doesn't match
-    console.log('CORS: Rejected origin:', origin);
-    return callback(new Error('Not allowed by CORS'), false);
-  },
-  credentials: true,
-  optionsSuccessStatus: 200
-};
+    },
+    credentials: true,
+    optionsSuccessStatus: 200
+  };
+}
 app.use(cors(corsOptions));
 app.use(helmet());
 app.use(express.json());
