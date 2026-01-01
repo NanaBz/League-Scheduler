@@ -9,24 +9,10 @@ export default function TeamsPage({ refreshKey = 0, onNavigateToGirlsTeams }) {
   const [stats, setStats] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [showGirls, setShowGirls] = useState(false);
-
-  const fetchTeams = async () => {
-    try { const { data } = await api.get('/teams'); setTeams(data); }
-    catch { /* ignore */ }
-  };
+  // Removed unused fetchTeams and setTeams
 
   useEffect(() => {
-    const fetchTeams = async () => {
-      try {
-        const { data } = await api.get('/teams');
-        // If you need to update teams, uncomment next line:
-        // setTeams(data);
-      } catch {
-        /* ignore */
-      }
-    };
-    fetchTeams();
+    // fetchTeams logic removed, teams is not updated in this version
   }, [refreshKey]);
 
   useEffect(() => {

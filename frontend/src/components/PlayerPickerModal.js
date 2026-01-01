@@ -45,23 +45,7 @@ export default function PlayerPickerModal({ lockedPosition, selectedIds = [], on
     fetchTeams();
   }, []);
 
-  const queryPlayers = async () => {
-    setLoading(true);
-    try {
-      const params = new URLSearchParams();
-      if (position && position !== 'ALL') params.append('position', position);
-      if (search) params.append('search', search);
-      if (minPrice) params.append('minPrice', minPrice);
-      if (maxPrice) params.append('maxPrice', maxPrice);
-      if (selectedTeams.length) params.append('teams', selectedTeams.join(','));
-      const { data } = await api.get(`/fantasy/players?${params}`);
-      setPlayers(data.players || []);
-    } catch {
-      setPlayers([]);
-    } finally {
-      setLoading(false);
-    }
-  };
+  // Removed unused queryPlayers function
 
   useEffect(() => {
     const queryPlayers = async () => {
