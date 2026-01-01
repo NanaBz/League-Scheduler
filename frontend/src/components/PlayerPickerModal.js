@@ -63,7 +63,7 @@ export default function PlayerPickerModal({ lockedPosition, selectedIds = [], on
     }
   };
 
-  useEffect(() => { queryPlayers(); }, [position, minPrice, maxPrice, selectedTeams, search]);
+  useEffect(() => { queryPlayers(); }, [position, minPrice, maxPrice, selectedTeams, search, queryPlayers]);
 
   const toggleTeam = (id) => {
     setSelectedTeams(prev => {
