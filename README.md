@@ -29,22 +29,29 @@ A comprehensive web application for managing a school's football league system w
 
 ## Features
 
-### Admin Panel
+
+### Admin Panel & Actions
 - **Secure Authentication**: Email whitelist with strong password requirements
+- **Stats Management**: Admins can update player and team statistics after each match. These stats are reflected in the public Stats view and league table.
+- **Teams Management**: Admins can initialize, add, edit, or remove teams. Team changes are instantly reflected in the Teams view for all users.
+- **Fantasy Management**: Admins can set fantasy prices, manage squads, and update fantasy match performances. These actions power the Fantasy section for users.
 - **Set League Fixtures**: Generate home and away fixtures for 6 teams (10 matchweeks total)
 - **Set Cup Fixtures**: Create knockout tournament for top 4 teams (semifinals and final)
 - **Set Super Cup Fixture**: League winner vs cup winner
-- **Edit Matches**: Update scores, dates, and times for all matches
-- **Reset Season**: Clear all data and start fresh
+- **Edit Matches**: Update scores, dates, and times for all matches. Match results update Stats, Teams, and Fantasy modules automatically.
+- **Reset Season**: Clear all data and start fresh (removes teams, stats, matches, and fantasy data)
 - **Session Management**: JWT-based authentication with automatic logout
 
 ### Security Features
 - **Email Whitelist**: Only authorized admins can access admin panel
 - **Password Hashing**: bcryptjs encryption for secure password storage
 - **JWT Tokens**: Secure session management with expiration
-- **CORS Protection**: Production-ready CORS configuration
+- **CORS Handling**: By default, all origins are allowed unless CORS_ORIGINS is set in the backend environment. This ensures smooth frontend-backend communication for public deployments.
 
 ### User View
+- **Stats**: View real-time player and team statistics, updated by admin actions after matches.
+- **Teams**: Browse all teams, their squads, and details. Team changes by admins are instantly visible.
+- **Fantasy**: Play fantasy football using real match data and admin-set prices/squads. Fantasy scores update after each match.
 - **League Table**: Real-time standings with points, goals, and statistics
 - **Fixtures & Results**: View all matches with filtering options
 - **Winner Banners**: Congratulatory messages when competitions are won
@@ -65,7 +72,7 @@ A comprehensive web application for managing a school's football league system w
 - **Frontend**: React, Axios
 - **Database**: MongoDB
 - **Authentication**: JWT tokens, bcryptjs password hashing
-- **Security**: Email whitelist, CORS protection
+- **Security**: Email whitelist, CORS handling
 
 ## 🚀 Quick Deployment
 
@@ -116,6 +123,14 @@ For full deployment instructions, see [DEPLOYMENT_GUIDE.md](DEPLOYMENT_GUIDE.md)
    - Click "Set Cup Fixtures" to create cup matches
 
 ## API Endpoints
+### Stats
+- `GET /api/stats` - Get all player and team statistics
+- `POST /api/stats` - Add or update stats for a player or team
+
+### Fantasy
+- `GET /api/fantasy` - Get fantasy data (users, squads, performances)
+- `POST /api/fantasy` - Update fantasy match performance
+- `POST /api/fantasy/set-prices` - Set fantasy prices for players
 
 ### Teams
 - `GET /api/teams` - Get all teams with league table data
