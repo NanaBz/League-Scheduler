@@ -1,17 +1,3 @@
-## ⚠️ Security Notice
-
-**Never commit secrets or credentials to the repository.**
-
-- All secrets (MongoDB URIs, JWT secrets, SMTP credentials, etc.) must be stored in `.env` files and never pushed to GitHub.
-- The `.env` files are now gitignored.
-- If secrets were ever committed, rotate them immediately and clean your git history (see below).
-
-### If you exposed secrets:
-1. **Rotate/revoke** all exposed credentials (MongoDB, JWT, SMTP, etc.).
-2. **Purge secrets from git history** using [BFG Repo-Cleaner](https://rtyley.github.io/bfg-repo-cleaner/) or `git filter-branch`.
-3. **Force-push** the cleaned history to GitHub.
-4. **Update Vercel/Render/hosted env vars** with new secrets.
-5. **Check GitHub security alerts** for any remaining exposures.
 # League Scheduler
 
 A comprehensive web application for managing a school's football league system with MongoDB + Express backend and React frontend.
@@ -82,7 +68,7 @@ For full deployment instructions, see [DEPLOYMENT_GUIDE.md](DEPLOYMENT_GUIDE.md)
 
 ### Production Stack
 - **Frontend**: Vercel
-- **Backend**: Railway
+- **Backend**: Render
 - **Database**: MongoDB Atlas
 - **Cost**: Free tier available
 
