@@ -3,7 +3,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import api from '../utils/api';
 
 export default function TeamsPage({ refreshKey = 0, onNavigateToGirlsTeams }) {
-  const [teams] = useState([]);
+  const [teams, setTeams] = useState([]);
   const [selectedTeam, setSelectedTeam] = useState(null);
   const [players, setPlayers] = useState([]);
   const [stats, setStats] = useState([]);
@@ -12,7 +12,9 @@ export default function TeamsPage({ refreshKey = 0, onNavigateToGirlsTeams }) {
   // Removed unused fetchTeams and setTeams
 
   useEffect(() => {
-    // fetchTeams logic removed, teams is not updated in this version
+    api.get('/teams')
+      .then(({ data }) => setTeams(data))
+      .catch(() => setTeams([]));
   }, [refreshKey]);
 
   useEffect(() => {
