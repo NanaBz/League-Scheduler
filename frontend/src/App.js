@@ -325,18 +325,6 @@ function App() {
         ) : null}
 
 
-        {/* If on Girls Teams, add a back button to Boys Teams */}
-        {activeTab === 'user' && activeSection === 'teams' && girlsTeamsActive && (
-          <div style={{ margin: '16px 0 0 0' }}>
-            <button
-              className="btn btn-secondary"
-              style={{ fontWeight: 600, padding: '8px 18px', borderRadius: 8, background: '#f1f5f9', color: '#1e293b', border: '1px solid #e2e8f0' }}
-              onClick={() => setGirlsTeamsActive(false)}
-            >
-              ← Back to Boys Teams
-            </button>
-          </div>
-        )}
 
         </div>{/* content-area */}
         </div>{/* layout-with-sidebar */}
