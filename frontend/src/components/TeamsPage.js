@@ -57,20 +57,41 @@ export default function TeamsPage({ refreshKey = 0, onNavigateToGirlsTeams }) {
 
   return (
     <div className="teams-page">
-      {/* Sub-navigation for teams */}
+      {/* Toggle navigation for teams (HCI: clear active state, accessible, visually grouped) */}
       {!selectedTeam && (
-        <div style={{ display: 'flex', gap: 16, marginBottom: 20 }}>
+        <div className="toggle-bar" style={{ display: 'inline-flex', gap: 0, background: '#f3f4f6', borderRadius: 999, margin: '0 auto 18px', justifyContent: 'center', alignItems: 'center', boxShadow: '0 1px 4px rgba(0,0,0,0.04)' }}>
           <button
-            className="btn btn-secondary"
-            style={{ fontWeight: 600, padding: '8px 18px', borderRadius: 8, background: '#f1f5f9', color: '#1e293b', border: '1px solid #e2e8f0' }}
+            className="toggle-btn"
+            aria-current="page"
+            style={{
+              fontWeight: 600,
+              padding: '8px 18px',
+              borderRadius: 999,
+              background: '#fff',
+              color: '#1e293b',
+              border: 'none',
+              boxShadow: '0 0 0 2px #e5e7eb',
+              cursor: 'default',
+              transition: 'background 0.2s, color 0.2s',
+            }}
             disabled
           >
             Boys Teams
           </button>
           <button
-            className="btn btn-secondary"
-            style={{ fontWeight: 600, padding: '8px 18px', borderRadius: 8, background: '#f8fafc', color: '#0ea5e9', border: '1px solid #bae6fd', cursor: 'pointer' }}
+            className="toggle-btn"
+            style={{
+              fontWeight: 600,
+              padding: '8px 18px',
+              borderRadius: 999,
+              background: 'transparent',
+              color: '#1e293b',
+              border: 'none',
+              cursor: 'pointer',
+              transition: 'background 0.2s, color 0.2s',
+            }}
             onClick={() => onNavigateToGirlsTeams && onNavigateToGirlsTeams()}
+            aria-label="Switch to Girls Teams"
           >
             Girls Teams
           </button>
