@@ -33,9 +33,19 @@ router.post('/:id/reset-score', authenticateAdmin, async (req, res) => {
 router.post('/generate-acwpl', authenticateAdmin, async (req, res) => {
   console.log('ACWPL route hit');
   try {
-    const teams = await Team.find({ competition: 'acwpl' });
+    let teams = await Team.find({ competition: 'acwpl' });
     if (teams.length !== 2) {
-      return res.status(400).json({ message: 'Exactly 2 teams required for ACWPL best-of-5 series' });
+      // Reset ACWPL teams to Orion and Firestorm
+      await Team.deleteMany({ competition: 'acwpl' });
+      const newTeams = [
+        { name: 'Orion', logo: '/logos/Orion.png', competition: 'acwpl', category: 'girls' },
+        { name: 'Firestorm', logo: '/logos/Firestorm.png', competition: 'acwpl', category: 'girls' }
+      ];
+      await Team.insertMany(newTeams);
+      teams = await Team.find({ competition: 'acwpl' });
+      if (teams.length !== 2) {
+        return res.status(500).json({ message: 'Failed to reset ACWPL teams. Please check database.' });
+      }
     }
     await Match.deleteMany({ competition: 'acwpl' });
     const fixtures = [];
