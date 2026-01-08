@@ -298,11 +298,54 @@ function App() {
           ) : activeSection === 'stats' ? (
             <StatsPage />
           ) : activeSection === 'teams' ? (
-            girlsTeamsActive ? (
-              <GirlsTeamsPage />
-            ) : (
-              <TeamsPage refreshKey={dataRefreshKey} onNavigateToGirlsTeams={() => setGirlsTeamsActive(true)} />
-            )
+            <>
+              {/* Toggle navigation for teams (always visible on teams page) */}
+              <div className="toggle-bar" style={{ display: 'inline-flex', gap: 0, background: '#f3f4f6', borderRadius: 999, margin: '0 auto 18px', justifyContent: 'center', alignItems: 'center', boxShadow: '0 1px 4px rgba(0,0,0,0.04)' }}>
+                <button
+                  className="toggle-btn"
+                  aria-current={!girlsTeamsActive ? 'page' : undefined}
+                  style={{
+                    fontWeight: 600,
+                    padding: '8px 18px',
+                    borderRadius: 999,
+                    background: !girlsTeamsActive ? '#fff' : 'transparent',
+                    color: '#1e293b',
+                    border: 'none',
+                    boxShadow: !girlsTeamsActive ? '0 0 0 2px #e5e7eb' : 'none',
+                    cursor: !girlsTeamsActive ? 'default' : 'pointer',
+                    transition: 'background 0.2s, color 0.2s',
+                  }}
+                  onClick={() => setGirlsTeamsActive(false)}
+                  disabled={!girlsTeamsActive}
+                >
+                  Boys Teams
+                </button>
+                <button
+                  className="toggle-btn"
+                  aria-current={girlsTeamsActive ? 'page' : undefined}
+                  style={{
+                    fontWeight: 600,
+                    padding: '8px 18px',
+                    borderRadius: 999,
+                    background: girlsTeamsActive ? '#fff' : 'transparent',
+                    color: '#1e293b',
+                    border: 'none',
+                    boxShadow: girlsTeamsActive ? '0 0 0 2px #e5e7eb' : 'none',
+                    cursor: girlsTeamsActive ? 'default' : 'pointer',
+                    transition: 'background 0.2s, color 0.2s',
+                  }}
+                  onClick={() => setGirlsTeamsActive(true)}
+                  disabled={girlsTeamsActive}
+                >
+                  Girls Teams
+                </button>
+              </div>
+              {girlsTeamsActive ? (
+                <GirlsTeamsPage />
+              ) : (
+                <TeamsPage refreshKey={dataRefreshKey} onNavigateToGirlsTeams={() => setGirlsTeamsActive(true)} />
+              )}
+            </>
           ) : activeSection === 'fantasy' ? (
             <div style={{
               display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
