@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import api from '../utils/api';
 
 export default function GirlsTeamsPage() {
-  const [selectedTeam, setSelectedTeam] = useState(null);
+  const [selectedTeam] = useState(null);
   const [players, setPlayers] = useState([]);
   const [stats, setStats] = useState([]);
   const [loading, setLoading] = useState(false);
