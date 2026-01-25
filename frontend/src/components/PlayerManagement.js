@@ -14,9 +14,15 @@ export default function PlayerManagement({ onDataChange = () => {} }) {
   const [staffForm, setStaffForm] = useState({ role: 'Coach', name: '' });
   const [savingRow, setSavingRow] = useState(null);
 
-  const leagueTeams = useMemo(() => teams.filter(t => t && t.competition !== 'acwpl'), [teams]);
-  const filteredTeams = useMemo(() => leagueTeams, [leagueTeams]);
+  // Boys teams: not acwpl, Girls teams: Orion/Firestorm or acwpl
+  const boysTeams = useMemo(() => teams.filter(t => t && t.competition !== 'acwpl' && t.name !== 'Orion' && t.name !== 'Firestorm'), [teams]);
+  const girlsTeams = useMemo(() => teams.filter(t => t && (t.competition === 'acwpl' || t.name === 'Orion' || t.name === 'Firestorm')), [teams]);
+
+  // Tab state: 'boys' or 'girls'
+  const [activeTab, setActiveTab] = useState('boys');
+  const filteredTeams = useMemo(() => activeTab === 'boys' ? boysTeams : girlsTeams, [activeTab, boysTeams, girlsTeams]);
   const selectedTeam = useMemo(() => filteredTeams.find(t => t._id === selectedTeamId) || null, [filteredTeams, selectedTeamId]);
+  // Transfer options: only within same group
   const transferOptions = useMemo(() => filteredTeams.filter(t => t._id !== selectedTeamId), [filteredTeams, selectedTeamId]);
 
   const fetchTeams = useCallback(async () => {
@@ -208,38 +214,50 @@ export default function PlayerManagement({ onDataChange = () => {} }) {
       <div className="card">
         <h2>Player Management</h2>
         {error && <div className="error-inline" style={{ marginBottom: 10 }}>{error}</div>}
-        {/* Team Grid (hide when a team is selected) */}
+        {/* Tabs for Boys/Girls Teams */}
         {!selectedTeamId && (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 12 }}>
-          {filteredTeams.map(team => (
-            <button
-              key={team._id}
-              className={`team-card ${selectedTeamId === team._id ? 'active' : ''}`}
-              onClick={() => setSelectedTeamId(team._id)}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                {team.logo && (
-                  <img
-                    src={team.logo}
-                    alt={team.name}
-                    style={{
-                      width: 28,
-                      height: 28,
-                      borderRadius: '50%',
-                      backgroundColor: team.name === 'Falcons' ? '#94a3b8' : 'transparent',
-                      padding: team.name === 'Falcons' ? 2 : 0,
-                      boxSizing: 'border-box'
-                    }}
-                  />
-                )}
-                <div>
-                  <div style={{ fontWeight: 700 }}>{team.name}</div>
-                  <div style={{ fontSize: '0.85em', color: '#555' }}>{team.competition === 'league' ? 'League' : 'ACWPL'}</div>
-                </div>
-              </div>
-            </button>
-          ))}
-          </div>
+          <>
+            <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
+              <button
+                className={`btn btn-tab${activeTab === 'boys' ? ' active' : ''}`}
+                onClick={() => setActiveTab('boys')}
+              >Boys Teams</button>
+              <button
+                className={`btn btn-tab${activeTab === 'girls' ? ' active' : ''}`}
+                onClick={() => setActiveTab('girls')}
+              >Girls Teams</button>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 12 }}>
+              {filteredTeams.map(team => (
+                <button
+                  key={team._id}
+                  className={`team-card ${selectedTeamId === team._id ? 'active' : ''}`}
+                  onClick={() => setSelectedTeamId(team._id)}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    {team.logo && (
+                      <img
+                        src={team.logo}
+                        alt={team.name}
+                        style={{
+                          width: 28,
+                          height: 28,
+                          borderRadius: '50%',
+                          backgroundColor: team.name === 'Falcons' ? '#94a3b8' : 'transparent',
+                          padding: team.name === 'Falcons' ? 2 : 0,
+                          boxSizing: 'border-box'
+                        }}
+                      />
+                    )}
+                    <div>
+                      <div style={{ fontWeight: 700 }}>{team.name}</div>
+                      <div style={{ fontSize: '0.85em', color: '#555' }}>{team.competition === 'league' ? 'League' : 'ACWPL'}</div>
+                    </div>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </>
         )}
       </div>
 

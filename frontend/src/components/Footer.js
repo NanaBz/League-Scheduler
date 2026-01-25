@@ -23,9 +23,9 @@ const Footer = ({ isAdmin, onLoginClick, onAdminClick, onLogoutClick, onBackToLe
         <div className="footer-section">
           <h4>Quick Access</h4>
           <div className="footer-links">
-            <button className="footer-link" onClick={() => window.setSelectedCompetition && window.setSelectedCompetition('stats')}><BarChart3 size={16} /> Stats</button>
-            <button className="footer-link" onClick={() => window.setSelectedCompetition && window.setSelectedCompetition('teams')}><Users size={16} /> Teams</button>
-            <button className="footer-link" onClick={() => window.setSelectedCompetition && window.setSelectedCompetition('fixtures')}><Calendar size={16} /> Fixtures & Results</button>
+            <button className="footer-link" onClick={() => window.setSelectedCompetition && window.setSelectedCompetition('league', 'stats')}><BarChart3 size={16} /> Stats</button>
+            <button className="footer-link" onClick={() => window.setSelectedCompetition && window.setSelectedCompetition('league', 'teams')}><Users size={16} /> Teams</button>
+            <button className="footer-link" onClick={() => window.setSelectedCompetition && window.setSelectedCompetition('league', 'fixtures')}><Calendar size={16} /> Fixtures & Results</button>
             <button className="footer-link" disabled style={{opacity:0.7}}><Star size={16} /> FPL (Coming Soon)</button>
             {/* Admin Access */}
             <div className="admin-access">

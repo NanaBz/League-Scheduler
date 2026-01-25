@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, Settings, TrendingUp, TrendingDown, Minus } from 'lucide-react';
+import { ArrowLeft, TrendingUp, TrendingDown, Minus } from 'lucide-react';
 import './LeaguesAndCups.css';
 import OverallLeague from './OverallLeague';
 // import OverallTeamModal from './OverallTeamModal';
@@ -23,8 +23,7 @@ export default function LeaguesAndCups({ onBack }) {
     totalPlayers: 150
   };
 
-  // User's joined/created leagues (should be set from backend or parent props)
-  const [userLeagues] = useState([]);
+  // User's joined/created leagues removed (no longer needed)
 
   const getRankIndicator = (change) => {
     if (change > 0) {
@@ -35,33 +34,11 @@ export default function LeaguesAndCups({ onBack }) {
       return { icon: <Minus size={20} />, color: '#9ca3af', text: '—' };
     }
   };
+  // User leagues rendering removed. Only Acity League and Cup logic remains.
 
-  const cupStatus = () => {
-    if (currentGameweek < 6) {
-      return {
-        status: 'upcoming',
-        message: `Cup will commence after Gameweek 6. Top 32 players will qualify.`,
-        details: 'Qualify by being in the top 32 before MW6'
-      };
-    } else if (currentGameweek === 6) {
-      return {
-        status: 'active',
-        round: 'Round of 32',
-        message: 'Cup Round of 32 is live!'
-      };
-    } else if (currentGameweek === 7) {
-      return {
-        status: 'active',
-        round: 'Round of 16',
-        message: 'Cup Round of 16 is live!'
-      };
-    } else if (currentGameweek === 8) {
-      return {
-        status: 'active',
-        round: 'Quarter Finals',
-        message: 'Cup Quarter Finals are live!'
-      };
-    } else if (currentGameweek === 9) {
+  // Cup status logic moved to its own function
+  function cupStatus() {
+    if (currentGameweek === 9) {
       return {
         status: 'active',
         round: 'Semi Finals',
@@ -79,7 +56,7 @@ export default function LeaguesAndCups({ onBack }) {
         message: 'Cup has concluded. Check back next season!'
       };
     }
-  };
+  }
 
   const rankIndicator = getRankIndicator(overallLeague.rankChange);
   const cup = cupStatus();
@@ -153,52 +130,7 @@ export default function LeaguesAndCups({ onBack }) {
                 <p className="league-overall-sub">Tap to view full standings</p>
               </div>
 
-              {/* Configure Leagues Button (only this has settings icon) */}
-              <div className="league-configure-card" role="button" aria-label="Configure Leagues" tabIndex={0} style={{marginTop: 8, padding: '8px 10px', borderRadius: 10, background: '#f3f4f6', boxShadow: '0 1px 4px rgba(0,0,0,0.03)', display: 'flex', alignItems: 'center', gap: 7, cursor: 'pointer', minHeight: 0}}
-                onClick={() => setShowConfigure(true)}
-                onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') setShowConfigure(true); }}
-              >
-                <Settings size={18} style={{color: '#6d28d9', minWidth: 18}} />
-                <div>
-                  <div style={{fontWeight: 700, fontSize: '0.98rem', color: '#1e293b', lineHeight: 1}}>Configure Leagues</div>
-                  <div style={{fontSize: '0.85rem', color: '#475569', lineHeight: 1.1}}>Manage your league settings</div>
-                </div>
-              </div>
-
-              {/* Heading for Invitational Classic Leagues */}
-              <div style={{marginTop: 18, marginBottom: 2, fontWeight: 700, fontSize: '1.08rem', color: '#1e293b', letterSpacing: 0.2}}>
-                Invitational Classic Leagues
-              </div>
-              {/* User Leagues List (alphabetical, no settings, rank at far right) - now below Configure Leagues */}
-              <div className="user-leagues-list">
-                {userLeagues && userLeagues.length > 0 &&
-                  userLeagues
-                    .slice()
-                    .sort((a, b) => a.name.localeCompare(b.name))
-                    .map(league => (
-                      <div className="user-league-tab" key={league.id} style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        background: '#4f267b',
-                        color: '#fff',
-                        borderRadius: 14,
-                        margin: '10px 0 0 0',
-                        padding: '16px 18px',
-                        fontWeight: 600,
-                        fontSize: '1.08rem',
-                        boxShadow: '0 1px 4px rgba(0,0,0,0.04)',
-                        cursor: 'pointer',
-                        minHeight: 0
-                      }}>
-                        <span>{league.name}</span>
-                        <span style={{ marginLeft: 'auto', fontWeight: 700, fontSize: '1.05rem', color: '#10b981' }}>
-                          {league.rank !== undefined ? `#${league.rank}` : '-'}
-                        </span>
-                      </div>
-                    ))
-                }
-              </div>
+              {/* Removed Configure Leagues and Invitational Classic Leagues logic as requested */}
             </>
           ) : (
             <div>

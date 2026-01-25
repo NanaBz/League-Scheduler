@@ -1,14 +1,21 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import api from '../utils/api';
 
+
 export default function GirlsTeamsPage() {
-  const [selectedTeam] = useState(null);
+  const [teams, setTeams] = useState([]);
+  const [selectedTeam, setSelectedTeam] = useState(null);
   const [players, setPlayers] = useState([]);
   const [stats, setStats] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  // No need to fetch teams here, handled by parent
+  // Fetch only Orion and Firestorm
+  useEffect(() => {
+    api.get('/teams')
+      .then(({ data }) => setTeams(data.filter(t => ['Orion', 'Firestorm'].includes(t.name))))
+      .catch(() => setTeams([]));
+  }, []);
 
   useEffect(() => {
     if (!selectedTeam) return;
@@ -45,8 +52,42 @@ export default function GirlsTeamsPage() {
   return (
     <div className="teams-page">
 
+      {/* Team Grid (hidden when a team is selected) */}
+      {!selectedTeam && (
+        <div className="team-cards">
+          {teams.map(t => (
+            <button
+              key={t._id}
+              className={`team-card`}
+              onClick={() => setSelectedTeam(t)}
+              style={{ padding: '10px 12px' }}
+            >
+              <img
+                src={t.logo}
+                alt={t.name}
+                style={{
+                  width: 80,
+                  height: 80,
+                  maxWidth: '26vw',
+                  maxHeight: '26vw',
+                  objectFit: 'contain',
+                  backgroundColor: t.name === 'Falcons' ? '#94a3b8' : 'transparent',
+                  padding: t.name === 'Falcons' ? '4px' : '0',
+                  borderRadius: '10px',
+                  boxSizing: 'border-box'
+                }}
+              />
+              <span style={{ marginTop: 8, fontWeight: 600 }}>{t.name}</span>
+            </button>
+          ))}
+        </div>
+      )}
+
       {selectedTeam && (
         <div className="team-detail" style={{ background: '#f8fafc', borderRadius: 12, padding: 12, color: '#1e293b' }}>
+          <div style={{ marginBottom: 10 }}>
+            <button className="btn btn-secondary btn-small" onClick={() => setSelectedTeam(null)}>Back to Teams</button>
+          </div>
           <h3 style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             {selectedTeam.logo && (
               <img src={selectedTeam.logo} alt={selectedTeam.name}

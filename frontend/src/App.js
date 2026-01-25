@@ -12,18 +12,30 @@ import StatsPage from './components/StatsPage';
 import TeamsPage from './components/TeamsPage';
 import GirlsTeamsPage from './components/GirlsTeamsPage';
 import FantasyManagement from './components/FantasyManagement';
+import FantasyAuth from './components/FantasyAuth';
 import axios from 'axios';
 import './index.css';
 
 function App() {
-  const [activeTab, setActiveTab] = useState('user');
-  const [activeSection, setActiveSection] = useState('fixtures'); // fixtures | stats | teams | acwpl | fantasy
-  const [selectedCompetition, setSelectedCompetition] = useState('league');
+  // Restore from localStorage if available
+  const getInitial = (key, fallback) => {
+    try {
+      const v = localStorage.getItem(key);
+      if (v === null) return fallback;
+      if (v === 'true') return true;
+      if (v === 'false') return false;
+      return v;
+    } catch { return fallback; }
+  };
+  const [activeTab, setActiveTab] = useState(() => getInitial('activeTab', 'user'));
+  const [activeSection, setActiveSection] = useState(() => getInitial('activeSection', 'fixtures'));
+  const [selectedCompetition, setSelectedCompetition] = useState(() => getInitial('selectedCompetition', 'league'));
   // Expose setSelectedCompetition globally for Footer quick links
   React.useEffect(() => {
-    window.setSelectedCompetition = (comp) => {
+    window.setSelectedCompetition = (comp, section) => {
       setActiveTab('user');
-      setActiveSection('fixtures');
+      // If section is provided, use it, else default to 'fixtures'
+      setActiveSection(section || 'fixtures');
       setSelectedCompetition(comp);
     };
     return () => { delete window.setSelectedCompetition; };
@@ -110,7 +122,12 @@ function App() {
     console.log('Data changed - triggering UserView refresh');
   };
 
-  const [girlsTeamsActive, setGirlsTeamsActive] = useState(false);
+  const [girlsTeamsActive, setGirlsTeamsActive] = useState(() => getInitial('girlsTeamsActive', false));
+  // Persist navigation state to localStorage
+  React.useEffect(() => { localStorage.setItem('activeTab', activeTab); }, [activeTab]);
+  React.useEffect(() => { localStorage.setItem('activeSection', activeSection); }, [activeSection]);
+  React.useEffect(() => { localStorage.setItem('selectedCompetition', selectedCompetition); }, [selectedCompetition]);
+  React.useEffect(() => { localStorage.setItem('girlsTeamsActive', girlsTeamsActive); }, [girlsTeamsActive]);
 
   if (isLoading) {
     return (
@@ -347,15 +364,7 @@ function App() {
               )}
             </>
           ) : activeSection === 'fantasy' ? (
-            <div style={{
-              display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-              minHeight: '40vh', textAlign: 'center', color: '#64748b', padding: '2rem'
-            }}>
-              <Star size={48} color="#fbbf24" style={{ marginBottom: 16 }} />
-              <h2 style={{ fontWeight: 700, fontSize: '2rem', marginBottom: 8 }}>Fantasy Premier League</h2>
-              <p style={{ fontSize: '1.2rem', marginBottom: 16 }}>Coming Soon!</p>
-              <p style={{ fontSize: '1rem', color: '#94a3b8' }}>The Fantasy feature will be available in a future update. Stay tuned!</p>
-            </div>
+            <FantasyAuth />
           ) : null
         ) : isAdmin ? (
           adminSection === 'fixtures-mgmt' ? (
