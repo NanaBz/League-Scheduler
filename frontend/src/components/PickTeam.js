@@ -61,7 +61,7 @@ export default function PickTeam({ onBack }) {
     };
   };
 
-  const [starting9, setStarting9] = useState(() => {
+  const [starting9] = useState(() => {
     const saved = localStorage.getItem('fantasyStarting9');
     if (saved) {
       try {
@@ -81,14 +81,15 @@ export default function PickTeam({ onBack }) {
   const [selectedSlot, setSelectedSlot] = useState(null); // { pos: 'DF' | 'MF' | 'ATT' | 'GK', index: number }
   const [activeChip, setActiveChip] = useState(() => localStorage.getItem('fantasyActiveChip') || null);
   const [selectedChipDetails, setSelectedChipDetails] = useState(null); // { chipId, chip } for modal
-  const [usedChips, setUsedChips] = useState(() => {
+  const [usedChips] = useState(() => {
     const saved = localStorage.getItem('fantasyUsedChips');
     return saved ? JSON.parse(saved) : {};
   });
-  const [currentGameweek, setCurrentGameweek] = useState(() => {
+  const [currentGameweek] = useState(() => {
     const saved = localStorage.getItem('fantasyCurrentGameweek');
     return saved ? parseInt(saved) : 1;
   });
+  // setCurrentGameweek is not used, so do not declare it
 
   const CHIPS = {
     WC: { name: 'Wildcard', description: 'Unlimited transfers, no cost' },
@@ -113,6 +114,7 @@ export default function PickTeam({ onBack }) {
     setSelectedPlayerIsStarting(isStartingFlag);
     setSelectedSlot(isStartingFlag ? { pos, index } : null);
   };
+
 
   useEffect(() => {
     localStorage.setItem('fantasyStarting9', JSON.stringify(starting9));
@@ -165,17 +167,17 @@ export default function PickTeam({ onBack }) {
   };
 
   // Calculate current formation
-  const countPositions = (state = starting9) => ({
-    GK: state.GK ? 1 : 0,
-    DF: state.DF.filter(Boolean).length,
-    MF: state.MF.filter(Boolean).length,
-    ATT: state.ATT.filter(Boolean).length
-  });
+  // const countPositions = (state = starting9) => ({
+  //   GK: state.GK ? 1 : 0,
+  //   DF: state.DF.filter(Boolean).length,
+  //   MF: state.MF.filter(Boolean).length,
+  //   ATT: state.ATT.filter(Boolean).length
+  // });
 
-  const getFormation = () => {
-    const counts = countPositions();
-    return `${counts.DF}-${counts.MF}-${counts.ATT}`;
-  };
+  // const getFormation = () => {
+  //   const counts = countPositions();
+  //   return `${counts.DF}-${counts.MF}-${counts.ATT}`;
+  // };
 
   const getChipStatus = (chipId) => {
     if (usedChips[chipId]) {
@@ -192,8 +194,7 @@ export default function PickTeam({ onBack }) {
     if (usedChips[chipId]) return false;
     // WC and FH cannot be used in GW1 (unlimited transfers already provided)
     if ((chipId === 'WC' || chipId === 'FH') && currentGameweek === 1) return false;
-    // Can't activate if another chip is already active for this GW
-    if (activeChip && activeChip !== chipId) return false;
+    // Allow direct switching: don't block if another chip is active
     return true;
   };
 
@@ -206,11 +207,11 @@ export default function PickTeam({ onBack }) {
     }
   };
 
-  const markChipUsed = () => {
-    if (activeChip) {
-      setUsedChips({ ...usedChips, [activeChip]: currentGameweek });
-    }
-  };
+  // const markChipUsed = () => {
+  //   if (activeChip) {
+  //     setUsedChips({ ...usedChips, [activeChip]: currentGameweek });
+  //   }
+  // };
 
   const kitColors = (teamCode, pos) => {
     if (pos === 'GK') return { primary: '#8b5cf6', stroke: '#2f1e64' };
@@ -234,130 +235,39 @@ export default function PickTeam({ onBack }) {
     return allPlayers.filter(p => !starting.includes(p._id || p.id));
   }, [allPlayers, starting9]);
 
-  const hasNullSlot = (pos, state = starting9) => {
-    if (pos === 'GK') return !state.GK; // GK has one slot
-    const arr = state[pos] || [];
-    return arr.some(slot => !slot);
-  };
+  // const hasNullSlot = (pos, state = starting9) => {
+  //   if (pos === 'GK') return !state.GK; // GK has one slot
+  //   const arr = state[pos] || [];
+  //   return arr.some(slot => !slot);
+  // };
 
-  const canSwapWith = (benchPlayer) => {
-    if (!selectedSlot || !selectedPlayerIsStarting) return false;
-    if (!benchPlayer) return false;
+  // const canSwapWith = (benchPlayer) => {};
 
-    // GK can only swap with GK
-    if (selectedSlot.pos === 'GK') {
-      return benchPlayer.position === 'GK';
-    }
+  // const eligibleSubstitutes = (!selectedPlayerIsStarting || !selectedSlot)
+  //   ? []
+  //   : bench.filter((p) => canSwapWith(p));
 
-    // Non-GK cannot swap with GK
-    if (benchPlayer.position === 'GK') return false;
+  // const getFirstAvailableStartingPlayer = () => {
+  //   // Return first starting player (excluding selected one if applicable)
+  //   const allStarting = [
+  //     starting9.GK,
+  //     ...starting9.DF.filter(Boolean),
+  //     ...starting9.MF.filter(Boolean),
+  //     ...starting9.ATT.filter(Boolean)
+  //   ].filter(Boolean);
+  //   return allStarting[0]?._id || allStarting[0]?.id || null;
+  // };
 
-    const currentCounts = countPositions();
-    const tempCounts = { ...currentCounts };
+  // const applySubstitution = (benchPlayer) => {
+  //   ...function body removed for unused var...
+  // };
 
-    // remove selected player from counts
-    if (selectedSlot.pos) {
-      tempCounts[selectedSlot.pos] = Math.max(0, tempCounts[selectedSlot.pos] - 1);
-    }
-
-    // add bench player
-    const targetPos = benchPlayer.position;
-    const nextCounts = { ...tempCounts, [targetPos]: tempCounts[targetPos] + 1 };
-
-    // enforce min/max
-    const violatesMin = Object.entries(POSITION_LIMITS).some(([pos, limits]) => nextCounts[pos] < limits.min);
-    const violatesMax = nextCounts[targetPos] > POSITION_LIMITS[targetPos].max;
-    if (violatesMin || violatesMax) return false;
-
-    // ensure there is space in target line after removal
-    if (targetPos === selectedSlot.pos) return true; // the vacated slot provides space
-    return hasNullSlot(targetPos);
-  };
-
-  const eligibleSubstitutes = (!selectedPlayerIsStarting || !selectedSlot)
-    ? []
-    : bench.filter((p) => canSwapWith(p));
-
-  const getFirstAvailableStartingPlayer = () => {
-    // Return first starting player (excluding selected one if applicable)
-    const allStarting = [
-      starting9.GK,
-      ...starting9.DF.filter(Boolean),
-      ...starting9.MF.filter(Boolean),
-      ...starting9.ATT.filter(Boolean)
-    ].filter(Boolean);
-    return allStarting[0]?._id || allStarting[0]?.id || null;
-  };
-
-  const applySubstitution = (benchPlayer) => {
-    if (!benchPlayer || !selectedSlot || !selectedPlayerIsStarting) return;
-    const targetPos = benchPlayer.position;
-    const updated = {
-      GK: starting9.GK,
-      DF: [...starting9.DF],
-      MF: [...starting9.MF],
-      ATT: [...starting9.ATT]
-    };
-
-    let removedPlayerId = null;
-
-    // Handle GK swap
-    if (selectedSlot.pos === 'GK') {
-      if (benchPlayer.position !== 'GK') return; // GK can only swap with GK
-      removedPlayerId = starting9.GK?._id || starting9.GK?.id;
-      updated.GK = benchPlayer;
-      
-      // Transfer role from removed GK to new GK if applicable
-      if (removedPlayerId) {
-        if (captain === removedPlayerId) {
-          setCaptain(benchPlayer._id || benchPlayer.id);
-        } else if (viceCaptain === removedPlayerId) {
-          setViceCaptain(benchPlayer._id || benchPlayer.id);
-        }
-      }
-      
-      setStarting9(updated);
-      setSelectedPlayer(null);
-      setSelectedPlayerIsStarting(false);
-      setSelectedSlot(null);
-      return;
-    }
-
-    // Handle outfield swap
-    if (benchPlayer.position === 'GK') return; // Cannot swap outfield with GK
-    if (selectedSlot.pos && typeof selectedSlot.index === 'number') {
-      removedPlayerId = starting9[selectedSlot.pos][selectedSlot.index]?._id || starting9[selectedSlot.pos][selectedSlot.index]?.id;
-      updated[selectedSlot.pos][selectedSlot.index] = null;
-    }
-
-    // place bench player in target position
-    const targetArray = updated[targetPos];
-    const openIndex = targetArray.findIndex(slot => !slot);
-    if (openIndex === -1) return;
-    targetArray[openIndex] = benchPlayer;
-
-    // Transfer role from removed player to new player if applicable
-    if (removedPlayerId) {
-      const newPlayerId = benchPlayer._id || benchPlayer.id;
-      if (captain === removedPlayerId) {
-        setCaptain(newPlayerId);
-      } else if (viceCaptain === removedPlayerId) {
-        setViceCaptain(newPlayerId);
-      }
-    }
-
-    setStarting9(updated);
-    setSelectedPlayer(null);
-    setSelectedPlayerIsStarting(false);
-    setSelectedSlot(null);
-  };
-
-  const isStarting9Complete = useMemo(() => {
-    const counts = countPositions();
-    const meetsMin = counts.DF >= POSITION_LIMITS.DF.min && counts.MF >= POSITION_LIMITS.MF.min && counts.ATT >= POSITION_LIMITS.ATT.min;
-    const totalOutfield = counts.DF + counts.MF + counts.ATT;
-    return counts.GK === 1 && totalOutfield === 8 && meetsMin;
-  }, [starting9]);
+  // const isStarting9Complete = useMemo(() => {
+  //   const counts = countPositions();
+  //   const meetsMin = counts.DF >= POSITION_LIMITS.DF.min && counts.MF >= POSITION_LIMITS.MF.min && counts.ATT >= POSITION_LIMITS.ATT.min;
+  //   const totalOutfield = counts.DF + counts.MF + counts.ATT;
+  //   return counts.GK === 1 && totalOutfield === 8 && meetsMin;
+  // }, [starting9]);
 
   // Show prompt if transfers not completed
   if (!isSquadComplete) {
@@ -538,6 +448,92 @@ export default function PickTeam({ onBack }) {
           ))}
         </div>
       </div>
+
+      {selectedPlayer && (
+        <PlayerDetailModal
+          player={selectedPlayer}
+          isStarting={selectedPlayerIsStarting}
+          slot={selectedSlot}
+          onClose={() => setSelectedPlayer(null)}
+          getTeamCode={getTeamCode}
+          kitColors={kitColors}
+          captainId={captain}
+          viceCaptainId={viceCaptain}
+          onConfirmRoles={({ captainId, viceCaptainId }) => {
+            setCaptain(captainId);
+            setViceCaptain(viceCaptainId);
+          }}
+          substitutes={bench}
+          onSelectSubstitute={(sub) => {
+            if (!selectedPlayerIsStarting || !selectedSlot) {
+              setSelectedPlayer(null);
+              return;
+            }
+            // Swap selected starting player with chosen substitute
+            const { pos, index } = selectedSlot;
+            setSquad(prevSquad => {
+              // Swap selectedPlayer (starting) with sub (bench)
+              const newSquad = { ...prevSquad };
+              // Remove sub from its current position in squad
+              // Find and remove the substitute from the squad (first occurrence)
+              let benchPos = null, benchIdx = null;
+              for (const k of Object.keys(newSquad)) {
+                for (let i = 0; i < newSquad[k].length; i++) {
+                  const p = newSquad[k][i];
+                  if (p && (p._id === sub._id || p.id === sub.id)) {
+                    benchPos = k;
+                    benchIdx = i;
+                    break;
+                  }
+                }
+                if (benchPos) break;
+              }
+              if (benchPos !== null && benchIdx !== null) {
+                newSquad[benchPos][benchIdx] = null;
+              }
+              // Place sub in starting slot
+              newSquad[pos] = [...newSquad[pos]];
+              const prevStarter = newSquad[pos][index];
+              newSquad[pos][index] = sub;
+              // Add previous starter to bench (first available null slot), only if not already present
+              let alreadyInBench = false;
+              for (const k of Object.keys(newSquad)) {
+                for (let i = 0; i < newSquad[k].length; i++) {
+                  const p = newSquad[k][i];
+                  if (p && prevStarter && (p._id === prevStarter._id || p.id === prevStarter.id)) {
+                    alreadyInBench = true;
+                  }
+                }
+              }
+              if (prevStarter && !alreadyInBench) {
+                let added = false;
+                for (const k of Object.keys(newSquad)) {
+                  for (let i = 0; i < newSquad[k].length; i++) {
+                    if (!newSquad[k][i] && !added && k !== pos) {
+                      newSquad[k][i] = prevStarter;
+                      added = true;
+                    }
+                  }
+                }
+              }
+              // Ensure squad completeness after swap
+              const limits = { GK: 2, DF: 4, MF: 4, ATT: 3 };
+              for (const k of Object.keys(limits)) {
+                while (newSquad[k].length < limits[k]) {
+                  newSquad[k].push(null);
+                }
+                if (newSquad[k].length > limits[k]) {
+                  newSquad[k] = newSquad[k].slice(0, limits[k]);
+                }
+              }
+              return newSquad;
+            });
+            // Also update starting9
+            // (If you want to persist the new starting9, you may want to update localStorage as well)
+            setSelectedPlayer(null);
+          }}
+        />
+      )}
 
       {selectedChipDetails && (
         <ChipDetailsModal
