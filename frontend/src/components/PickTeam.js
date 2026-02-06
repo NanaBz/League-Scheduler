@@ -186,98 +186,14 @@ export default function PickTeam({ onBack }) {
     if (activeChip === chipId) {
       return 'active'; // Currently selected for this GW
     }
-    return 'available'; // Can be used
-  };
-
-  const canActivateChip = (chipId) => {
-    // Can't use if already used
-    if (usedChips[chipId]) return false;
-    // WC and FH cannot be used in GW1 (unlimited transfers already provided)
-    if ((chipId === 'WC' || chipId === 'FH') && currentGameweek === 1) return false;
-    // Allow direct switching: don't block if another chip is active
-    return true;
-  };
-
-  const toggleChip = (chipId) => {
-    if (!canActivateChip(chipId)) return;
-    if (activeChip === chipId) {
-      setActiveChip(null);
-    } else {
-      setActiveChip(chipId);
-    }
-  };
-
-  // const markChipUsed = () => {
-  //   if (activeChip) {
-  //     setUsedChips({ ...usedChips, [activeChip]: currentGameweek });
-  //   }
-  // };
-
-  const kitColors = (teamCode, pos) => {
-    if (pos === 'GK') return { primary: '#8b5cf6', stroke: '#2f1e64' };
-    switch (teamCode) {
-      case 'KWF': return { primary: '#ffd233', stroke: '#7a5b00' };
-      case 'DRA': return { primary: '#2563eb', stroke: '#0b3b9d' };
-      case 'VIK': return { primary: '#dc2626', stroke: '#7a1010' };
-      case 'LIO': return { primary: '#16a34a', stroke: '#0a5928' };
-      case 'ELI': return { primary: '#111111', stroke: '#e5e5e5' };
-      case 'FAL': return { primary: '#ffffff', stroke: '#000000' };
-      default: return { primary: '#444', stroke: '#111' };
-    }
-  };
-
-  const allPlayers = useMemo(() => {
-    return Object.values(squad).flat().filter(Boolean);
-  }, [squad]);
-
-  const bench = useMemo(() => {
-    const starting = Object.values(starting9).flat().filter(Boolean).map(p => p._id || p.id);
-    return allPlayers.filter(p => !starting.includes(p._id || p.id));
-  }, [allPlayers, starting9]);
-
-  // const hasNullSlot = (pos, state = starting9) => {
-  //   if (pos === 'GK') return !state.GK; // GK has one slot
-  //   const arr = state[pos] || [];
-  //   return arr.some(slot => !slot);
-  // };
-
-  // const canSwapWith = (benchPlayer) => {};
-
-  // const eligibleSubstitutes = (!selectedPlayerIsStarting || !selectedSlot)
-  //   ? []
-  //   : bench.filter((p) => canSwapWith(p));
-
-  // const getFirstAvailableStartingPlayer = () => {
-  //   // Return first starting player (excluding selected one if applicable)
-  //   const allStarting = [
-  //     starting9.GK,
-  //     ...starting9.DF.filter(Boolean),
-  //     ...starting9.MF.filter(Boolean),
-  //     ...starting9.ATT.filter(Boolean)
-  //   ].filter(Boolean);
-  //   return allStarting[0]?._id || allStarting[0]?.id || null;
-  // };
-
-  // const applySubstitution = (benchPlayer) => {
-  //   ...function body removed for unused var...
-  // };
-
-  // const isStarting9Complete = useMemo(() => {
-  //   const counts = countPositions();
-  //   const meetsMin = counts.DF >= POSITION_LIMITS.DF.min && counts.MF >= POSITION_LIMITS.MF.min && counts.ATT >= POSITION_LIMITS.ATT.min;
-  //   const totalOutfield = counts.DF + counts.MF + counts.ATT;
-  //   return counts.GK === 1 && totalOutfield === 8 && meetsMin;
-  // }, [starting9]);
-
-  // Show prompt if transfers not completed
-  if (!isSquadComplete) {
     return (
-      <div className="pick-team-container">
-        <div className="pick-team-header">
-          <button className="back-link" onClick={onBack}>
-            <ArrowLeft size={18} />
-            <span>Back</span>
-          </button>
+      <div className="fantasy-section" style={{ textAlign: 'center', padding: '3rem 1rem' }}>
+        <h2 style={{ color: '#ff5555', marginBottom: '1rem' }}>Coming Soon</h2>
+        <p style={{ color: '#ccc', fontSize: '1.2rem' }}>
+          The Fantasy League feature is under development and will be available soon. Stay tuned!
+        </p>
+      </div>
+    );
           <h2>Pick Your Starting 9</h2>
         </div>
         <div className="transfers-prompt">
