@@ -2,9 +2,30 @@ import React, { useState, useEffect } from 'react';
 import { Trophy, Award, RefreshCcw, Edit3, Save, FileDown, FileBarChart2 } from 'lucide-react';
 import PropTypes from 'prop-types';
 import api from '../utils/api';
+import { matchEventsToGoalscorerForm, resizeGoalsToScores } from '../utils/matchEventsForm';
 import GoalScorerSelector from './GoalScorerSelector';
 import TeamSelection from './TeamSelection';
 import PlayerPriceEditor from './PlayerPriceEditor';
+
+function buildServerFormSnapshot(match, homeScore, awayScore) {
+  const h = parseInt(homeScore, 10) || 0;
+  const a = parseInt(awayScore, 10) || 0;
+  const raw = matchEventsToGoalscorerForm(match?.events || []);
+  return {
+    goals: resizeGoalsToScores(raw.goals, h, a),
+    cards: raw.cards,
+    cleanSheets: raw.cleanSheets,
+  };
+}
+
+function stableAdminFormString(form) {
+  if (!form || !form.goals) return '';
+  return JSON.stringify({
+    goals: form.goals,
+    cards: form.cards,
+    cleanSheets: form.cleanSheets,
+  });
+}
 
 // Helper function to get team logo CSS class
 const getTeamLogoClass = (teamName) => {
@@ -31,6 +52,18 @@ const AdminPanel = ({ onDataChange, isAdmin }) => {
   const [savingMatches, setSavingMatches] = useState(new Set()); // Track which matches are being saved
   const [fixtureStatus, setFixtureStatus] = useState({}); // Track fixture publication status
   const [goalscorerData, setGoalscorerData] = useState({}); // Track goalscorer + cards/clean sheets per match
+
+  // Fetch and set match events for editing (auto-populate goalscorer/assist fields)
+  const fetchMatchEvents = async (matchId) => {
+    try {
+      const response = await api.get(`/matches/${matchId}`);
+      const match = response.data;
+      const { goals, cards, cleanSheets } = matchEventsToGoalscorerForm(match.events || []);
+      setGoalscorerData((prev) => ({ ...prev, [matchId]: { goals, cards, cleanSheets } }));
+    } catch (error) {
+      console.error('fetchMatchEvents failed:', error.response?.data || error.message);
+    }
+  };
   const [selectedMatchForLineup, setSelectedMatchForLineup] = useState(null); // Track match being edited for lineups
 
   useEffect(() => {
@@ -351,18 +384,14 @@ const AdminPanel = ({ onDataChange, isAdmin }) => {
         fetchMatches(),
         fetchTeams()
       ]);
-      
+
+      // Reload saved events into admin form so selections are not wiped after save
+      await fetchMatchEvents(matchId);
+
       // Trigger UserView refresh without page reload
       onDataChange();
-      
-      // Clear goalscorer data and edited matches
-      setGoalscorerData(prev => {
-        const newData = { ...prev };
-        delete newData[matchId];
-        return newData;
-      });
 
-      setEditedMatches(prev => {
+      setEditedMatches((prev) => {
         const newEdited = { ...prev };
         delete newEdited[matchId];
         return newEdited;
@@ -403,15 +432,20 @@ const AdminPanel = ({ onDataChange, isAdmin }) => {
   };
 
   const hasUnsavedChanges = (matchId) => {
+    const match = matches.find((m) => m._id === matchId);
     const hasEdits = editedMatches[matchId] && Object.keys(editedMatches[matchId]).length > 0;
+    if (!match) return hasEdits;
     const data = goalscorerData[matchId];
-    const goals = data?.goals || data;
-    const cards = data?.cards;
-    const cleanSheets = data?.cleanSheets;
-    const hasGoalscorers = goals && ((goals.home && goals.home.length > 0) || (goals.away && goals.away.length > 0));
-    const hasCards = cards && ((cards.home && cards.home.length > 0) || (cards.away && cards.away.length > 0));
-    const hasCleanSheets = cleanSheets && ((cleanSheets.home?.enabled && cleanSheets.home.playerId) || (cleanSheets.away?.enabled && cleanSheets.away.playerId));
-    return hasEdits || hasGoalscorers || hasCards || hasCleanSheets;
+    const hs = getMatchValue(match, 'homeScore');
+    const as = getMatchValue(match, 'awayScore');
+    const serverSnap = buildServerFormSnapshot(match, hs, as);
+    const serverStr = stableAdminFormString(serverSnap);
+    if (!data) {
+      // No local form payload yet — unsaved only if score line edits or server expects nothing but UI would differ
+      return hasEdits;
+    }
+    const differsFromServer = stableAdminFormString(data) !== serverStr;
+    return hasEdits || differsFromServer;
   };
 
   const isMatchDrawn = (match) => {
@@ -1075,11 +1109,12 @@ const AdminPanel = ({ onDataChange, isAdmin }) => {
           </div>
 
           {/* Goalscorer Selection - appears below the match row when scores are set */}
+          {/* Auto-populate goalscorer/assist fields when editing a match */}
           <GoalScorerSelector
             match={match}
             homeScore={getMatchValue(match, 'homeScore')}
             awayScore={getMatchValue(match, 'awayScore')}
-            onGoalscorerData={(data) => setGoalscorerData(prev => ({ ...prev, [match._id]: data }))}
+            onGoalscorerData={(data) => setGoalscorerData((prev) => ({ ...prev, [match._id]: data }))}
           />
           </>
         ))}

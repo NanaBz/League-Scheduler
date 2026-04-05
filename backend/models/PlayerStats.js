@@ -30,8 +30,8 @@ const playerStatsSchema = new mongoose.Schema({
   timestamps: true
 });
 
-// Unique per player per season and competition
-playerStatsSchema.index({ player: 1, seasonNumber: 1, competition: 1 }, { unique: true });
+// Unique per player per season, competition, and team
+playerStatsSchema.index({ player: 1, seasonNumber: 1, competition: 1, team: 1 }, { unique: true });
 // Lookup indexes
 playerStatsSchema.index({ competition: 1, seasonNumber: 1 });
 

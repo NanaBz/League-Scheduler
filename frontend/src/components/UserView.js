@@ -50,10 +50,13 @@ const formatGoalscorers = (match, side) => {
   const goals = match.events.filter(e => 
     e.type === 'GOAL' && 
     e.side === side && 
-    e.player
+    (e.player?._id || e.player?.name || e.player)
   );
   
   if (goals.length === 0) return null;
+
+  const playerLabel = (p) => (typeof p === 'object' && p && p.name) ? p.name : 'Player';
+  const assistLabel = (p) => (typeof p === 'object' && p && p.name) ? p.name : null;
   
   return (
     <div style={{ fontSize: '0.85em', color: '#666', marginTop: '4px' }}>
@@ -62,16 +65,16 @@ const formatGoalscorers = (match, side) => {
           {goal.ownGoal ? (
             <span style={{ color: '#dc3545', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
               <Goal size={14} />
-              <span>{goal.player.name} (OG)</span>
+              <span>{playerLabel(goal.player)} (OG)</span>
             </span>
           ) : (
             <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
               <Goal size={14} />
-              <span>{goal.player.name}</span>
-              {goal.assistPlayer && (
+              <span>{playerLabel(goal.player)}</span>
+              {goal.assistPlayer && assistLabel(goal.assistPlayer) && (
                 <sub style={{ marginLeft: '4px', fontSize: '0.9em', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
                   <Footprints size={12} />
-                  <span>{goal.assistPlayer.name}</span>
+                  <span>{assistLabel(goal.assistPlayer)}</span>
                 </sub>
               )}
             </span>
@@ -85,10 +88,11 @@ const formatGoalscorers = (match, side) => {
 // Helper function to format cards (yellow/red)
 const formatCards = (match, side, type) => {
   if (!match.events || match.events.length === 0) return null;
-  const evs = match.events.filter(e => e.type === type && e.side === side && e.player);
+  const evs = match.events.filter(e => e.type === type && e.side === side && (e.player?._id || e.player?.name || e.player));
   if (evs.length === 0) return null;
   const color = type === 'YELLOW_CARD' ? '#f1c40f' : '#e74c3c';
   const label = type === 'YELLOW_CARD' ? 'Yellow Cards' : 'Red Cards';
+  const cardPlayerLabel = (p) => (typeof p === 'object' && p && p.name) ? p.name : 'Player';
   return (
     <div style={{ fontSize: '0.85em', color: '#666', marginTop: '6px' }}>
       <div style={{ fontWeight: 600, marginBottom: 4 }}>{label}</div>
@@ -96,7 +100,7 @@ const formatCards = (match, side, type) => {
         <div key={`${type}-${idx}`} style={{ display: 'flex', alignItems: 'center', gap: '6', marginBottom: 2 }}>
           <Square size={12} color={color} />
           <span>
-            {ev.player.name}
+            {cardPlayerLabel(ev.player)}
             {typeof ev.minute === 'number' && !Number.isNaN(ev.minute) ? ` (${ev.minute}')` : ''}
           </span>
         </div>
@@ -326,7 +330,11 @@ const UserView = ({ competitions, selectedCompetition, refreshKey, isAdmin }) =>
   };
 
   const hasMatchEvents = (match) => {
-    return match.events && match.events.some(e => ['GOAL','YELLOW_CARD','RED_CARD'].includes(e.type) && e.player);
+    if (!match.events || match.events.length === 0) return false;
+    return match.events.some((e) =>
+      ['GOAL', 'YELLOW_CARD', 'RED_CARD'].includes(e.type) &&
+      (e.player?._id || e.player?.name || e.player)
+    );
   };
 
   const hasStartingLineup = (match) => {

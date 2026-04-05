@@ -1,5 +1,6 @@
 console.log('matches.js loaded');
 const express = require('express');
+const mongoose = require('mongoose');
 const router = express.Router();
 const Match = require('../models/Match');
 const Team = require('../models/Team');
@@ -554,6 +555,25 @@ router.get('/fixture-status', async (req, res) => {
   }
 });
 
+// Single match (must stay below static paths like /fixture-status)
+router.get('/:id', async (req, res) => {
+  try {
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(400).json({ message: 'Invalid match id' });
+    }
+    const match = await Match.findById(req.params.id)
+      .populate('homeTeam', 'name logo')
+      .populate('awayTeam', 'name logo')
+      .populate('events.player', 'name number')
+      .populate('events.assistPlayer', 'name number')
+      .lean();
+    if (!match) return res.status(404).json({ message: 'Match not found' });
+    res.json(match);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
 // Helper function to update cup progression after semi-finals
 async function updateCupProgression() {
   try {
@@ -729,23 +749,55 @@ router.post('/:id/events', authenticateAdmin, async (req, res) => {
     const allowedTypes = ['GOAL', 'CLEAN_SHEET', 'YELLOW_CARD', 'RED_CARD'];
     const allowedSides = ['home', 'away'];
 
+    // Team the player represented in this fixture (not Player.team — avoids wrong bucket after transfers)
+    const teamIdForMatchSide = (side) => {
+      const ref = side === 'home' ? match.homeTeam : match.awayTeam;
+      if (!ref) throw new Error('Invalid match team reference');
+      return ref instanceof mongoose.Types.ObjectId ? ref : ref._id;
+    };
+
+    const toPlayerObjectId = (ref) => {
+      if (!ref) return null;
+      if (ref instanceof mongoose.Types.ObjectId) return ref;
+      if (typeof ref === 'object' && ref._id) return toPlayerObjectId(ref._id);
+      const s = String(ref);
+      if (!mongoose.Types.ObjectId.isValid(s)) return null;
+      return new mongoose.Types.ObjectId(s);
+    };
+
     // Helper to adjust stats for an event (delta=+1 or -1)
     const adjustStatsForEvent = async (ev, delta) => {
       if (!allowedTypes.includes(ev.type)) throw new Error('Invalid event type');
       if (!allowedSides.includes(ev.side)) throw new Error('Invalid event side');
       if (!ev.player) throw new Error('Event must include player');
 
-      const player = await Player.findById(ev.player).lean();
-      if (!player) throw new Error('Player not found');
+      const playerOid = toPlayerObjectId(ev.player);
+      if (!playerOid) throw new Error('Event must include valid player');
 
       const competition = match.competition;
+      const statsTeamId = teamIdForMatchSide(ev.side);
 
-      // Upsert the PlayerStats doc
-      const statsDoc = await PlayerStats.findOneAndUpdate(
-        { player: player._id, team: player.team, seasonNumber, competition },
-        {},
-        { upsert: true, new: true, setDefaultsOnInsert: true }
-      );
+      if (delta > 0) {
+        const player = await Player.findById(playerOid).lean();
+        if (!player) throw new Error('Player not found');
+      }
+
+      let statsDoc;
+      if (delta < 0) {
+        statsDoc = await PlayerStats.findOne({
+          player: playerOid,
+          team: statsTeamId,
+          seasonNumber,
+          competition,
+        });
+        if (!statsDoc) return;
+      } else {
+        statsDoc = await PlayerStats.findOneAndUpdate(
+          { player: playerOid, team: statsTeamId, seasonNumber, competition },
+          {},
+          { upsert: true, new: true, setDefaultsOnInsert: true }
+        );
+      }
 
       const update = {};
       if (ev.type === 'GOAL') {
@@ -754,13 +806,23 @@ router.post('/:id/events', authenticateAdmin, async (req, res) => {
         } else {
           update.goals = (statsDoc.goals || 0) + delta;
           if (ev.assistPlayer) {
-            const assistPlayer = await Player.findById(ev.assistPlayer).lean();
-            if (assistPlayer) {
-              await PlayerStats.findOneAndUpdate(
-                { player: assistPlayer._id, team: assistPlayer.team, seasonNumber, competition },
-                { $inc: { assists: delta } },
-                { upsert: true, new: true, setDefaultsOnInsert: true }
-              );
+            const assistOid = toPlayerObjectId(ev.assistPlayer);
+            if (assistOid) {
+              if (delta > 0) {
+                const assistPlayer = await Player.findById(assistOid).lean();
+                if (assistPlayer) {
+                  await PlayerStats.findOneAndUpdate(
+                    { player: assistOid, team: statsTeamId, seasonNumber, competition },
+                    { $inc: { assists: delta } },
+                    { upsert: true, new: true, setDefaultsOnInsert: true }
+                  );
+                }
+              } else {
+                await PlayerStats.updateOne(
+                  { player: assistOid, team: statsTeamId, seasonNumber, competition },
+                  { $inc: { assists: delta } }
+                );
+              }
             }
           }
         }
@@ -772,10 +834,7 @@ router.post('/:id/events', authenticateAdmin, async (req, res) => {
         update.redCards = (statsDoc.redCards || 0) + delta;
       }
 
-      await PlayerStats.updateOne(
-        { _id: statsDoc._id },
-        { $set: update }
-      );
+      await PlayerStats.updateOne({ _id: statsDoc._id }, { $set: update });
     };
 
     // Reverse previous events

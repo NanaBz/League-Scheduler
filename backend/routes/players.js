@@ -6,34 +6,37 @@ const mongoose = require('mongoose');
 const { authenticateAdmin } = require('../middleware/auth');
 
 // List players (optionally by team)
+// List players (optionally by team, and optionally include inactive)
 router.get('/', async (req, res) => {
   try {
-    const { teamId } = req.query;
-    console.log('🔍 Players endpoint hit - teamId:', teamId);
-    
+    const { teamId, includeInactive } = req.query;
+    console.log('🔍 Players endpoint hit - teamId:', teamId, 'includeInactive:', includeInactive);
+
     let filter = {};
     if (teamId) {
-      // Convert string teamId to MongoDB ObjectId
       try {
         filter.team = new mongoose.Types.ObjectId(teamId);
       } catch (e) {
         console.warn('⚠️ Failed to convert teamId to ObjectId, using string:', e.message);
-        filter.team = teamId; // Fallback to string comparison
+        filter.team = teamId;
       }
     }
-    
+    if (!includeInactive) {
+      filter.active = true;
+    }
+
     console.log('📋 Using filter:', filter);
-    
+
     const players = await Player.find(filter)
       .populate('team', 'name logo')
       .sort({ team: 1, position: 1, number: 1 })
       .lean();
-    
+
     console.log(`✅ Found ${players.length} players with filter:`, filter);
     if (players.length > 0) {
       console.log('Sample player:', players[0]);
     }
-    
+
     res.json(players);
   } catch (error) {
     console.error('❌ Error in players endpoint:', error);
@@ -69,13 +72,30 @@ router.put('/:id', authenticateAdmin, async (req, res) => {
   }
 });
 
-// Delete player
+// Delete player (soft delete by default, permanent if ?permanent=true and no stats)
 router.delete('/:id', authenticateAdmin, async (req, res) => {
   try {
     const player = await Player.findById(req.params.id);
     if (!player) return res.status(404).json({ message: 'Player not found' });
-    await player.deleteOne();
-    res.json({ message: 'Player deleted' });
+
+    const permanent = req.query.permanent === 'true';
+    if (permanent) {
+      // Check for linked stats or match events before hard delete
+      const PlayerStats = require('../models/PlayerStats');
+      const Match = require('../models/Match');
+      const statsCount = await PlayerStats.countDocuments({ player: player._id });
+      const matchEventCount = await Match.countDocuments({ 'events.player': player._id });
+      if (statsCount > 0 || matchEventCount > 0) {
+        return res.status(400).json({ message: 'Cannot permanently delete player with linked stats or match events. Please remove stats/events first.' });
+      }
+      await player.deleteOne();
+      return res.json({ message: 'Player permanently deleted' });
+    } else {
+      // Soft delete: mark as inactive
+      player.active = false;
+      await player.save();
+      return res.json({ message: 'Player marked as inactive (soft deleted)' });
+    }
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

@@ -1,26 +1,39 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import api from '../utils/api';
+import {
+  emptyGoalsForScores,
+  matchEventsToGoalscorerForm,
+  resizeGoalsToScores,
+} from '../utils/matchEventsForm';
+
+const defaultCleanSheets = () => ({
+  home: { enabled: false, playerId: '' },
+  away: { enabled: false, playerId: '' },
+});
 
 export default function GoalScorerSelector({ match, homeScore, awayScore, onGoalscorerData }) {
   const [homePlayers, setHomePlayers] = useState([]);
   const [awayPlayers, setAwayPlayers] = useState([]);
   const [goalscorers, setGoalscorers] = useState({ home: [], away: [] });
   const [cards, setCards] = useState({ home: [], away: [] });
-  const [cleanSheets, setCleanSheets] = useState({
-    home: { enabled: false, playerId: '' },
-    away: { enabled: false, playerId: '' }
-  });
+  const [cleanSheets, setCleanSheets] = useState(defaultCleanSheets());
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  // Fetch players for both teams
+  const onGoalscorerDataRef = useRef(onGoalscorerData);
+  onGoalscorerDataRef.current = onGoalscorerData;
+
+  const homeTeamId = match?.homeTeam?._id || match?.homeTeam;
+  const awayTeamId = match?.awayTeam?._id || match?.awayTeam;
+
+  // Fetch players when fixture identity changes (not whole match object identity)
   useEffect(() => {
     const fetchPlayers = async () => {
       setLoading(true);
       try {
         const [homeRes, awayRes] = await Promise.all([
-          api.get(`/players`, { params: { teamId: match.homeTeam._id || match.homeTeam } }),
-          api.get(`/players`, { params: { teamId: match.awayTeam._id || match.awayTeam } }),
+          api.get(`/players`, { params: { teamId: homeTeamId } }),
+          api.get(`/players`, { params: { teamId: awayTeamId } }),
         ]);
         setHomePlayers(homeRes.data || []);
         setAwayPlayers(awayRes.data || []);
@@ -29,39 +42,60 @@ export default function GoalScorerSelector({ match, homeScore, awayScore, onGoal
       }
       setLoading(false);
     };
-    
-    if (match) fetchPlayers();
-  }, [match]);
 
-  // Initialize goalscorers array when score changes
+    if (homeTeamId && awayTeamId) fetchPlayers();
+  }, [homeTeamId, awayTeamId]);
+
+  // Stable key for server-persisted events only (editing scores does not rewrite this)
+  const serverEventsKey = useMemo(() => {
+    if (!match?.events?.length) return `${match?._id || 'm'}:noevents`;
+    return (
+      (match._id || '') +
+      ':' +
+      match.events
+        .map((e) => {
+          const p = e.player?._id || e.player;
+          const a = e.assistPlayer?._id || e.assistPlayer;
+          return `${e.type}|${e.side}|${p}|${a}|${!!e.ownGoal}|${e.minute ?? ''}`;
+        })
+        .join(';')
+    );
+  }, [match._id, match.events]);
+
+  const prevMatchIdRef = useRef(null);
+
+  // New match row → reset rows; same match → resize goal slots when scores change (preserve picks)
   useEffect(() => {
-    const hScore = parseInt(homeScore) || 0;
-    const aScore = parseInt(awayScore) || 0;
-
-    setGoalscorers({
-      home: Array(hScore).fill(null).map(() => ({
-        scorerId: '',
-        isOwnGoal: false,
-        assistId: '',
-      })),
-      away: Array(aScore).fill(null).map(() => ({
-        scorerId: '',
-        isOwnGoal: false,
-        assistId: '',
-      }))
-    });
-
-    // Reset cards and clean sheets when scores change (keeps data in sync with a new edit)
-    setCards({ home: [], away: [] });
-    setCleanSheets({ home: { enabled: false, playerId: '' }, away: { enabled: false, playerId: '' } });
-  }, [homeScore, awayScore, match]);
-
-  // Notify parent when goalscorers change
-  useEffect(() => {
-    if (onGoalscorerData) {
-      onGoalscorerData({ goals: goalscorers, cards, cleanSheets });
+    if (!match?._id) return;
+    const hScore = parseInt(homeScore, 10) || 0;
+    const aScore = parseInt(awayScore, 10) || 0;
+    if (prevMatchIdRef.current !== match._id) {
+      prevMatchIdRef.current = match._id;
+      setGoalscorers(emptyGoalsForScores(hScore, aScore));
+      setCards({ home: [], away: [] });
+      setCleanSheets(defaultCleanSheets());
+      return;
     }
-  }, [goalscorers, cards, cleanSheets, onGoalscorerData]);
+    setGoalscorers((prev) => resizeGoalsToScores(prev, hScore, aScore));
+  }, [match._id, homeScore, awayScore]);
+
+  // When the server copy of events changes (load, save, refetch), hydrate the form from DB
+  useEffect(() => {
+    if (!match?.events?.length) return;
+    const hScore = parseInt(homeScore, 10) || 0;
+    const aScore = parseInt(awayScore, 10) || 0;
+    const { goals, cards: c, cleanSheets: cs } = matchEventsToGoalscorerForm(match.events);
+    setGoalscorers(resizeGoalsToScores(goals, hScore, aScore));
+    setCards(c);
+    setCleanSheets(cs);
+  }, [serverEventsKey]);
+
+  // Notify parent when local form state changes (callback ref avoids loops from unstable identity)
+  useEffect(() => {
+    if (onGoalscorerDataRef.current) {
+      onGoalscorerDataRef.current({ goals: goalscorers, cards, cleanSheets });
+    }
+  }, [goalscorers, cards, cleanSheets]);
 
   const updateGoalscorer = (side, index, scorerId, isOwnGoal = false) => {
     setGoalscorers(prev => {

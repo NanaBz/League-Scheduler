@@ -42,12 +42,32 @@ export default function StatsPage() {
     }));
   };
 
+  // Group stats by player, aggregate teams and stat values
   const Section = ({ title, items, metricKey }) => {
     const sectionKey = `${competition}-${metricKey}`;
     const isExpanded = expandedSections[sectionKey] || false;
     const allItems = items || [];
-    // Show top 3 by default, all items when expanded
-    const displayItems = isExpanded ? allItems : allItems.slice(0, 3);
+
+    // Group by player id (includes orphanedPlayerId when the Player doc was deleted)
+    const grouped = {};
+    allItems.forEach((row) => {
+      const pid = row.player?._id || row.orphanedPlayerId;
+      if (!pid) return;
+      const key = String(pid);
+      if (!grouped[key]) {
+        grouped[key] = {
+          player: row.player,
+          orphanedPlayerId: row.orphanedPlayerId,
+          teams: [],
+          stat: 0,
+        };
+      }
+      grouped[key].teams.push(row.team);
+      grouped[key].stat += row[metricKey] || 0;
+    });
+    // Convert to array and sort by stat desc
+    const groupedArr = Object.values(grouped).sort((a, b) => b.stat - a.stat);
+    const displayItems = isExpanded ? groupedArr : groupedArr.slice(0, 3);
 
     const handleToggle = (e) => {
       e.preventDefault();
@@ -59,31 +79,42 @@ export default function StatsPage() {
       <div className={`stats-section ${isExpanded ? 'stats-section-expanded' : ''}`}>
         <div className="stats-section-header">
           <h4>{title}</h4>
-          {allItems.length > 0 && (
+          {groupedArr.length > 0 && (
             <button
               type="button"
               className={`stats-expand-btn ${isExpanded ? 'stats-expand-btn-active' : ''}`}
               onClick={handleToggle}
               aria-label={isExpanded ? `Collapse ${title}` : `Expand ${title}`}
             >
-              {isExpanded ? 'Show less' : `View all (${allItems.length})`}
+              {isExpanded ? 'Show less' : `View all (${groupedArr.length})`}
             </button>
           )}
         </div>
         <ul className="stats-list">
           {displayItems.map((row, idx) => (
-            <li key={`${metricKey}-${row.player?._id || idx}`} className="stats-item">
+            <li
+              key={`${metricKey}-${row.player?._id || row.orphanedPlayerId || idx}`}
+              className="stats-item"
+            >
               <div className="stats-player">
-                <img
-                  src={row.team?.logo}
-                  alt="logo"
-                  className="stats-team-logo"
-                  style={row.team?.name === 'Falcons' ? { backgroundColor: '#94a3b8', padding: 4, borderRadius: 8 } : undefined}
-                />
-                <span className="stats-name">{row.player?.name}</span>
-                <span className="stats-team">{row.team?.name}</span>
+                {/* Show all team logos for this player */}
+                {row.teams.map((team, tIdx) => (
+                  <img
+                    key={team?._id || tIdx}
+                    src={team?.logo}
+                    alt="logo"
+                    className="stats-team-logo"
+                    style={team?.name === 'Falcons' ? { backgroundColor: '#94a3b8', padding: 4, borderRadius: 8, marginRight: 2 } : { marginRight: 2 }}
+                  />
+                ))}
+                <span className="stats-name">
+                  {(row.player?.name && String(row.player.name).trim()) ||
+                    (row.orphanedPlayerId ? 'Former player (removed)' : 'Unknown')}
+                </span>
+                {/* Show all team names, comma separated */}
+                <span className="stats-team">{row.teams.map(t => t?.name).filter(Boolean).join(', ')}</span>
               </div>
-              <div className="stats-value">{row[metricKey] || 0}</div>
+              <div className="stats-value">{row.stat || 0}</div>
             </li>
           ))}
         </ul>

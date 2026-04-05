@@ -1,11 +1,41 @@
 const express = require('express');
 const router = express.Router();
 const PlayerStats = require('../models/PlayerStats');
+const Player = require('../models/Player');
+const Team = require('../models/Team');
 const Season = require('../models/Season');
 
 async function getActiveSeasonNumber() {
   const season = await Season.findOne({ isActive: true }).lean();
   return season ? season.seasonNumber : null;
+}
+
+/** Manual join so deleted players still expose an id for labels (populate alone drops the ref). */
+async function decorateStatsRows(statsDocs) {
+  if (!statsDocs.length) return statsDocs;
+  const playerIds = [...new Set(statsDocs.map((s) => String(s.player)))];
+  const teamIds = [...new Set(statsDocs.map((s) => String(s.team)))];
+  const [players, teams] = await Promise.all([
+    Player.find({ _id: { $in: playerIds } }).select('name number position').lean(),
+    Team.find({ _id: { $in: teamIds } }).select('name logo').lean(),
+  ]);
+  const playerById = Object.fromEntries(players.map((p) => [String(p._id), p]));
+  const teamById = Object.fromEntries(teams.map((t) => [String(t._id), t]));
+  return statsDocs.map((s) => {
+    const pid = String(s.player);
+    const tid = String(s.team);
+    return {
+      ...s,
+      player: playerById[pid] || null,
+      orphanedPlayerId: playerById[pid] ? undefined : pid,
+      team: teamById[tid] || null,
+    };
+  });
+}
+
+async function sortedDecoratedStats(filter, sortObj) {
+  const docs = await PlayerStats.find(filter).sort(sortObj).lean();
+  return decorateStatsRows(docs);
 }
 
 // GET /stats?team=teamId (get all stats for a specific team)
@@ -14,10 +44,8 @@ router.get('/', async (req, res) => {
     const { team } = req.query;
     if (!team) return res.status(400).json({ message: 'team parameter required' });
     const seasonNumber = await getActiveSeasonNumber();
-    const stats = await PlayerStats.find({ team, seasonNumber })
-      .populate('player', 'name number position')
-      .populate('team', 'name logo')
-      .lean();
+    const raw = await PlayerStats.find({ team, seasonNumber }).lean();
+    const stats = await decorateStatsRows(raw);
     res.json(stats);
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -34,12 +62,11 @@ router.get('/leaderboard', async (req, res) => {
     const allowedMetrics = ['goals', 'assists', 'cleanSheets', 'yellowCards', 'redCards'];
     if (!allowedCompetitions.includes(competition)) return res.status(400).json({ message: 'Invalid competition' });
     if (!allowedMetrics.includes(metric)) return res.status(400).json({ message: 'Invalid metric' });
-    const top = await PlayerStats.find({ competition, seasonNumber })
+    const raw = await PlayerStats.find({ competition, seasonNumber })
       .sort({ [metric]: -1 })
       .limit(parseInt(limit, 10))
-      .populate('player', 'name number position')
-      .populate('team', 'name logo')
       .lean();
+    const top = await decorateStatsRows(raw);
     res.json(top);
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -56,17 +83,13 @@ router.get('/summary', async (req, res) => {
     if (!allowedCompetitions.includes(competition)) return res.status(400).json({ message: 'Invalid competition' });
 
     // Return ALL stats, sorted by each metric (frontend will show top 3 by default)
+    const filter = { competition, seasonNumber };
     const [goals, assists, cleanSheets, yellowCards, redCards] = await Promise.all([
-      PlayerStats.find({ competition, seasonNumber }).sort({ goals: -1 })
-        .populate('player', 'name number position').populate('team', 'name logo').lean(),
-      PlayerStats.find({ competition, seasonNumber }).sort({ assists: -1 })
-        .populate('player', 'name number position').populate('team', 'name logo').lean(),
-      PlayerStats.find({ competition, seasonNumber }).sort({ cleanSheets: -1 })
-        .populate('player', 'name number position').populate('team', 'name logo').lean(),
-      PlayerStats.find({ competition, seasonNumber }).sort({ yellowCards: -1 })
-        .populate('player', 'name number position').populate('team', 'name logo').lean(),
-      PlayerStats.find({ competition, seasonNumber }).sort({ redCards: -1 })
-        .populate('player', 'name number position').populate('team', 'name logo').lean()
+      sortedDecoratedStats(filter, { goals: -1 }),
+      sortedDecoratedStats(filter, { assists: -1 }),
+      sortedDecoratedStats(filter, { cleanSheets: -1 }),
+      sortedDecoratedStats(filter, { yellowCards: -1 }),
+      sortedDecoratedStats(filter, { redCards: -1 }),
     ]);
 
     res.json({ goals, assists, cleanSheets, yellowCards, redCards });
