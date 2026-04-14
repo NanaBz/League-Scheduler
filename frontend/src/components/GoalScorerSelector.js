@@ -88,7 +88,7 @@ export default function GoalScorerSelector({ match, homeScore, awayScore, onGoal
     setGoalscorers(resizeGoalsToScores(goals, hScore, aScore));
     setCards(c);
     setCleanSheets(cs);
-  }, [serverEventsKey]);
+  }, [serverEventsKey, homeScore, awayScore, match.events]);
 
   // Notify parent when local form state changes (callback ref avoids loops from unstable identity)
   useEffect(() => {
