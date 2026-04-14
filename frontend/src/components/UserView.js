@@ -150,7 +150,7 @@ const UserView = ({ competitions, selectedCompetition, refreshKey, isAdmin }) =>
     // Only use ACWPL matches
     const acwplMatches = matches.filter(m => m && m.homeTeam && m.awayTeam && ['Orion','Firestorm'].includes(m.homeTeam.name) && ['Orion','Firestorm'].includes(m.awayTeam.name));
     for (const match of acwplMatches) {
-      if (!match.isPlayed) continue;
+      if (!match.isPlayed || match.isVoided) continue;
       const home = base.find(t => t.name === match.homeTeam.name);
       const away = base.find(t => t.name === match.awayTeam.name);
       if (!home || !away) continue;
@@ -177,27 +177,18 @@ const UserView = ({ competitions, selectedCompetition, refreshKey, isAdmin }) =>
     // Sort by points, then GD, then GF
     return base.sort((a, b) => b.points - a.points || b.goalDifference - a.goalDifference || b.goalsFor - a.goalsFor);
   }
-  // ACWPL winner detection (most points after 5 games)
+  // ACWPL winner detection (clinched as soon as mathematically uncatchable)
   const acwplTable = getAcwplTable();
   let acwplWinner = null;
-  if (acwplTable.length === 2 && acwplTable[0].played === 5 && acwplTable[1].played === 5) {
-    if (acwplTable[0].points > acwplTable[1].points) {
-      acwplWinner = acwplTable[0].name;
-    } else if (acwplTable[1].points > acwplTable[0].points) {
-      acwplWinner = acwplTable[1].name;
-    } else {
-      // If tied on points, use goal difference, then goals for
-      if (acwplTable[0].goalDifference > acwplTable[1].goalDifference) {
-        acwplWinner = acwplTable[0].name;
-      } else if (acwplTable[1].goalDifference > acwplTable[0].goalDifference) {
-        acwplWinner = acwplTable[1].name;
-      } else if (acwplTable[0].goalsFor > acwplTable[1].goalsFor) {
-        acwplWinner = acwplTable[0].name;
-      } else if (acwplTable[1].goalsFor > acwplTable[0].goalsFor) {
-        acwplWinner = acwplTable[1].name;
-      } else {
-        acwplWinner = null; // True tie
-      }
+  if (acwplTable.length === 2) {
+    const leader = acwplTable[0];
+    const challenger = acwplTable[1];
+    const challengerRemainingGames = Math.max(0, 5 - challenger.played);
+    const challengerMaxPossiblePoints = challenger.points + (challengerRemainingGames * 3);
+
+    // 3 wins always clinches a best-of-5, but we also support earlier mathematical clinch by points.
+    if (leader.won >= 3 || leader.points > challengerMaxPossiblePoints) {
+      acwplWinner = leader.name;
     }
   }
 
@@ -463,7 +454,7 @@ const UserView = ({ competitions, selectedCompetition, refreshKey, isAdmin }) =>
             fontSize: '1.05rem',
             fontWeight: 400
           }}>
-            The ACWPL is a 5-game series between Orion and Firestorm. The team with the most points after all 5 games is crowned champion. All matches are played as regular fixtures, and the table below updates live as results are entered.
+            The ACWPL is a best-of-5 series between Orion and Firestorm. A team is crowned champion immediately after 3 wins or once they are mathematically uncatchable on points. Any remaining fixtures are marked null/void.
           </div>
         </div>
   )}
@@ -1453,7 +1444,9 @@ const UserView = ({ competitions, selectedCompetition, refreshKey, isAdmin }) =>
                       </div>
                     </div>
                     <div className="score-display">
-                      {match.isPlayed ? (
+                      {match.isVoided ? (
+                        <span><strong>VOID</strong></span>
+                      ) : match.isPlayed ? (
                         <span><strong>{match.homeScore} - {match.awayScore}</strong></span>
                       ) : (
                         <span>vs</span>
@@ -1474,8 +1467,8 @@ const UserView = ({ competitions, selectedCompetition, refreshKey, isAdmin }) =>
                     </div>
                     <div>Fixture</div>
                     <div>
-                      <span className={`badge ${match.isPlayed ? 'badge-success' : 'badge-warning'}`}>
-                        {match.isPlayed ? 'Played' : 'Scheduled'}
+                      <span className={`badge ${match.isVoided ? 'badge-danger' : (match.isPlayed ? 'badge-success' : 'badge-warning')}`}>
+                        {match.isVoided ? 'Void' : (match.isPlayed ? 'Played' : 'Scheduled')}
                       </span>
                     </div>
                   </div>
@@ -1911,7 +1904,7 @@ const UserView = ({ competitions, selectedCompetition, refreshKey, isAdmin }) =>
                 {matches.filter(m => m && m.homeTeam && m.awayTeam).map(match => (
                   <div 
                     key={match._id} 
-                    className={`fixture-card ${match.isPlayed ? 'played' : 'scheduled'}`}
+                    className={`fixture-card ${match.isVoided ? 'scheduled' : (match.isPlayed ? 'played' : 'scheduled')}`}
                     onClick={() => (match.isPlayed && (hasMatchEvents(match) || hasStartingLineup(match))) && toggleMatchDetails(match._id)}
                     style={{ cursor: (match.isPlayed && (hasMatchEvents(match) || hasStartingLineup(match))) ? 'pointer' : 'default' }}
                   >
@@ -1921,8 +1914,8 @@ const UserView = ({ competitions, selectedCompetition, refreshKey, isAdmin }) =>
                         <span className="fixture-time">{match.time}</span>
                       </div>
                       <div className="fixture-status">
-                        <span className={`status-badge ${match.isPlayed ? 'completed' : 'upcoming'}`}>
-                          {match.isPlayed ? 'FT' : 'Scheduled'}
+                        <span className={`status-badge ${match.isVoided ? 'upcoming' : (match.isPlayed ? 'completed' : 'upcoming')}`}>
+                          {match.isVoided ? 'VOID' : (match.isPlayed ? 'FT' : 'Scheduled')}
                         </span>
                       </div>
                     </div>
@@ -1939,13 +1932,15 @@ const UserView = ({ competitions, selectedCompetition, refreshKey, isAdmin }) =>
                           )}
                           <span className="team-name">{match.homeTeam.name}</span>
                         </div>
-                        {match.isPlayed && (
+                        {match.isPlayed && !match.isVoided && (
                           <div className="team-score">{match.homeScore}</div>
                         )}
                       </div>
 
                       <div className="vs-section">
-                        {match.isPlayed ? (
+                        {match.isVoided ? (
+                          <div className="vs-display">VOID</div>
+                        ) : match.isPlayed ? (
                           <div className="final-score">
                             <span className="score-display">{match.homeScore} - {match.awayScore}</span>
                           </div>
@@ -1965,7 +1960,7 @@ const UserView = ({ competitions, selectedCompetition, refreshKey, isAdmin }) =>
                           )}
                           <span className="team-name">{match.awayTeam.name}</span>
                         </div>
-                        {match.isPlayed && (
+                        {match.isPlayed && !match.isVoided && (
                           <div className="team-score">{match.awayScore}</div>
                         )}
                       </div>

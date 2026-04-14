@@ -127,6 +127,9 @@ router.put('/:id', authenticateAdmin, async (req, res) => {
     if (!match) {
       return res.status(404).json({ message: 'Match not found' });
     }
+    if (match.isVoided) {
+      return res.status(400).json({ message: 'This fixture has been marked void after ACWPL clinch and can no longer be edited.' });
+    }
 
     const oldHomeScore = match.homeScore;
     const oldAwayScore = match.awayScore;
@@ -158,6 +161,11 @@ router.put('/:id', authenticateAdmin, async (req, res) => {
     // Update cup progression if this is a semi-final match that is now played
     if (match.competition === 'cup' && match.stage === 'semi-final' && match.isPlayed) {
       await updateCupProgression();
+    }
+
+    // ACWPL: if champion is mathematically confirmed, void remaining unplayed fixtures
+    if (match.competition === 'acwpl' && match.isPlayed) {
+      await finalizeAcwplIfClinched();
     }
 
     res.json(updatedMatch);
@@ -575,6 +583,70 @@ router.get('/:id', async (req, res) => {
 });
 
 // Helper function to update cup progression after semi-finals
+async function getAcwplClinchState() {
+  const acwplMatches = await Match.find({ competition: 'acwpl' })
+    .populate('homeTeam', 'name')
+    .populate('awayTeam', 'name')
+    .sort({ matchweek: 1, date: 1 })
+    .lean();
+
+  const teamNames = ['Orion', 'Firestorm'];
+  const table = {
+    Orion: { points: 0, wins: 0, played: 0 },
+    Firestorm: { points: 0, wins: 0, played: 0 }
+  };
+
+  for (const match of acwplMatches) {
+    if (!match.isPlayed || match.isVoided) continue;
+    const home = match.homeTeam?.name;
+    const away = match.awayTeam?.name;
+    if (!teamNames.includes(home) || !teamNames.includes(away)) continue;
+
+    table[home].played += 1;
+    table[away].played += 1;
+
+    if (match.homeScore > match.awayScore) {
+      table[home].wins += 1;
+      table[home].points += 3;
+    } else if (match.awayScore > match.homeScore) {
+      table[away].wins += 1;
+      table[away].points += 3;
+    } else {
+      table[home].points += 1;
+      table[away].points += 1;
+    }
+  }
+
+  const [teamA, teamB] = teamNames;
+  const remainingA = Math.max(0, 5 - table[teamA].played);
+  const remainingB = Math.max(0, 5 - table[teamB].played);
+  const maxA = table[teamA].points + (remainingA * 3);
+  const maxB = table[teamB].points + (remainingB * 3);
+
+  if (table[teamA].wins >= 3 || table[teamA].points > maxB) return { champion: teamA };
+  if (table[teamB].wins >= 3 || table[teamB].points > maxA) return { champion: teamB };
+  return { champion: null };
+}
+
+async function finalizeAcwplIfClinched() {
+  const { champion } = await getAcwplClinchState();
+  if (!champion) return;
+
+  await Match.updateMany(
+    {
+      competition: 'acwpl',
+      isPlayed: false,
+      isVoided: { $ne: true }
+    },
+    {
+      $set: {
+        isVoided: true,
+        voidReason: `ACWPL winner decided early: ${champion} clinched the series.`
+      }
+    }
+  );
+}
+
 async function updateCupProgression() {
   try {
     // Get all semi-final matches
@@ -799,12 +871,15 @@ router.post('/:id/events', authenticateAdmin, async (req, res) => {
         );
       }
 
+      const clampNonNeg = (n) => Math.max(0, n);
       const update = {};
       if (ev.type === 'GOAL') {
         if (ev.ownGoal) {
-          update.ownGoals = (statsDoc.ownGoals || 0) + delta;
+          const next = (statsDoc.ownGoals || 0) + delta;
+          update.ownGoals = delta < 0 ? clampNonNeg(next) : next;
         } else {
-          update.goals = (statsDoc.goals || 0) + delta;
+          const nextG = (statsDoc.goals || 0) + delta;
+          update.goals = delta < 0 ? clampNonNeg(nextG) : nextG;
           if (ev.assistPlayer) {
             const assistOid = toPlayerObjectId(ev.assistPlayer);
             if (assistOid) {
@@ -818,20 +893,31 @@ router.post('/:id/events', authenticateAdmin, async (req, res) => {
                   );
                 }
               } else {
-                await PlayerStats.updateOne(
-                  { player: assistOid, team: statsTeamId, seasonNumber, competition },
-                  { $inc: { assists: delta } }
-                );
+                const aDoc = await PlayerStats.findOne({
+                  player: assistOid,
+                  team: statsTeamId,
+                  seasonNumber,
+                  competition,
+                });
+                if (aDoc) {
+                  await PlayerStats.updateOne(
+                    { _id: aDoc._id },
+                    { $set: { assists: clampNonNeg((aDoc.assists || 0) + delta) } }
+                  );
+                }
               }
             }
           }
         }
       } else if (ev.type === 'CLEAN_SHEET') {
-        update.cleanSheets = (statsDoc.cleanSheets || 0) + delta;
+        const next = (statsDoc.cleanSheets || 0) + delta;
+        update.cleanSheets = delta < 0 ? clampNonNeg(next) : next;
       } else if (ev.type === 'YELLOW_CARD') {
-        update.yellowCards = (statsDoc.yellowCards || 0) + delta;
+        const next = (statsDoc.yellowCards || 0) + delta;
+        update.yellowCards = delta < 0 ? clampNonNeg(next) : next;
       } else if (ev.type === 'RED_CARD') {
-        update.redCards = (statsDoc.redCards || 0) + delta;
+        const next = (statsDoc.redCards || 0) + delta;
+        update.redCards = delta < 0 ? clampNonNeg(next) : next;
       }
 
       await PlayerStats.updateOne({ _id: statsDoc._id }, { $set: update });

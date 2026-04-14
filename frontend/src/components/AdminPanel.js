@@ -464,6 +464,10 @@ const AdminPanel = ({ onDataChange, isAdmin }) => {
     );
   };
 
+  const isLockedVoidedAcwplMatch = (match) => (
+    selectedCompetition === 'acwpl' && Boolean(match?.isVoided)
+  );
+
   const saveFixtures = async (competition) => {
     setLoading(true);
     try {
@@ -979,6 +983,7 @@ const AdminPanel = ({ onDataChange, isAdmin }) => {
                 onChange={(e) => handleMatchEdit(match._id, 'date', e.target.value)}
                 className="input"
                 style={{ width: '130px' }}
+                disabled={isLockedVoidedAcwplMatch(match)}
               />
             </div>
             <div>
@@ -988,6 +993,7 @@ const AdminPanel = ({ onDataChange, isAdmin }) => {
                 onChange={(e) => handleMatchEdit(match._id, 'time', e.target.value)}
                 className="input"
                 style={{ width: '80px' }}
+                disabled={isLockedVoidedAcwplMatch(match)}
               />
             </div>
             <div><strong>{match.homeTeam.name}</strong></div>
@@ -1000,6 +1006,7 @@ const AdminPanel = ({ onDataChange, isAdmin }) => {
                 onChange={(e) => handleMatchEdit(match._id, 'homeScore', e.target.value)}
                 className="input"
                 placeholder="Enter score"
+                disabled={isLockedVoidedAcwplMatch(match)}
               />
               {shouldShowPenalties(match) && (
                 <>
@@ -1017,6 +1024,7 @@ const AdminPanel = ({ onDataChange, isAdmin }) => {
                     placeholder="P"
                     style={{ width: '40px', marginLeft: '5px', border: '2px solid #dc2626', background: '#fff6f6', color: '#222', fontWeight: 600, textAlign: 'center' }}
                     title="Penalty shootout score"
+                    disabled={isLockedVoidedAcwplMatch(match)}
                   />
                   <span style={{ marginLeft: 2, color: '#dc2626', fontWeight: 600, fontSize: '0.95em' }}>P</span>
                 </>
@@ -1031,6 +1039,7 @@ const AdminPanel = ({ onDataChange, isAdmin }) => {
                 onChange={(e) => handleMatchEdit(match._id, 'awayScore', e.target.value)}
                 className="input"
                 placeholder="Enter score"
+                disabled={isLockedVoidedAcwplMatch(match)}
               />
               {shouldShowPenalties(match) && (
                 <>
@@ -1048,6 +1057,7 @@ const AdminPanel = ({ onDataChange, isAdmin }) => {
                     placeholder="P"
                     style={{ width: '40px', marginLeft: '5px', border: '2px solid #dc2626', background: '#fff6f6', color: '#222', fontWeight: 600, textAlign: 'center' }}
                     title="Penalty shootout score"
+                    disabled={isLockedVoidedAcwplMatch(match)}
                   />
                   <span style={{ marginLeft: 2, color: '#dc2626', fontWeight: 600, fontSize: '0.95em' }}>P</span>
                 </>
@@ -1056,13 +1066,16 @@ const AdminPanel = ({ onDataChange, isAdmin }) => {
             <div><strong>{match.awayTeam.name}</strong></div>
             <div>{match.matchweek}</div>
             <div>
-              <span className={`badge ${match.isPlayed ? 'badge-success' : 'badge-warning'}`}>
-                {match.isPlayed ? 'Played' : 'Scheduled'}
+              <span className={`badge ${match.isVoided ? 'badge-danger' : (match.isPlayed ? 'badge-success' : 'badge-warning')}`}>
+                {match.isVoided ? 'Void' : (match.isPlayed ? 'Played' : 'Scheduled')}
               </span>
+              {isLockedVoidedAcwplMatch(match) && match.voidReason && (
+                <div style={{ marginTop: '4px', fontSize: '11px', color: '#666' }}>{match.voidReason}</div>
+              )}
 
             </div>
             <div>
-              {hasUnsavedChanges(match._id) && (
+              {hasUnsavedChanges(match._id) && !isLockedVoidedAcwplMatch(match) && (
                 <button
                   onClick={() => saveMatch(match._id)}
                   disabled={savingMatches.has(match._id)}
@@ -1072,7 +1085,7 @@ const AdminPanel = ({ onDataChange, isAdmin }) => {
                   {savingMatches.has(match._id) ? 'Saving...' : 'Save'}
                 </button>
               )}
-              {hasUnsavedChanges(match._id) && (
+              {hasUnsavedChanges(match._id) && !isLockedVoidedAcwplMatch(match) && (
                 <button
                   onClick={() => {
                     setEditedMatches(prev => {
@@ -1101,6 +1114,7 @@ const AdminPanel = ({ onDataChange, isAdmin }) => {
                 className="btn btn-danger btn-small"
                 style={{ marginLeft: '5px' }}
                 title="Reset this match's score to blank"
+                disabled={isLockedVoidedAcwplMatch(match)}
               >
                 Reset
               </button>
@@ -1110,12 +1124,14 @@ const AdminPanel = ({ onDataChange, isAdmin }) => {
 
           {/* Goalscorer Selection - appears below the match row when scores are set */}
           {/* Auto-populate goalscorer/assist fields when editing a match */}
-          <GoalScorerSelector
-            match={match}
-            homeScore={getMatchValue(match, 'homeScore')}
-            awayScore={getMatchValue(match, 'awayScore')}
-            onGoalscorerData={(data) => setGoalscorerData((prev) => ({ ...prev, [match._id]: data }))}
-          />
+          {!isLockedVoidedAcwplMatch(match) && (
+            <GoalScorerSelector
+              match={match}
+              homeScore={getMatchValue(match, 'homeScore')}
+              awayScore={getMatchValue(match, 'awayScore')}
+              onGoalscorerData={(data) => setGoalscorerData((prev) => ({ ...prev, [match._id]: data }))}
+            />
+          )}
           </>
         ))}
 

@@ -65,6 +65,14 @@ const matchSchema = new mongoose.Schema({
     type: Boolean,
     default: false
   },
+  isVoided: {
+    type: Boolean,
+    default: false
+  },
+  voidReason: {
+    type: String,
+    default: null
+  },
   isPublished: {
     type: Boolean,
     default: false
