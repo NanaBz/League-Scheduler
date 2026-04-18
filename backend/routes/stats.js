@@ -10,6 +10,29 @@ async function getActiveSeasonNumber() {
   return season ? season.seasonNumber : null;
 }
 
+/**
+ * Prefer an explicitly active season; otherwise use the highest seasonNumber that
+ * already has PlayerStats rows (covers databases where `isActive` was never set).
+ * Optional `competition` / `team` scopes the stats fallback so we match real buckets.
+ */
+async function resolveStatsSeasonNumber({ competition, team } = {}) {
+  const activeNumber = await getActiveSeasonNumber();
+  if (activeNumber != null) return activeNumber;
+
+  const statsFilter = {};
+  if (competition) statsFilter.competition = competition;
+  if (team) statsFilter.team = team;
+
+  const latestStats = await PlayerStats.findOne(statsFilter)
+    .sort({ seasonNumber: -1 })
+    .select('seasonNumber')
+    .lean();
+  if (latestStats) return latestStats.seasonNumber;
+
+  const latestSeason = await Season.findOne().sort({ seasonNumber: -1 }).lean();
+  return latestSeason ? latestSeason.seasonNumber : null;
+}
+
 /** Manual join so deleted players still expose an id for labels (populate alone drops the ref). */
 async function decorateStatsRows(statsDocs) {
   if (!statsDocs.length) return statsDocs;
@@ -43,8 +66,10 @@ router.get('/', async (req, res) => {
   try {
     const { team } = req.query;
     if (!team) return res.status(400).json({ message: 'team parameter required' });
-    const seasonNumber = await getActiveSeasonNumber();
-    const raw = await PlayerStats.find({ team, seasonNumber }).lean();
+    const seasonNumber = await resolveStatsSeasonNumber({ team });
+    const raw = seasonNumber
+      ? await PlayerStats.find({ team, seasonNumber }).lean()
+      : [];
     const stats = await decorateStatsRows(raw);
     res.json(stats);
   } catch (error) {
@@ -56,7 +81,7 @@ router.get('/', async (req, res) => {
 router.get('/leaderboard', async (req, res) => {
   try {
     const { competition, metric = 'goals', limit = 3 } = req.query;
-    const seasonNumber = await getActiveSeasonNumber();
+    const seasonNumber = await resolveStatsSeasonNumber({ competition });
     if (!seasonNumber) return res.status(400).json({ message: 'No active season' });
     const allowedCompetitions = ['league', 'cup', 'super-cup', 'acwpl'];
     const allowedMetrics = ['goals', 'assists', 'cleanSheets', 'yellowCards', 'redCards'];
@@ -77,7 +102,7 @@ router.get('/leaderboard', async (req, res) => {
 router.get('/summary', async (req, res) => {
   try {
     const { competition } = req.query;
-    const seasonNumber = await getActiveSeasonNumber();
+    const seasonNumber = await resolveStatsSeasonNumber({ competition });
     if (!seasonNumber) return res.status(400).json({ message: 'No active season' });
     const allowedCompetitions = ['league', 'cup', 'super-cup', 'acwpl'];
     if (!allowedCompetitions.includes(competition)) return res.status(400).json({ message: 'Invalid competition' });

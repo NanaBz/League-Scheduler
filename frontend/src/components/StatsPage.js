@@ -22,7 +22,7 @@ export default function StatsPage() {
       const { data } = await api.get('/stats/summary', { params: { competition } });
       setSummary(data);
     } catch (e) {
-      setError('Failed to load stats');
+      setError(e.response?.data?.message || 'Failed to load stats');
     } finally {
       setLoading(false);
     }
