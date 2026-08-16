@@ -1,38 +1,205 @@
-.overall-league { background: #1b0f2b; color: #f6f3ff; border-radius: 14px; box-shadow: 0 8px 24px rgba(0,0,0,0.25); width: 100%; max-width: 100%; box-sizing: border-box; }
-.ol-header { padding: 14px 16px; border-bottom: 1px solid rgba(255,255,255,0.08); font-weight: 600; }
-.ol-updated { opacity: 0.85; }
+/* Overall standings — red + black (matches fantasy strip / dashboard tokens) */
+.overall-league {
+  background: linear-gradient(
+    165deg,
+    #050505 0%,
+    #111111 18%,
+    #2a0a0a 42%,
+    var(--primary-red-dark, #b91c1c) 70%,
+    var(--primary-red, #dc2626) 100%
+  );
+  color: #fff;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+}
 
-.ol-table-wrap { overflow-x: hidden; overflow-y: auto; max-height: 70vh; -webkit-overflow-scrolling: touch; }
-.ol-table { width: 100%; border-collapse: collapse; min-width: 420px; }
-.ol-table th, .ol-table td { padding: 10px 12px; border-bottom: 1px solid rgba(255,255,255,0.08); font-size: 0.95rem; }
-.ol-table th { text-align: left; font-weight: 700; letter-spacing: 0.02em; color: #e9e3ff; font-size: 0.95rem; }
+.overall-league.ol-no-meta .ol-table-wrap {
+  padding-top: 10px;
+  border-radius: 14px 14px 0 0;
+}
 
-.ol-pos { width: 64px; }
-.ol-pos-badge { display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: 50%; font-weight: 800; color: #fff; }
-.ol-pos-badge.up { background: linear-gradient(135deg,#12b886,#2f9e44); }
-.ol-pos-badge.down { background: linear-gradient(135deg,#e03131,#c92a2a); }
-.ol-pos-badge.same { background: linear-gradient(135deg,#868e96,#495057); }
+.ol-header {
+  padding: 12px 14px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  font-weight: 600;
+}
 
-.ol-team { max-width: 0; }
-.ol-team-line { display:flex; align-items:center; gap:8px; }
-.ol-team-name { font-weight: 700; color:#fff; font-size: 0.9rem; }
-.ol-delta { color:#c3b8ff; font-size: 0.9rem; }
-.ol-user-sub { font-size: 0.8rem; color: #cbbcff; opacity: 0.9; }
+.ol-updated {
+  opacity: 0.88;
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 0.8rem;
+}
 
-.ol-gw, .ol-total { font-weight: 700; color:#fff; width: 70px; text-align: center; }
+.ol-table-wrap {
+  overflow-x: hidden;
+  overflow-y: auto;
+  max-height: 70vh;
+  -webkit-overflow-scrolling: touch;
+}
 
-.ol-row { cursor: pointer; }
-.ol-row:hover { background: rgba(255,255,255,0.06); }
+.ol-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 420px;
+}
+
+.ol-table th,
+.ol-table td {
+  padding: 10px 12px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.2);
+  font-size: 0.9rem;
+}
+
+.ol-table th {
+  text-align: left;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  color: rgba(255, 255, 255, 0.92);
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.ol-empty {
+  padding: 20px 14px !important;
+  text-align: center;
+  color: rgba(255, 255, 255, 0.75);
+  font-size: 0.88rem;
+  line-height: 1.45;
+}
+
+.ol-empty--error {
+  color: #fecaca;
+}
+
+.ol-pos {
+  width: 64px;
+}
+
+.ol-pos-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  font-weight: 800;
+  color: #fff;
+}
+
+.ol-pos-badge.up {
+  background: linear-gradient(135deg, #12b886, #2f9e44);
+}
+
+.ol-pos-badge.down {
+  background: linear-gradient(135deg, #e03131, #c92a2a);
+}
+
+.ol-pos-badge.same {
+  background: linear-gradient(135deg, #575757, #3d3d3d);
+}
+
+.ol-pos-placeholder {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 32px;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.45);
+  font-size: 0.95rem;
+}
+
+.ol-team {
+  max-width: 0;
+}
+
+.ol-team-line {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ol-team-name {
+  font-weight: 700;
+  color: #fff;
+  font-size: 0.88rem;
+}
+
+.ol-delta {
+  color: rgba(255, 255, 255, 0.55);
+  font-size: 0.85rem;
+}
+
+.ol-user-sub {
+  font-size: 0.76rem;
+  color: rgba(255, 220, 220, 0.75);
+}
+
+.ol-gw,
+.ol-total {
+  font-weight: 700;
+  color: #fff;
+  width: 70px;
+  text-align: center;
+  font-size: 0.88rem;
+}
+
+.ol-row {
+  cursor: pointer;
+}
+
+.ol-row:hover {
+  background: rgba(220, 38, 38, 0.12);
+}
 
 @media (max-width: 640px) {
-  .overall-league { border-radius: 12px; }
-  .ol-table th, .ol-table td { padding: 6px 8px; font-size: 0.85rem; }
-  .ol-table th { font-size: 0.85rem; }
-  .ol-team-name { font-size: 0.8rem; }
-  .ol-user-sub { font-size: 0.7rem; }
-  .ol-pos { width: 52px; }
-  .ol-pos-badge { width: 28px; height: 28px; font-size: 0.85rem; }
-  .ol-gw, .ol-total { width: 52px; font-size: 0.85rem; }
-  .ol-delta { font-size: 0.75rem; }
-  .ol-table { min-width: 100%; }
+  .overall-league {
+    border-radius: 12px;
+  }
+
+  .ol-table th,
+  .ol-table td {
+    padding: 6px 8px;
+    font-size: 0.82rem;
+  }
+
+  .ol-table th {
+    font-size: 0.72rem;
+  }
+
+  .ol-team-name {
+    font-size: 0.8rem;
+  }
+
+  .ol-user-sub {
+    font-size: 0.68rem;
+  }
+
+  .ol-pos {
+    width: 52px;
+  }
+
+  .ol-pos-badge {
+    width: 28px;
+    height: 28px;
+    font-size: 0.85rem;
+  }
+
+  .ol-gw,
+  .ol-total {
+    width: 52px;
+    font-size: 0.82rem;
+  }
+
+  .ol-delta {
+    font-size: 0.75rem;
+  }
+
+  .ol-table {
+    min-width: 100%;
+  }
 }

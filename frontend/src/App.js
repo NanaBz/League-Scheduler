@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useLayoutEffect } from 'react';
 import { Trophy, Award, Star, Users, Zap, Cog, LogOut } from 'lucide-react';
 
 import UserView from './components/UserView';
@@ -16,6 +16,9 @@ import FantasyAuth from './components/FantasyAuth';
 import axios from 'axios';
 import './index.css';
 
+const USER_SECTIONS = ['fixtures', 'stats', 'teams', 'fantasy'];
+const COMPETITION_IDS = ['league', 'cup', 'super-cup', 'acwpl', 'girls-super-cup'];
+
 function App() {
   // Restore from localStorage if available
   const getInitial = (key, fallback) => {
@@ -27,9 +30,19 @@ function App() {
       return v;
     } catch { return fallback; }
   };
-  const [activeTab, setActiveTab] = useState(() => getInitial('activeTab', 'user'));
-  const [activeSection, setActiveSection] = useState(() => getInitial('activeSection', 'fixtures'));
-  const [selectedCompetition, setSelectedCompetition] = useState(() => getInitial('selectedCompetition', 'league'));
+
+  const [activeTab, setActiveTab] = useState(() => {
+    const t = getInitial('activeTab', 'user');
+    return t === 'admin' || t === 'user' ? t : 'user';
+  });
+  const [activeSection, setActiveSection] = useState(() => {
+    const s = getInitial('activeSection', 'fixtures');
+    return USER_SECTIONS.includes(s) ? s : 'fixtures';
+  });
+  const [selectedCompetition, setSelectedCompetition] = useState(() => {
+    const c = getInitial('selectedCompetition', 'league');
+    return COMPETITION_IDS.includes(c) ? c : 'league';
+  });
   // Expose setSelectedCompetition globally for Footer quick links
   React.useEffect(() => {
     window.setSelectedCompetition = (comp, section) => {
@@ -51,7 +64,12 @@ function App() {
   const [competitions] = useState({
     league: { name: 'League', description: 'Circle Method league' },
     cup: { name: 'Agha Cup', description: 'Knockout cup for top 4 teams' },
-    'super-cup': { name: 'Super Cup', description: 'League winner vs Cup winner' }
+    'super-cup': { name: 'Super Cup', description: 'League winner vs Cup winner' },
+    acwpl: { name: 'ACWPL', description: 'Girls best-of-5 league (Orion vs Firestorm)' },
+    'girls-super-cup': {
+      name: 'Girls Super Cup',
+      description: 'Best-of-3 between Orion and Firestorm; first to two wins. Draws can go to penalties; remaining games are void once a side clinches.',
+    },
   });
 
   // Force production API URL
@@ -123,11 +141,30 @@ function App() {
   };
 
   const [girlsTeamsActive, setGirlsTeamsActive] = useState(() => getInitial('girlsTeamsActive', false));
+  /** While viewing an archived season inside UserView, hide the live competition banner. */
+  const [fixturesArchiveOpen, setFixturesArchiveOpen] = useState(false);
   // Persist navigation state to localStorage
   React.useEffect(() => { localStorage.setItem('activeTab', activeTab); }, [activeTab]);
   React.useEffect(() => { localStorage.setItem('activeSection', activeSection); }, [activeSection]);
   React.useEffect(() => { localStorage.setItem('selectedCompetition', selectedCompetition); }, [selectedCompetition]);
   React.useEffect(() => { localStorage.setItem('girlsTeamsActive', girlsTeamsActive); }, [girlsTeamsActive]);
+
+  /**
+   * Stale localStorage (e.g. activeTab=admin after logout) makes the main branch render null
+   * while the shell still shows. useLayoutEffect runs before paint so the user does not see a white flash.
+   */
+  useLayoutEffect(() => {
+    if (isLoading) return;
+    if (activeTab === 'admin' && !isAdmin) {
+      setActiveTab('user');
+    }
+    if (!USER_SECTIONS.includes(activeSection)) {
+      setActiveSection('fixtures');
+    }
+    if (!COMPETITION_IDS.includes(selectedCompetition)) {
+      setSelectedCompetition('league');
+    }
+  }, [isLoading, activeTab, isAdmin, activeSection, selectedCompetition]);
 
   if (isLoading) {
     return (
@@ -185,6 +222,13 @@ function App() {
               >
                 <Users size={16} />
                 <span className="comp-text">ACWPL</span>
+              </button>
+              <button
+                className={`comp-nav-btn ${selectedCompetition === 'girls-super-cup' ? 'active' : ''}`}
+                onClick={() => setSelectedCompetition('girls-super-cup')}
+              >
+                <Star size={16} />
+                <span className="comp-text">Girls Super Cup</span>
               </button>
             </div>
           )}
@@ -287,7 +331,7 @@ function App() {
         )}
 
         {/* Competition Info Banner (only fixtures) */}
-        {activeTab === 'user' && activeSection === 'fixtures' && (
+        {activeTab === 'user' && activeSection === 'fixtures' && !fixturesArchiveOpen && (
         <div className="competition-info">
           <h3>{competitions[selectedCompetition]?.name}</h3>
           <p>
@@ -300,6 +344,8 @@ function App() {
             {selectedCompetition === 'super-cup' && 
               'Single match between the League champion and Cup winner. If the same team wins both, the runner-up plays instead.'
             }
+            {selectedCompetition === 'acwpl' && competitions.acwpl?.description}
+            {selectedCompetition === 'girls-super-cup' && competitions['girls-super-cup']?.description}
           </p>
         </div>) }
 
@@ -309,8 +355,10 @@ function App() {
             <UserView 
               competitions={competitions}
               selectedCompetition={selectedCompetition}
+              onCompetitionChange={setSelectedCompetition}
               refreshKey={dataRefreshKey}
               isAdmin={isAdmin}
+              onArchiveViewChange={setFixturesArchiveOpen}
             />
           ) : activeSection === 'stats' ? (
             <StatsPage />
@@ -367,13 +415,38 @@ function App() {
             <FantasyAuth />
           ) : null
         ) : isAdmin ? (
-          adminSection === 'fixtures-mgmt' ? (
-            <AdminPanel onDataChange={handleDataChange} isAdmin={isAdmin} />
-          ) : adminSection === 'players-mgmt' ? (
-            <PlayerManagement onDataChange={handleDataChange} isAdmin={isAdmin} />
-          ) : adminSection === 'fantasy-mgmt' ? (
-            <FantasyManagement isAdmin={isAdmin} />
-          ) : null
+          <>
+            <nav className="admin-mobile-nav" aria-label="Admin sections">
+              <button
+                type="button"
+                className={adminSection === 'fixtures-mgmt' ? 'active' : ''}
+                onClick={() => setAdminSection('fixtures-mgmt')}
+              >
+                Fixtures
+              </button>
+              <button
+                type="button"
+                className={adminSection === 'players-mgmt' ? 'active' : ''}
+                onClick={() => setAdminSection('players-mgmt')}
+              >
+                Players
+              </button>
+              <button
+                type="button"
+                className={adminSection === 'fantasy-mgmt' ? 'active' : ''}
+                onClick={() => setAdminSection('fantasy-mgmt')}
+              >
+                Fantasy
+              </button>
+            </nav>
+            {adminSection === 'fixtures-mgmt' ? (
+              <AdminPanel onDataChange={handleDataChange} isAdmin={isAdmin} />
+            ) : adminSection === 'players-mgmt' ? (
+              <PlayerManagement onDataChange={handleDataChange} isAdmin={isAdmin} />
+            ) : adminSection === 'fantasy-mgmt' ? (
+              <FantasyManagement isAdmin={isAdmin} />
+            ) : null}
+          </>
         ) : null}
 
 

@@ -3,9 +3,15 @@ const Admin = require('../models/Admin');
 
 // Admin email whitelist checker
 const isWhitelistedEmail = (email) => {
-  // Support both ADMIN_EMAILS (comma-separated) and ADMIN_EMAIL (single)
-  const adminEmails = process.env.ADMIN_EMAILS?.split(',').map(e => e.trim().toLowerCase()) || 
-                     [process.env.ADMIN_EMAIL?.toLowerCase()].filter(Boolean) || [];
+  // Support ADMIN_EMAILS (comma-separated) and fall back to ADMIN_EMAIL when unset/empty
+  const fromList = (process.env.ADMIN_EMAILS || '')
+    .split(',')
+    .map((e) => e.trim().toLowerCase())
+    .filter(Boolean);
+  const adminEmails =
+    fromList.length > 0
+      ? fromList
+      : [process.env.ADMIN_EMAIL?.toLowerCase()].filter(Boolean);
   return adminEmails.includes(email.toLowerCase());
 };
 

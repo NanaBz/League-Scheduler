@@ -1,48 +1,126 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ArrowLeft } from 'lucide-react';
 import api from '../utils/api';
+import {
+  EMPTY_SQUAD,
+  loadSquadFromLocalStorage,
+  normalizeSquadShape,
+  saveSquadToLocalStorage,
+} from '../utils/fantasySquadStorage';
+import { deriveGameweekInfo } from '../utils/fantasyGameweek';
+import { transferChipSummaryLabel } from '../utils/fantasyChips';
+import { isPastDeadline } from '../utils/fantasyMatchweek';
+import {
+  formatPitchFixture,
+  refreshSquadFixtures,
+} from '../utils/fantasyPlayerFixtures';
 import './FantasyTransfers.css';
 import JerseyIcon from './JerseyIcon';
+import { getTeamCode, kitColors } from '../utils/fantasyKitColors';
 import PlayerPickerModal from './PlayerPickerModal';
 import PlayerDetailsModal from './PlayerDetailsModal';
 import ValidationModal from './ValidationModal';
 
-export default function FantasyTransfers({ onBack }) {
+export default function FantasyTransfers({ user, onBack, onGoToPickTeam }) {
+  const userId = user?.id;
   const [view, setView] = useState('pitch'); // 'pitch' | 'list'
   const [matches, setMatches] = useState([]);
+  const [serverSeasonInfo, setServerSeasonInfo] = useState(null);
+  const [squadLoading, setSquadLoading] = useState(true);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [pickerLock, setPickerLock] = useState(null); // { position: 'DF', slotIndex: 0 }
   const [detailsPlayer, setDetailsPlayer] = useState(null);
   const [detailsSlot, setDetailsSlot] = useState(null); // { position, index }
   const [validationError, setValidationError] = useState(null);
-  const [squad, setSquad] = useState(() => {
-    const saved = localStorage.getItem('fantasySquad');
-    if (saved) {
-      try {
-        return JSON.parse(saved);
-      } catch {
-        return { GK: [null, null], DF: [null, null, null, null], MF: [null, null, null, null], ATT: [null, null, null] };
-      }
+  const [squad, setSquad] = useState(() => normalizeSquadShape(EMPTY_SQUAD));
+  const saveTimerRef = useRef(null);
+  const squadHydratedRef = useRef(false);
+
+  const persistSquad = useCallback(async (nextSquad, userKey) => {
+    if (!userKey) return;
+    saveSquadToLocalStorage(userKey, nextSquad);
+    try {
+      await api.put('/fantasy/my-squad', { squad: nextSquad });
+    } catch (err) {
+      console.error('Failed to save squad:', err.response?.data || err.message);
     }
-    return { GK: [null, null], DF: [null, null, null, null], MF: [null, null, null, null], ATT: [null, null, null] };
-  });
+  }, []);
 
-  // Save squad to localStorage whenever it changes
+  // Load this user's squad when account changes
   useEffect(() => {
-    localStorage.setItem('fantasySquad', JSON.stringify(squad));
-  }, [squad]);
+    if (!userId) {
+      setSquad(normalizeSquadShape(EMPTY_SQUAD));
+      setSquadLoading(false);
+      return undefined;
+    }
 
-  // Fetch matches for deadline computation
+    let cancelled = false;
+    squadHydratedRef.current = false;
+    setSquadLoading(true);
+
+    (async () => {
+      try {
+        const { data } = await api.get('/fantasy/my-squad');
+        if (cancelled) return;
+        if (data?.success && data.squad) {
+          setSquad(normalizeSquadShape(data.squad));
+          saveSquadToLocalStorage(userId, data.squad);
+        } else {
+          const cached = loadSquadFromLocalStorage(userId);
+          setSquad(cached ? normalizeSquadShape(cached) : normalizeSquadShape(EMPTY_SQUAD));
+        }
+      } catch {
+        if (!cancelled) {
+          const cached = loadSquadFromLocalStorage(userId);
+          setSquad(cached ? normalizeSquadShape(cached) : normalizeSquadShape(EMPTY_SQUAD));
+        }
+      } finally {
+        if (!cancelled) {
+          squadHydratedRef.current = true;
+          setSquadLoading(false);
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [userId]);
+
+  // Debounced save — only after initial load for this user
+  useEffect(() => {
+    if (!userId || !squadHydratedRef.current || squadLoading) return undefined;
+
+    if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+    saveTimerRef.current = setTimeout(() => {
+      persistSquad(squad, userId);
+    }, 400);
+
+    return () => {
+      if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+    };
+  }, [squad, userId, squadLoading, persistSquad]);
+
+  // Fetch matches for deadline computation and server season info
   useEffect(() => {
     const fetchMatches = async () => {
       try {
-        const { data } = await api.get('/matches');
+        const { data } = await api.get('/matches', { params: { competition: 'league' } });
         setMatches(Array.isArray(data) ? data : []);
       } catch {
         setMatches([]);
       }
     };
+    const fetchSeasonInfo = async () => {
+      try {
+        const s = await api.get('/fantasy/season');
+        if (s?.data?.success) setServerSeasonInfo(s.data);
+      } catch (err) {
+        setServerSeasonInfo(null);
+      }
+    };
     fetchMatches();
+    fetchSeasonInfo();
   }, []);
 
   // Summary values — to be wired to backend later
@@ -57,26 +135,21 @@ export default function FantasyTransfers({ onBack }) {
   }, [squad]);
   
   const budget = totalBudget - totalSpent;
-  const wildcard = true;
-  const freeHit = true;
 
+  const derivedGameweekInfo = useMemo(() => deriveGameweekInfo(matches), [matches]);
   const upcomingInfo = useMemo(() => {
-    const now = new Date();
-    const future = matches
-      .map(m => ({ ...m, dt: m.date && m.time ? new Date(`${m.date.split('T')[0]}T${m.time}`) : null }))
-      .filter(m => m.dt && m.dt.getTime() > now.getTime());
-    if (future.length === 0) return { week: null, deadline: null };
-    const nextWeek = Math.min(...future.map(m => m.matchweek || 0).filter(Boolean));
-    const inWeek = future.filter(m => (m.matchweek || 0) === nextWeek);
-    if (inWeek.length === 0) return { week: nextWeek, deadline: null };
-    const earliest = inWeek.reduce((a, b) => (a.dt < b.dt ? a : b));
-    const deadline = new Date(earliest.dt.getTime() - 60 * 60 * 1000);
-    return { week: nextWeek, deadline };
-  }, [matches]);
+    if (serverSeasonInfo?.deadline) {
+      return { week: derivedGameweekInfo.week, deadline: new Date(serverSeasonInfo.deadline) };
+    }
+    return derivedGameweekInfo;
+  }, [derivedGameweekInfo, serverSeasonInfo]);
 
   // Free transfers: GW1 unlimited, GW2+ 1 per week
   const currentGameweek = upcomingInfo.week || 1;
   const freeTransfersAvailable = currentGameweek === 1 ? 999 : 1;
+  const deadlinePassed = isPastDeadline(upcomingInfo.deadline);
+  const wildcardLabel = transferChipSummaryLabel(currentGameweek, false);
+  const freeHitLabel = transferChipSummaryLabel(currentGameweek, false);
 
   const formatDeadline = (dt) => {
     if (!dt) return '—';
@@ -118,49 +191,17 @@ export default function FantasyTransfers({ onBack }) {
     return { valid: true };
   };
 
-  const getTeamCode = (player) => {
-    // Extract team code from player.team object or fallback
-    if (!player) return 'DEF';
-    const teamName = player.team?.name || player.teamName || '';
-    // Map full team names to short codes
-    const mapping = {
-      'Warriors': 'KWF',
-      'Dragons': 'DRA',
-      'Vikings': 'VIK',
-      'Lions': 'LIO',
-      'Elites': 'ELI',
-      'Falcons': 'FAL'
-    };
-    return player.teamCode || mapping[teamName] || 'DEF';
-  };
-
-  const kitColors = (teamCode, pos) => {
-    // Flat primary colors only; keepers use a neutral purple
-    if (pos === 'GK') return { primary: '#8b5cf6', stroke: '#2f1e64' };
-    switch (teamCode) {
-      case 'KWF': // Warriors (yellow)
-        return { primary: '#ffd233', stroke: '#7a5b00' };
-      case 'DRA': // Dragons (blue)
-        return { primary: '#2563eb', stroke: '#0b3b9d' };
-      case 'VIK': // Vikings (red)
-        return { primary: '#dc2626', stroke: '#7a1010' };
-      case 'LIO': // Lions (green)
-        return { primary: '#16a34a', stroke: '#0a5928' };
-      case 'ELI': // Elites (black)
-        return { primary: '#111111', stroke: '#e5e5e5' };
-      case 'FAL': // Falcons (white with black outline)
-        return { primary: '#ffffff', stroke: '#000000' };
-      default:
-        return { primary: '#444', stroke: '#111' };
-    }
-  };
+  const displaySquad = useMemo(
+    () => refreshSquadFixtures(squad, matches, currentGameweek),
+    [squad, matches, currentGameweek]
+  );
 
   const grouped = useMemo(() => ({
-    GK: squad.GK,
-    DF: squad.DF,
-    MF: squad.MF,
-    ATT: squad.ATT,
-  }), [squad]);
+    GK: displaySquad.GK,
+    DF: displaySquad.DF,
+    MF: displaySquad.MF,
+    ATT: displaySquad.ATT,
+  }), [displaySquad]);
 
   const selectedIds = useMemo(() => (
     Object.values(grouped)
@@ -238,22 +279,40 @@ export default function FantasyTransfers({ onBack }) {
     return Object.values(squad).flat().filter(Boolean).length === 13;
   }, [squad]);
 
-  const handleSubmitTeam = () => {
+  const handleSubmitTeam = async () => {
+    if (deadlinePassed) {
+      setValidationError({
+        title: 'Deadline passed',
+        message: 'The gameweek deadline has passed. Transfers are locked until the next gameweek.',
+        type: 'warning',
+      });
+      return;
+    }
     if (!isSquadComplete) {
       setValidationError({ 
         title: 'Incomplete Squad', 
-        message: 'You must select all 13 players (2 GK, 4 DF, 4 MF, 3 ATT) before submitting.',
+        message: 'You must select all 13 players (2 GK, 4 DF, 4 MF, 3 ATT) before saving.',
         type: 'warning' 
       });
       return;
     }
-    // TODO: Submit to backend and activate squad for gameweek
-    console.log('Squad submitted:', squad);
-    setValidationError({ 
-      title: 'Squad Submitted', 
-      message: `Your squad has been submitted for Gameweek ${upcomingInfo.week}. Good luck!`,
-      type: 'success' 
-    });
+    try {
+      if (userId) {
+        await api.put('/fantasy/my-squad', { squad });
+        saveSquadToLocalStorage(userId, squad);
+      }
+      setValidationError({ 
+        title: 'Squad saved', 
+        message: `Your 13-player squad is saved for Gameweek ${upcomingInfo.week}. Head to Pick team to set your starting XI.`,
+        type: 'success' 
+      });
+    } catch (err) {
+      setValidationError({
+        title: 'Save Failed',
+        message: err.response?.data?.message || 'Could not save your squad. Please try again.',
+        type: 'error',
+      });
+    }
   };
 
   return (
@@ -266,6 +325,7 @@ export default function FantasyTransfers({ onBack }) {
         <div className="transfers-title-block">
           <h2 className="transfers-title">Transfers</h2>
           <div className="transfers-subtitle">
+            {user?.teamName ? `${user.teamName} · ` : ''}
             Gameweek {upcomingInfo.week || '—'} • Deadline: {upcomingInfo.deadline ? formatDeadline(upcomingInfo.deadline) : '—'}
           </div>
         </div>
@@ -275,13 +335,13 @@ export default function FantasyTransfers({ onBack }) {
         <div className="summary-item"><div className="label">Free Transfers</div><div className="value">{freeTransfersAvailable === 999 ? '∞' : freeTransfersAvailable}</div></div>
         <div className="summary-item"><div className="label">Cost</div><div className="value">{cost}</div></div>
         <div className="summary-item"><div className="label">Budget</div><div className="value">{budget.toFixed(1)}m</div></div>
-        <div className="summary-item"><div className="label">Wildcard</div><div className="value">{wildcard ? 'Available' : 'Used'}</div></div>
-        <div className="summary-item"><div className="label">Free Hit</div><div className="value">{freeHit ? 'Available' : 'Used'}</div></div>
+        <div className="summary-item"><div className="label">Wildcard</div><div className="value">{wildcardLabel}</div></div>
+        <div className="summary-item"><div className="label">Free Hit</div><div className="value">{freeHitLabel}</div></div>
       </div>
 
-      <div className="toggle-bar">
-        <button className={`toggle-btn ${view==='pitch'?'active':''}`} onClick={() => setView('pitch')}>Pitch View</button>
-        <button className={`toggle-btn ${view==='list'?'active':''}`} onClick={() => setView('list')}>List View</button>
+      <div className="toggle-bar toggle-bar--fpl">
+        <button type="button" className={`toggle-btn ${view === 'pitch' ? 'active' : ''}`} onClick={() => setView('pitch')}>Pitch</button>
+        <button type="button" className={`toggle-btn ${view === 'list' ? 'active' : ''}`} onClick={() => setView('list')}>List</button>
       </div>
 
       <div className="squad-progress">
@@ -291,94 +351,114 @@ export default function FantasyTransfers({ onBack }) {
         <div className="progress-text">{Object.values(squad).flat().filter(Boolean).length} / 13 Players Selected</div>
       </div>
 
-      {view === 'pitch' ? (
-        <div className="pitch">
-          {/* GK */}
-          <div className="pitch-row gk">
-            {grouped.GK.map((p, idx) => (
-              <div className="jersey-card" key={`GK-${idx}`}>
-                {p ? (
-                  <div className="jersey-content" onClick={() => openPlayerDetails(p, 'GK', idx)}>
-                    <div className="jersey-price">{(p.fantasyPrice || 0).toFixed(1)}m</div>
-                    <div className="jersey-kit">
-                      <JerseyIcon size={44} {...kitColors(getTeamCode(p), p.position)} />
-                    </div>
-                    <div className="jersey-meta">
-                      <span className="name">{p.name}</span>
-                      <span className="opp">Next: {p.nextThree?.[0]?.opponent || '—'}</span>
-                    </div>
-                  </div>
-                ) : (
-                  <button className="add-slot" onClick={() => openPicker('GK', idx)}>+ Add GK</button>
-                )}
-              </div>
-            ))}
-          </div>
-          {/* DF */}
-          <div className="pitch-row df">
-            {grouped.DF.map((p, idx) => (
-              <div className="jersey-card" key={`DF-${idx}`}>
-                {p ? (
-                  <div className="jersey-content" onClick={() => openPlayerDetails(p, 'DF', idx)}>
-                    <div className="jersey-price">{(p.fantasyPrice || 0).toFixed(1)}m</div>
-                    <div className="jersey-kit">
-                      <JerseyIcon size={44} {...kitColors(getTeamCode(p), p.position)} />
-                    </div>
-                    <div className="jersey-meta">
-                      <span className="name">{p.name}</span>
-                      <span className="opp">Next: {p.nextThree?.[0]?.opponent || '—'}</span>
-                    </div>
-                  </div>
-                ) : (
-                  <button className="add-slot" onClick={() => openPicker('DF', idx)}>+ Add Defender</button>
-                )}
-              </div>
-            ))}
-          </div>
-          {/* MF */}
-          <div className="pitch-row mf">
-            {grouped.MF.map((p, idx) => (
-              <div className="jersey-card" key={`MF-${idx}`}>
-                {p ? (
-                  <div className="jersey-content" onClick={() => openPlayerDetails(p, 'MF', idx)}>
-                    <div className="jersey-price">{(p.fantasyPrice || 0).toFixed(1)}m</div>
-                    <div className="jersey-kit">
-                      <JerseyIcon size={44} {...kitColors(getTeamCode(p), p.position)} />
-                    </div>
-                    <div className="jersey-meta">
-                      <span className="name">{p.name}</span>
-                      <span className="opp">Next: {p.nextThree?.[0]?.opponent || '—'}</span>
-                    </div>
-                  </div>
-                ) : (
-                  <button className="add-slot" onClick={() => openPicker('MF', idx)}>+ Add Midfielder</button>
-                )}
-              </div>
-            ))}
-          </div>
-          {/* ATT */}
-          <div className="pitch-row att">
-            {grouped.ATT.map((p, idx) => (
-              <div className="jersey-card" key={`ATT-${idx}`}>
-                {p ? (
-                  <div className="jersey-content" onClick={() => openPlayerDetails(p, 'ATT', idx)}>
-                    <div className="jersey-price">{(p.fantasyPrice || 0).toFixed(1)}m</div>
-                    <div className="jersey-kit">
-                      <JerseyIcon size={44} {...kitColors(getTeamCode(p), p.position)} />
-                    </div>
-                    <div className="jersey-meta">
-                      <span className="name">{p.name}</span>
-                      <span className="opp">Next: {p.nextThree?.[0]?.opponent || '—'}</span>
-                    </div>
-                  </div>
-                ) : (
-                  <button className="add-slot" onClick={() => openPicker('ATT', idx)}>+ Add Forward</button>
-                )}
-              </div>
-            ))}
+      {squadLoading ? (
+        <p className="transfers-loading" style={{ textAlign: 'center', color: '#64748b', padding: '24px 0' }}>
+          Loading your squad…
+        </p>
+      ) : null}
+
+      {!squadLoading && view === 'pitch' ? (
+        <div className="transfers-pitch-wrap">
+          <div className="pitch" aria-label="Squad pitch view">
+            <div className="pitch-row pitch-row--gk">
+              {grouped.GK.map((p, idx) => (
+                <div className="pitch-slot" key={`GK-${idx}`}>
+                  {p ? (
+                    <button
+                      type="button"
+                      className="pitch-player-card"
+                      onClick={() => openPlayerDetails(p, 'GK', idx)}
+                    >
+                      <div className="pitch-player-price">{(p.fantasyPrice || 0).toFixed(1)}m</div>
+                      <div className="pitch-player-kit">
+                        <JerseyIcon className="pitch-player-kit-svg" size={52} {...kitColors(getTeamCode(p), p.position)} />
+                      </div>
+                      <div className="pitch-player-info">
+                        <span className="pitch-player-name">{p.name}</span>
+                        <span className="pitch-player-fixture">{formatPitchFixture(p, matches, currentGameweek)}</span>
+                      </div>
+                    </button>
+                  ) : (
+                    <button type="button" className="pitch-empty-slot" aria-label="Add goalkeeper" onClick={() => openPicker('GK', idx)}>
+                      <span className="pitch-empty-slot__plus" aria-hidden>+</span>
+                      <span className="pitch-empty-slot__label">Add GK</span>
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+            <div className="pitch-row pitch-row--df">
+              {grouped.DF.map((p, idx) => (
+                <div className="pitch-slot" key={`DF-${idx}`}>
+                  {p ? (
+                    <button type="button" className="pitch-player-card" onClick={() => openPlayerDetails(p, 'DF', idx)}>
+                      <div className="pitch-player-price">{(p.fantasyPrice || 0).toFixed(1)}m</div>
+                      <div className="pitch-player-kit">
+                        <JerseyIcon className="pitch-player-kit-svg" size={52} {...kitColors(getTeamCode(p), p.position)} />
+                      </div>
+                      <div className="pitch-player-info">
+                        <span className="pitch-player-name">{p.name}</span>
+                        <span className="pitch-player-fixture">{formatPitchFixture(p, matches, currentGameweek)}</span>
+                      </div>
+                    </button>
+                  ) : (
+                    <button type="button" className="pitch-empty-slot" aria-label="Add defender" onClick={() => openPicker('DF', idx)}>
+                      <span className="pitch-empty-slot__plus" aria-hidden>+</span>
+                      <span className="pitch-empty-slot__label">Add DEF</span>
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+            <div className="pitch-row pitch-row--mf">
+              {grouped.MF.map((p, idx) => (
+                <div className="pitch-slot" key={`MF-${idx}`}>
+                  {p ? (
+                    <button type="button" className="pitch-player-card" onClick={() => openPlayerDetails(p, 'MF', idx)}>
+                      <div className="pitch-player-price">{(p.fantasyPrice || 0).toFixed(1)}m</div>
+                      <div className="pitch-player-kit">
+                        <JerseyIcon className="pitch-player-kit-svg" size={52} {...kitColors(getTeamCode(p), p.position)} />
+                      </div>
+                      <div className="pitch-player-info">
+                        <span className="pitch-player-name">{p.name}</span>
+                        <span className="pitch-player-fixture">{formatPitchFixture(p, matches, currentGameweek)}</span>
+                      </div>
+                    </button>
+                  ) : (
+                    <button type="button" className="pitch-empty-slot" aria-label="Add midfielder" onClick={() => openPicker('MF', idx)}>
+                      <span className="pitch-empty-slot__plus" aria-hidden>+</span>
+                      <span className="pitch-empty-slot__label">Add MID</span>
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+            <div className="pitch-row pitch-row--att">
+              {grouped.ATT.map((p, idx) => (
+                <div className="pitch-slot" key={`ATT-${idx}`}>
+                  {p ? (
+                    <button type="button" className="pitch-player-card" onClick={() => openPlayerDetails(p, 'ATT', idx)}>
+                      <div className="pitch-player-price">{(p.fantasyPrice || 0).toFixed(1)}m</div>
+                      <div className="pitch-player-kit">
+                        <JerseyIcon className="pitch-player-kit-svg" size={52} {...kitColors(getTeamCode(p), p.position)} />
+                      </div>
+                      <div className="pitch-player-info">
+                        <span className="pitch-player-name">{p.name}</span>
+                        <span className="pitch-player-fixture">{formatPitchFixture(p, matches, currentGameweek)}</span>
+                      </div>
+                    </button>
+                  ) : (
+                    <button type="button" className="pitch-empty-slot" aria-label="Add forward" onClick={() => openPicker('ATT', idx)}>
+                      <span className="pitch-empty-slot__plus" aria-hidden>+</span>
+                      <span className="pitch-empty-slot__label">Add FWD</span>
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
           </div>
         </div>
-      ) : (
+      ) : !squadLoading ? (
         <div className="list-view">
           {['GK','DF','MF','ATT'].flatMap(pos => grouped[pos].map((p, idx) => (
             <div className="list-item" key={`${pos}-${idx}`}>
@@ -387,23 +467,33 @@ export default function FantasyTransfers({ onBack }) {
                   <div className="name">{p.name}</div>
                   <div className="pos">{p.position}</div>
                   <div className="price">{(p.fantasyPrice || 0).toFixed(1)}m</div>
-                  <div className="opp">Next: {p.nextThree?.[0]?.opponent || '—'}</div>
+                  <div className="opp">Next: {formatPitchFixture(p, matches, currentGameweek)}</div>
                 </div>
               ) : (
-                <button className="add-slot" onClick={() => openPicker(pos, idx)}>+ Add {pos}</button>
+                <button
+                  type="button"
+                  className="add-slot add-slot--list"
+                  aria-label={`Add ${pos === 'DF' ? 'defender' : pos === 'MF' ? 'midfielder' : pos === 'ATT' ? 'forward' : 'goalkeeper'}`}
+                  onClick={() => openPicker(pos, idx)}
+                >
+                  <span className="add-slot__plus" aria-hidden>+</span>
+                  <span className="add-slot__label">{pos === 'GK' ? 'GK' : pos === 'DF' ? 'DEF' : pos === 'MF' ? 'MID' : 'FWD'}</span>
+                </button>
               )}
             </div>
           )))}
         </div>
-      )}
+      ) : null}
 
       <div className="submit-section">
         <button 
           className={`submit-btn ${isSquadComplete ? 'active' : 'disabled'}`}
           onClick={handleSubmitTeam}
-          disabled={!isSquadComplete}
+          disabled={!isSquadComplete || squadLoading || deadlinePassed}
         >
-          Submit Team for Gameweek {upcomingInfo.week || '—'}
+          {deadlinePassed
+            ? 'Deadline passed — squad locked'
+            : `Save squad for Gameweek ${upcomingInfo.week || '—'}`}
         </button>
       </div>
 
@@ -429,6 +519,17 @@ export default function FantasyTransfers({ onBack }) {
           message={validationError.message}
           type={validationError.type || 'error'}
           onClose={() => setValidationError(null)}
+          secondaryAction={
+            validationError.title === 'Squad saved' && onGoToPickTeam
+              ? {
+                  label: 'Pick Team',
+                  onClick: () => {
+                    setValidationError(null);
+                    onGoToPickTeam();
+                  },
+                }
+              : undefined
+          }
         />
       )}
     </div>

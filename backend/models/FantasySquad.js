@@ -42,6 +42,19 @@ const FantasySquadSchema = new mongoose.Schema({
   isLocked: {
     type: Boolean,
     default: false
+  },
+  /** Pick-team snapshot for this gameweek */
+  lineup: {
+    type: mongoose.Schema.Types.Mixed,
+    default: null
+  },
+  squadSlots: {
+    type: mongoose.Schema.Types.Mixed,
+    default: null
+  },
+  chipUsed: {
+    type: String,
+    default: null
   }
 }, {
   timestamps: true

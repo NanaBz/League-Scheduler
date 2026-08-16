@@ -1,5 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import api from '../utils/api';
+import TeamDetailHero from './TeamDetailHero';
+import { aggregatePlayerStatsAcrossCompetitions, topByMetric } from '../utils/aggregateTeamPlayerStats';
+import { acwplPosition, ordinal } from '../utils/teamTablePosition';
 
 
 export default function GirlsTeamsPage() {
@@ -7,6 +10,7 @@ export default function GirlsTeamsPage() {
   const [selectedTeam, setSelectedTeam] = useState(null);
   const [players, setPlayers] = useState([]);
   const [stats, setStats] = useState([]);
+  const [acwplMatches, setAcwplMatches] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
@@ -19,14 +23,18 @@ export default function GirlsTeamsPage() {
 
   useEffect(() => {
     if (!selectedTeam) return;
-    setLoading(true); setError(null);
+    setLoading(true);
+    setError(null);
+    setAcwplMatches([]);
     Promise.all([
       api.get('/players', { params: { teamId: selectedTeam._id } }),
-      api.get('/stats', { params: { team: selectedTeam._id } })
+      api.get('/stats', { params: { team: selectedTeam._id } }),
+      api.get('/matches', { params: { competition: 'acwpl' } }),
     ])
-      .then(([playersRes, statsRes]) => {
+      .then(([playersRes, statsRes, matchesRes]) => {
         setPlayers(playersRes.data);
         setStats(statsRes.data || []);
+        setAcwplMatches(matchesRes.data || []);
       })
       .catch(() => setError('Failed to load roster'))
       .finally(() => setLoading(false));
@@ -40,14 +48,27 @@ export default function GirlsTeamsPage() {
 
   const captain = useMemo(() => players.find(p => p.isCaptain), [players]);
   const viceCaptain = useMemo(() => players.find(p => p.isViceCaptain), [players]);
+  const aggregatedPlayerStats = useMemo(
+    () => aggregatePlayerStatsAcrossCompetitions(stats),
+    [stats]
+  );
   const topScorer = useMemo(() => {
-    if (stats.length === 0) return null;
-    return stats.reduce((max, s) => (s.goals || 0) > (max.goals || 0) ? s : max, stats[0]);
-  }, [stats]);
+    const t = topByMetric(aggregatedPlayerStats, 'goals');
+    if (!t || (t.goals || 0) <= 0) return null;
+    return t;
+  }, [aggregatedPlayerStats]);
   const topAssister = useMemo(() => {
-    if (stats.length === 0) return null;
-    return stats.reduce((max, s) => (s.assists || 0) > (max.assists || 0) ? s : max, stats[0]);
-  }, [stats]);
+    const t = topByMetric(aggregatedPlayerStats, 'assists');
+    if (!t || (t.assists || 0) <= 0) return null;
+    return t;
+  }, [aggregatedPlayerStats]);
+
+  const heroTableSubtitle = useMemo(() => {
+    if (!selectedTeam) return '';
+    const pos = acwplPosition(selectedTeam.name, acwplMatches, teams);
+    if (pos == null) return '';
+    return `ACWPL · ${ordinal(pos)}`;
+  }, [selectedTeam, acwplMatches, teams]);
 
   return (
     <div className="teams-page">
@@ -84,25 +105,14 @@ export default function GirlsTeamsPage() {
       )}
 
       {selectedTeam && (
-        <div className="team-detail" style={{ background: '#f8fafc', borderRadius: 12, padding: 12, color: '#1e293b' }}>
-          <div style={{ marginBottom: 10 }}>
-            <button className="btn btn-secondary btn-small" onClick={() => setSelectedTeam(null)}>Back to Teams</button>
-          </div>
-          <h3 style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            {selectedTeam.logo && (
-              <img src={selectedTeam.logo} alt={selectedTeam.name}
-                style={{
-                  width: 36,
-                  height: 36,
-                  objectFit: 'contain',
-                  borderRadius: 8,
-                  background: selectedTeam.name === 'Falcons' ? '#94a3b8' : '#fff',
-                  boxShadow: '0 1px 4px rgba(0,0,0,0.06)'
-                }}
-              />
-            )}
-            {selectedTeam.name}
-          </h3>
+        <div className="team-detail-stack">
+          <TeamDetailHero
+            team={selectedTeam}
+            onBack={() => setSelectedTeam(null)}
+            subtitle={heroTableSubtitle}
+            backLabel="Back to teams"
+          />
+          <div className="team-detail-body">
           {loading && <div className="loading-inline">Loading squad…</div>}
           {error && <div className="error-inline">{error}</div>}
           {!loading && !error && (
@@ -158,6 +168,7 @@ export default function GirlsTeamsPage() {
               </div>
             </>
           )}
+          </div>
         </div>
       )}
     </div>

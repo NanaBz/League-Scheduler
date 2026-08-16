@@ -1,22 +1,73 @@
-import React from 'react';
+import React, { useId } from 'react';
 
-// Flat-color SVG jersey. Props: size, primary, stroke
-export default function JerseyIcon({ size = 56, primary = '#888', stroke = '#1f2937' }) {
+/**
+ * Kit icon: optional linear gradient (gradientFrom + gradientTo), else flat `primary`.
+ * Sleeves use a darker shade of the end colour for depth.
+ */
+export default function JerseyIcon({
+  size = 56,
+  primary = '#888',
+  stroke = '#1f2937',
+  gradientFrom,
+  gradientTo,
+  className,
+}) {
+  const uid = useId().replace(/:/g, '');
+  const gradId = `jersey-fill-${uid}`;
+  const useGradient = Boolean(gradientFrom && gradientTo);
+  const fill = useGradient ? `url(#${gradId})` : primary;
+  const sleeveTone = useGradient ? gradientTo : primary;
+
   return (
-    <svg width={size} height={size} viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" aria-hidden>
-      {/* Shirt body */}
+    <svg
+      className={className}
+      width={size}
+      height={size}
+      viewBox="0 0 64 64"
+      xmlns="http://www.w3.org/2000/svg"
+      aria-hidden
+    >
+      {useGradient && (
+        <defs>
+          <linearGradient id={gradId} x1="12%" y1="0%" x2="88%" y2="100%">
+            <stop offset="0%" stopColor={gradientFrom} />
+            <stop offset="100%" stopColor={gradientTo} />
+          </linearGradient>
+        </defs>
+      )}
+      {/* Main shirt */}
       <path
-        d="M20 10 L24 6 L40 6 L44 10 L54 14 L50 22 L46 20 L46 54 L18 54 L18 20 L14 22 L10 14 Z"
-        fill={primary}
+        d="M20 11 L24 7 L40 7 L44 11 L54 15 L50 23 L46 21 L46 53 L18 53 L18 21 L14 23 L10 15 Z"
+        fill={fill}
         stroke={stroke}
-        strokeWidth="2.5"
+        strokeWidth="2.25"
         strokeLinejoin="round"
       />
-      {/* Sleeves shading (same hue, subtle depth) */}
-      <path d="M10 14 L14 22 L18 20 L18 16 L14 18 Z" fill={primary} opacity="0.25" />
-      <path d="M54 14 L50 22 L46 20 L46 16 L50 18 Z" fill={primary} opacity="0.25" />
-      {/* Collar */}
-      <path d="M24 6 L32 6 L40 6 L36 10 L28 10 Z" fill={stroke} />
+      {/* Sleeves — slightly darker */}
+      <path
+        d="M10 15 L14 23 L18 21 L18 17 L13 18 Z"
+        fill={sleeveTone}
+        opacity={useGradient ? 0.45 : 0.28}
+      />
+      <path
+        d="M54 15 L50 23 L46 21 L46 17 L51 18 Z"
+        fill={sleeveTone}
+        opacity={useGradient ? 0.45 : 0.28}
+      />
+      {/* Collar / neck */}
+      <path
+        d="M24 7 L32 12 L40 7 L36 10 L28 10 Z"
+        fill={stroke}
+        opacity="0.92"
+      />
+      {/* Hem highlight */}
+      <path
+        d="M22 48 L42 48"
+        stroke={stroke}
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        opacity="0.35"
+      />
     </svg>
   );
 }

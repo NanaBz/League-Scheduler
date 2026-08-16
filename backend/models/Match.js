@@ -41,8 +41,13 @@ const matchSchema = new mongoose.Schema({
   },
   competition: {
     type: String,
-    enum: ['league', 'cup', 'super-cup', 'acwpl'],
+    enum: ['league', 'cup', 'super-cup', 'acwpl', 'girls-super-cup'],
     required: true
+  },
+  /** Which PlayerStats / season bucket this fixture belongs to (set when fixtures are generated) */
+  seasonNumber: {
+    type: Number,
+    index: true,
   },
   stage: {
     type: String,
@@ -61,6 +66,20 @@ const matchSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Team'
   },
+  /** scheduled → live (in progress) → ft (finished). Legacy docs: omit field, infer from isPlayed. */
+  matchState: {
+    type: String,
+    enum: ['scheduled', 'live', 'ft'],
+    default: 'scheduled',
+  },
+  /** When false, current `events` are stored for live display but were never applied to PlayerStats (reverse must be skipped on next sync). */
+  eventsSyncedToStats: {
+    type: Boolean,
+    default: true,
+  },
+  /** Last scoreline already applied to league Team documents during live (league only; cleared on FT / abandon). */
+  liveLeagueStatsLastHome: { type: Number, default: null },
+  liveLeagueStatsLastAway: { type: Number, default: null },
   isPlayed: {
     type: Boolean,
     default: false

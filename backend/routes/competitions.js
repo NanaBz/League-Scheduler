@@ -142,6 +142,34 @@ router.post('/check-winners', async (req, res) => {
       }
     }
 
+    // Girls Super Cup (best-of-3, clinch at 2 wins)
+    const gscMatches = await Match.find({ competition: 'girls-super-cup' })
+      .populate('homeTeam', 'name')
+      .populate('awayTeam', 'name')
+      .sort({ matchweek: 1 })
+      .lean();
+    const gscWins = {};
+    for (const m of gscMatches) {
+      if (!m.isPlayed || m.isVoided) continue;
+      const h = m.homeScore;
+      const a = m.awayScore;
+      let winnerTeam = null;
+      if (typeof h === 'number' && typeof a === 'number') {
+        if (h > a) winnerTeam = m.homeTeam;
+        else if (a > h) winnerTeam = m.awayTeam;
+        else if (m.homePenalties != null && m.awayPenalties != null && m.homePenalties !== m.awayPenalties) {
+          winnerTeam = m.homePenalties > m.awayPenalties ? m.homeTeam : m.awayTeam;
+        }
+      }
+      if (winnerTeam && winnerTeam.name) {
+        gscWins[winnerTeam.name] = (gscWins[winnerTeam.name] || 0) + 1;
+      }
+    }
+    const gscLeader = Object.entries(gscWins).sort((x, y) => y[1] - x[1])[0];
+    if (gscLeader && gscLeader[1] >= 2) {
+      results.girlsSuperCup = gscLeader[0];
+    }
+
     res.json({ message: 'Winners checked', results });
   } catch (error) {
     res.status(500).json({ message: error.message });

@@ -1,7 +1,14 @@
 import React from 'react';
 import './ValidationModal.css';
 
-export default function ValidationModal({ title, message, type = 'error', onClose, actionText = 'OK' }) {
+export default function ValidationModal({
+  title,
+  message,
+  type = 'error',
+  onClose,
+  actionText = 'OK',
+  secondaryAction,
+}) {
   if (!message) return null;
 
   const icons = {
@@ -20,7 +27,12 @@ export default function ValidationModal({ title, message, type = 'error', onClos
           <p className="vm-message">{message}</p>
         </div>
         <div className="vm-actions">
-          <button className={`vm-btn vm-btn-${type}`} onClick={onClose}>
+          {secondaryAction ? (
+            <button type="button" className="vm-btn vm-btn-secondary" onClick={secondaryAction.onClick}>
+              {secondaryAction.label}
+            </button>
+          ) : null}
+          <button type="button" className={`vm-btn vm-btn-${type}`} onClick={onClose}>
             {actionText}
           </button>
         </div>

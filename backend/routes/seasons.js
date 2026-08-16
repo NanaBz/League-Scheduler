@@ -5,6 +5,7 @@ const Team = require('../models/Team');
 const Match = require('../models/Match');
 const { authenticateAdmin } = require('../middleware/auth');
 const AuditLog = require('../models/AuditLog');
+const { syncSeasonActiveFlagsToLatest } = require('../utils/seasonContext');
 
 // Get all seasons
 router.get('/', async (req, res) => {
@@ -15,6 +16,26 @@ router.get('/', async (req, res) => {
       .populate('winners.superCup', 'name logo')
       .sort({ seasonNumber: -1 });
     res.json(seasons);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// Fix isActive flags: only the highest seasonNumber is active (matches product expectation)
+router.post('/reconcile-active', authenticateAdmin, async (req, res) => {
+  try {
+    await AuditLog.create({
+      action: 'reconcile_season_active',
+      admin: { id: req.admin._id, email: req.admin.email },
+      details: {},
+      ip: req.ip,
+      userAgent: req.headers['user-agent'],
+    });
+    const seasonNumber = await syncSeasonActiveFlagsToLatest();
+    if (seasonNumber == null) {
+      return res.status(400).json({ message: 'No season documents found' });
+    }
+    res.json({ message: 'Season flags updated', activeSeasonNumber: seasonNumber });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -284,26 +305,37 @@ router.post('/reset', authenticateAdmin, async (req, res) => {
       superCup: superCupWinner?._id
     };
     
-    archivedSeason.matches = matches.map(match => ({
-      _id: match._id,
-      homeTeam: match.homeTeam._id, // Store ObjectId reference
-      awayTeam: match.awayTeam._id,  // Store ObjectId reference
-      homeScore: match.homeScore,
-      awayScore: match.awayScore,
-      homePenalties: match.homePenalties,
-      awayPenalties: match.awayPenalties,
-      date: match.date,
-      time: match.time,
-      matchweek: match.matchweek,
-      competition: match.competition,
-      stage: match.stage,
-      isPlayed: match.isPlayed
-    }));
+    archivedSeason.matches = matches.map((match) => {
+      const ht = match.homeTeam;
+      const at = match.awayTeam;
+      return {
+        _id: match._id,
+        homeTeam: ht && ht._id ? ht._id : match.homeTeam,
+        awayTeam: at && at._id ? at._id : match.awayTeam,
+        homeTeamName: ht && typeof ht === 'object' ? ht.name : undefined,
+        homeTeamLogo: ht && typeof ht === 'object' ? ht.logo : undefined,
+        awayTeamName: at && typeof at === 'object' ? at.name : undefined,
+        awayTeamLogo: at && typeof at === 'object' ? at.logo : undefined,
+        homeScore: match.homeScore,
+        awayScore: match.awayScore,
+        homePenalties: match.homePenalties,
+        awayPenalties: match.awayPenalties,
+        date: match.date,
+        time: match.time,
+        matchweek: match.matchweek,
+        competition: match.competition,
+        stage: match.stage,
+        isPlayed: match.isPlayed,
+        isVoided: Boolean(match.isVoided),
+      };
+    });
 
     // Save archived season
     console.log('Saving archived season...');
     await archivedSeason.save();
     console.log('Archived season saved successfully');
+
+    await syncSeasonActiveFlagsToLatest();
 
     // Reset current season data
     console.log('Resetting team data...');

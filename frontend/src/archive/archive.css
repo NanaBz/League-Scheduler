@@ -1,0 +1,36 @@
+/**
+ * Archive v2 layout: stable three-column fixtures, hide stray per-side score chips
+ * from shared fixture styles. Scoped with .archive-v2 on the season root.
+ */
+
+.archived-season-view.archive-v2 .fixtures-archive .arc-fixture-teams {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  gap: 0.75rem 0.5rem;
+  width: 100%;
+}
+
+.archived-season-view.archive-v2 .fixtures-archive .arc-fixture-teams .team-section.home,
+.archived-season-view.archive-v2 .fixtures-archive .arc-fixture-teams .team-section.away {
+  min-width: 0;
+}
+
+.archived-season-view.archive-v2 .fixtures-archive .arc-fixture-teams .team-section.home .team-info,
+.archived-season-view.archive-v2 .fixtures-archive .arc-fixture-teams .team-section.away .team-info {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 0.35rem;
+  width: 100%;
+}
+
+.archived-season-view.archive-v2 .fixtures-archive .arc-fixture-teams .vs-section {
+  justify-self: center;
+  text-align: center;
+}
+
+.archived-season-view.archive-v2 .fixtures-archive .team-score {
+  display: none !important;
+}

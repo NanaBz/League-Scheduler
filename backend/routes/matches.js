@@ -8,6 +8,94 @@ const Player = require('../models/Player');
 const PlayerStats = require('../models/PlayerStats');
 const Season = require('../models/Season');
 const { authenticateAdmin } = require('../middleware/auth');
+const {
+  resolveSeasonNumberForMatch,
+  seasonNumberForNewFixtures,
+  syncSeasonActiveFlagsToLatest,
+} = require('../utils/seasonContext');
+const { nearestQuarterLocalParts } = require('../utils/matchLiveTime');
+const { resetFantasySeasonData } = require('../utils/resetFantasySeason');
+const { finalizeFantasyMatchScoring } = require('../utils/fantasyMatchEventsSync');
+
+function effectiveMatchState(match) {
+  if (!match) return 'scheduled';
+  if (match.matchState) return match.matchState;
+  return match.isPlayed ? 'ft' : 'scheduled';
+}
+
+/** Rebuild league table totals from all finished league fixtures (source of truth). */
+async function recalculateLeagueTeamStats() {
+  const teams = await Team.find({ competition: 'league' });
+  const teamById = new Map(teams.map((t) => [t._id.toString(), t]));
+
+  for (const team of teams) {
+    team.played = 0;
+    team.won = 0;
+    team.drawn = 0;
+    team.lost = 0;
+    team.goalsFor = 0;
+    team.goalsAgainst = 0;
+    team.points = 0;
+    team.form = [];
+  }
+
+  const matches = await Match.find({
+    competition: 'league',
+    isPlayed: true,
+    isVoided: { $ne: true },
+    homeScore: { $ne: null },
+    awayScore: { $ne: null },
+  })
+    .sort({ matchweek: 1, date: 1 })
+    .lean();
+
+  for (const match of matches) {
+    const homeTeam = teamById.get(String(match.homeTeam));
+    const awayTeam = teamById.get(String(match.awayTeam));
+    if (!homeTeam || !awayTeam) continue;
+
+    const h = match.homeScore;
+    const a = match.awayScore;
+    if (typeof h !== 'number' || typeof a !== 'number') continue;
+
+    homeTeam.played += 1;
+    awayTeam.played += 1;
+    homeTeam.goalsFor += h;
+    homeTeam.goalsAgainst += a;
+    awayTeam.goalsFor += a;
+    awayTeam.goalsAgainst += h;
+
+    let homeResult;
+    let awayResult;
+    if (h > a) {
+      homeTeam.won += 1;
+      homeTeam.points += 3;
+      awayTeam.lost += 1;
+      homeResult = 'W';
+      awayResult = 'L';
+    } else if (h < a) {
+      awayTeam.won += 1;
+      awayTeam.points += 3;
+      homeTeam.lost += 1;
+      homeResult = 'L';
+      awayResult = 'W';
+    } else {
+      homeTeam.drawn += 1;
+      awayTeam.drawn += 1;
+      homeTeam.points += 1;
+      awayTeam.points += 1;
+      homeResult = 'D';
+      awayResult = 'D';
+    }
+
+    homeTeam.form.unshift(homeResult);
+    if (homeTeam.form.length > 3) homeTeam.form.pop();
+    awayTeam.form.unshift(awayResult);
+    if (awayTeam.form.length > 3) awayTeam.form.pop();
+  }
+
+  await Promise.all(teams.map((team) => team.save()));
+}
 
 // Reset match score
 router.post('/:id/reset-score', authenticateAdmin, async (req, res) => {
@@ -16,12 +104,21 @@ router.post('/:id/reset-score', authenticateAdmin, async (req, res) => {
     if (!match) {
       return res.status(404).json({ message: 'Match not found' });
     }
+    const competition = match.competition;
     match.homeScore = null;
     match.awayScore = null;
     match.homePenalties = null;
     match.awayPenalties = null;
     match.isPlayed = false;
+    match.matchState = 'scheduled';
+    match.events = [];
+    match.eventsSyncedToStats = true;
+    match.liveLeagueStatsLastHome = null;
+    match.liveLeagueStatsLastAway = null;
     await match.save();
+    if (competition === 'league') {
+      await recalculateLeagueTeamStats();
+    }
     await match.populate('homeTeam', 'name logo');
     await match.populate('awayTeam', 'name logo');
     res.json({ message: 'Match score reset', match });
@@ -51,6 +148,7 @@ router.post('/generate-acwpl', authenticateAdmin, async (req, res) => {
     await Match.deleteMany({ competition: 'acwpl' });
     const fixtures = [];
     const teamIds = teams.map(team => team._id);
+    const fixtureSeason = await seasonNumberForNewFixtures();
     let baseDate = new Date();
     baseDate.setDate(baseDate.getDate() + 7);
     for (let week = 0; week < 5; week++) {
@@ -65,7 +163,8 @@ router.post('/generate-acwpl', authenticateAdmin, async (req, res) => {
         date: matchDate,
         time: '15:00',
         matchweek: week + 1,
-        competition: 'acwpl'
+        competition: 'acwpl',
+        seasonNumber: fixtureSeason,
       });
       fixtures.push(match);
     }
@@ -108,7 +207,11 @@ router.get('/', async (req, res) => {
 
 // Create a new match
 router.post('/', authenticateAdmin, async (req, res) => {
-  const match = new Match(req.body);
+  const body = { ...req.body };
+  if (body.seasonNumber == null) {
+    body.seasonNumber = await seasonNumberForNewFixtures();
+  }
+  const match = new Match(body);
 
   try {
     const newMatch = await match.save();
@@ -128,25 +231,64 @@ router.put('/:id', authenticateAdmin, async (req, res) => {
       return res.status(404).json({ message: 'Match not found' });
     }
     if (match.isVoided) {
-      return res.status(400).json({ message: 'This fixture has been marked void after ACWPL clinch and can no longer be edited.' });
+      return res.status(400).json({
+        message: 'This fixture is void and can no longer be edited.',
+      });
     }
 
     const oldHomeScore = match.homeScore;
     const oldAwayScore = match.awayScore;
     const wasPlayed = match.isPlayed;
 
-    Object.assign(match, req.body);
-    
+    /** Live fixtures: score lines update; league table updates incrementally from liveLeagueStatsLast*. */
+    if (effectiveMatchState(match) === 'live') {
+      const leaguePrevH = match.competition === 'league' ? match.liveLeagueStatsLastHome : null;
+      const leaguePrevA = match.competition === 'league' ? match.liveLeagueStatsLastAway : null;
+
+      const allow = ['homeScore', 'awayScore', 'homePenalties', 'awayPenalties'];
+      for (const key of allow) {
+        if (Object.prototype.hasOwnProperty.call(req.body, key)) {
+          const v = req.body[key];
+          match[key] = v === '' || v === null || v === undefined ? null : Number(v);
+        }
+      }
+      match.isPlayed = false;
+      match.matchState = 'live';
+
+      if (match.competition === 'league') {
+        const hadPrev = Number.isFinite(leaguePrevH) && Number.isFinite(leaguePrevA);
+        await updateTeamStats(match, hadPrev ? leaguePrevH : null, hadPrev ? leaguePrevA : null, hadPrev);
+        match.liveLeagueStatsLastHome = match.homeScore;
+        match.liveLeagueStatsLastAway = match.awayScore;
+      }
+
+      const updatedMatch = await match.save();
+      await updatedMatch.populate('homeTeam', 'name logo');
+      await updatedMatch.populate('awayTeam', 'name logo');
+      return res.json(updatedMatch);
+    }
+
+    const body = { ...req.body };
+    delete body.matchState;
+    Object.assign(match, body);
+
     // Simple, explicit check: if both scores are numbers (including 0), mark as played
     const homeScore = match.homeScore;
     const awayScore = match.awayScore;
-    
-    if (typeof homeScore === 'number' && typeof awayScore === 'number' && 
-        homeScore >= 0 && awayScore >= 0) {
+
+    if (typeof homeScore === 'number' && typeof awayScore === 'number' && homeScore >= 0 && awayScore >= 0) {
       match.isPlayed = true;
+      match.matchState = 'ft';
       console.log(`✅ Match ${match._id} marked as PLAYED: ${homeScore}-${awayScore}`);
     } else {
-      console.log(`❌ Match ${match._id} NOT marked as played. Scores: home=${homeScore} (${typeof homeScore}), away=${awayScore} (${typeof awayScore})`);
+      if (!match.isPlayed) {
+        match.matchState = 'scheduled';
+      } else {
+        match.matchState = 'ft';
+      }
+      console.log(
+        `❌ Match ${match._id} NOT marked as played. Scores: home=${homeScore} (${typeof homeScore}), away=${awayScore} (${typeof awayScore})`
+      );
     }
 
     const updatedMatch = await match.save();
@@ -166,6 +308,10 @@ router.put('/:id', authenticateAdmin, async (req, res) => {
     // ACWPL: if champion is mathematically confirmed, void remaining unplayed fixtures
     if (match.competition === 'acwpl' && match.isPlayed) {
       await finalizeAcwplIfClinched();
+    }
+
+    if (match.competition === 'girls-super-cup' && match.isPlayed) {
+      await finalizeGirlsSuperCupIfClosed();
     }
 
     res.json(updatedMatch);
@@ -199,8 +345,11 @@ router.post('/generate-league', authenticateAdmin, async (req, res) => {
 
     // Clear existing league matches
     await Match.deleteMany({ competition: 'league' });
+    await recalculateLeagueTeamStats();
+    await resetFantasySeasonData();
 
     const fixtures = [];
+    const fixtureSeason = await seasonNumberForNewFixtures();
     const teamIds = teams.map(team => team._id);
     
     // 🎯 CIRCLE METHOD - Using Your Exact Pseudocode
@@ -309,7 +458,8 @@ router.post('/generate-league', authenticateAdmin, async (req, res) => {
           date: matchDate,
           time: gameIndex === 0 ? '13:00' : gameIndex === 1 ? '15:00' : '17:00',
           matchweek: week + 1,
-          competition: 'league'
+          competition: 'league',
+          seasonNumber: fixtureSeason,
         });
         
         fixtures.push(match);
@@ -356,6 +506,7 @@ router.post('/generate-cup', authenticateAdmin, async (req, res) => {
 
     // Randomize the 4 teams for semi-finals
     const shuffledTeams = [...teams].sort(() => Math.random() - 0.5);
+    const fixtureSeason = await seasonNumberForNewFixtures();
     
     const fixtures = [];
     
@@ -367,7 +518,8 @@ router.post('/generate-cup', authenticateAdmin, async (req, res) => {
       time: '19:00',
       matchweek: 1,
       competition: 'cup',
-      stage: 'semi-final'
+      stage: 'semi-final',
+      seasonNumber: fixtureSeason,
     });
 
     const semiFinal2 = new Match({
@@ -377,7 +529,8 @@ router.post('/generate-cup', authenticateAdmin, async (req, res) => {
       time: '19:00',
       matchweek: 1,
       competition: 'cup',
-      stage: 'semi-final'
+      stage: 'semi-final',
+      seasonNumber: fixtureSeason,
     });
 
     fixtures.push(semiFinal1, semiFinal2);
@@ -397,46 +550,6 @@ router.post('/generate-cup', authenticateAdmin, async (req, res) => {
 
 // Generate super cup fixtures with explicit winner selection
 router.post('/generate-super-cup', authenticateAdmin, async (req, res) => {
-  // Generate ACWPL (girls league) fixtures
-// --- ACWPL fixture generation route moved above module.exports ---
-router.post('/generate-acwpl', async (req, res) => {
-  console.log('ACWPL route hit');
-  try {
-    const teams = await Team.find({ competition: 'acwpl' });
-    if (teams.length !== 2) {
-      return res.status(400).json({ message: 'Exactly 2 teams required for ACWPL best-of-5 series' });
-    }
-    await Match.deleteMany({ competition: 'acwpl' });
-    const fixtures = [];
-    const teamIds = teams.map(team => team._id);
-    let baseDate = new Date();
-    baseDate.setDate(baseDate.getDate() + 7);
-    for (let week = 0; week < 5; week++) {
-      const isHomeOrion = week % 2 === 0;
-      const homeTeamId = isHomeOrion ? teamIds[0] : teamIds[1];
-      const awayTeamId = isHomeOrion ? teamIds[1] : teamIds[0];
-      const matchDate = new Date(baseDate);
-      matchDate.setDate(matchDate.getDate() + (week * 7));
-      const match = new Match({
-        homeTeam: homeTeamId,
-        awayTeam: awayTeamId,
-        date: matchDate,
-        time: '15:00',
-        matchweek: week + 1,
-        competition: 'acwpl'
-      });
-      fixtures.push(match);
-    }
-    await Match.insertMany(fixtures);
-    res.json({
-      message: 'ACWPL best-of-5 series fixtures generated',
-      count: fixtures.length,
-      matchweeks: 5
-    });
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-});
   try {
     const { leagueWinnerId, cupWinnerId, originalDoubleWinnerId } = req.body; // Explicit winner selection
     if (!leagueWinnerId || !cupWinnerId) {
@@ -452,6 +565,7 @@ router.post('/generate-acwpl', async (req, res) => {
     }
     // Clear existing super cup matches
     await Match.deleteMany({ competition: 'super-cup' });
+    const fixtureSeason = await seasonNumberForNewFixtures();
     // If double winner, store originalDoubleWinnerId for frontend display
     const superCupMatch = new Match({
       homeTeam: leagueWinnerId, // League winner is always home
@@ -463,7 +577,8 @@ router.post('/generate-acwpl', async (req, res) => {
       round: 'final',
       leagueWinner: leagueWinnerId,  // Store for display purposes
       cupWinner: cupWinnerId,        // Store for display purposes
-      originalDoubleWinnerId: originalDoubleWinnerId || null // Store if double winner
+      originalDoubleWinnerId: originalDoubleWinnerId || null, // Store if double winner
+      seasonNumber: fixtureSeason,
     });
     await superCupMatch.save();
     res.json({ 
@@ -478,12 +593,64 @@ router.post('/generate-acwpl', async (req, res) => {
   }
 });
 
+// Girls Super Cup: best-of-3 between ACWPL teams (Orion vs Firestorm); clinch at 2 wins voids remaining games
+router.post('/generate-girls-super-cup', authenticateAdmin, async (req, res) => {
+  try {
+    let teams = await Team.find({ competition: 'acwpl' });
+    if (teams.length !== 2) {
+      await Team.deleteMany({ competition: 'acwpl' });
+      await Team.insertMany([
+        { name: 'Orion', logo: '/logos/Orion.png', competition: 'acwpl', category: 'girls' },
+        { name: 'Firestorm', logo: '/logos/Firestorm.png', competition: 'acwpl', category: 'girls' },
+      ]);
+      teams = await Team.find({ competition: 'acwpl' });
+    }
+    if (teams.length !== 2) {
+      return res.status(500).json({ message: 'Could not ensure Orion and Firestorm for Girls Super Cup.' });
+    }
+
+    await Match.deleteMany({ competition: 'girls-super-cup' });
+    const fixtureSeason = await seasonNumberForNewFixtures();
+    const teamIds = teams.map((t) => t._id);
+    const fixtures = [];
+    const baseDate = new Date();
+    baseDate.setDate(baseDate.getDate() + 7);
+    for (let week = 0; week < 3; week++) {
+      const isHomeOrion = week % 2 === 0;
+      const homeTeamId = isHomeOrion ? teamIds[0] : teamIds[1];
+      const awayTeamId = isHomeOrion ? teamIds[1] : teamIds[0];
+      const matchDate = new Date(baseDate);
+      matchDate.setDate(matchDate.getDate() + week * 7);
+      fixtures.push(
+        new Match({
+          homeTeam: homeTeamId,
+          awayTeam: awayTeamId,
+          date: matchDate,
+          time: '16:00',
+          matchweek: week + 1,
+          competition: 'girls-super-cup',
+          stage: 'final',
+          seasonNumber: fixtureSeason,
+        })
+      );
+    }
+    await Match.insertMany(fixtures);
+    res.json({
+      message: 'Girls Super Cup best-of-3 fixtures generated (Orion vs Firestorm)',
+      count: fixtures.length,
+      matchweeks: 3,
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
 // Save fixtures for a competition (publish them)
 router.post('/save-fixtures', authenticateAdmin, async (req, res) => {
   try {
     const { competition } = req.body;
     
-    if (!competition || !['league', 'cup', 'super-cup', 'acwpl'].includes(competition)) {
+    if (!competition || !['league', 'cup', 'super-cup', 'acwpl', 'girls-super-cup'].includes(competition)) {
       return res.status(400).json({ message: 'Valid competition required' });
     }
 
@@ -504,14 +671,37 @@ router.post('/reset-fixtures', authenticateAdmin, async (req, res) => {
   try {
     const { competition } = req.body;
     
-    if (!competition || !['league', 'cup', 'super-cup', 'acwpl'].includes(competition)) {
+    if (!competition || !['league', 'cup', 'super-cup', 'acwpl', 'girls-super-cup'].includes(competition)) {
       return res.status(400).json({ message: 'Valid competition required' });
     }
 
     // Delete all matches for this competition
     await Match.deleteMany({ competition });
 
+    if (competition === 'league') {
+      await recalculateLeagueTeamStats();
+      await resetFantasySeasonData();
+    }
+
     res.json({ message: `${competition} fixtures reset successfully` });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// Rebuild league standings from played fixtures (fixes stale table after bulk resets)
+router.post('/recalculate-league-table', authenticateAdmin, async (req, res) => {
+  try {
+    await recalculateLeagueTeamStats();
+    const teams = await Team.find({ competition: 'league' }).sort({
+      points: -1,
+      goalDifference: -1,
+      goalsFor: -1,
+    });
+    res.json({
+      message: 'League table recalculated from finished fixtures.',
+      teams,
+    });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -531,6 +721,9 @@ router.get('/fixture-status', async (req, res) => {
 
     const acwplCount = await Match.countDocuments({ competition: 'acwpl' });
     const acwplPublished = await Match.countDocuments({ competition: 'acwpl', isPublished: true });
+
+    const girlsSuperCupCount = await Match.countDocuments({ competition: 'girls-super-cup' });
+    const girlsSuperCupPublished = await Match.countDocuments({ competition: 'girls-super-cup', isPublished: true });
 
     res.json({
       league: {
@@ -556,6 +749,12 @@ router.get('/fixture-status', async (req, res) => {
         isPublished: acwplPublished > 0,
         totalMatches: acwplCount,
         publishedMatches: acwplPublished
+      },
+      'girls-super-cup': {
+        hasFixtures: girlsSuperCupCount > 0,
+        isPublished: girlsSuperCupPublished > 0,
+        totalMatches: girlsSuperCupCount,
+        publishedMatches: girlsSuperCupPublished
       }
     });
   } catch (error) {
@@ -628,6 +827,43 @@ async function getAcwplClinchState() {
   return { champion: null };
 }
 
+function resolvedWinnerSideFromScores(match) {
+  if (!match || match.isVoided || !match.isPlayed) return null;
+  const h = match.homeScore;
+  const a = match.awayScore;
+  if (typeof h !== 'number' || typeof a !== 'number') return null;
+  if (h > a) return 'home';
+  if (a > h) return 'away';
+  const hp = match.homePenalties;
+  const ap = match.awayPenalties;
+  if (hp != null && ap != null && hp !== ap) return hp > ap ? 'home' : 'away';
+  return null;
+}
+
+async function finalizeGirlsSuperCupIfClosed() {
+  const series = await Match.find({ competition: 'girls-super-cup' }).sort({ matchweek: 1 }).lean();
+  const winsByTeamId = {};
+  for (const m of series) {
+    if (!m.isPlayed || m.isVoided) continue;
+    const side = resolvedWinnerSideFromScores(m);
+    if (!side) continue;
+    const tid = String(side === 'home' ? m.homeTeam : m.awayTeam);
+    winsByTeamId[tid] = (winsByTeamId[tid] || 0) + 1;
+  }
+  const maxWins = Math.max(0, ...Object.values(winsByTeamId));
+  if (maxWins < 2) return;
+
+  await Match.updateMany(
+    { competition: 'girls-super-cup', isPlayed: false, isVoided: { $ne: true } },
+    {
+      $set: {
+        isVoided: true,
+        voidReason: 'Girls Super Cup: a team reached two wins — remaining fixtures are void.',
+      },
+    }
+  );
+}
+
 async function finalizeAcwplIfClinched() {
   const { champion } = await getAcwplClinchState();
   if (!champion) return;
@@ -693,6 +929,10 @@ async function updateCupProgression() {
     });
 
     if (winners.length === 2) {
+      const cupSeason =
+        semiFinals[0].seasonNumber ??
+        semiFinals[1].seasonNumber ??
+        (await seasonNumberForNewFixtures());
       // Create the final match with actual winners
       const finalMatch = new Match({
         homeTeam: winners[0]._id,
@@ -702,7 +942,8 @@ async function updateCupProgression() {
         matchweek: 2,
         competition: 'cup',
         stage: 'final',
-        isPublished: true  // Make sure it's published so it shows up
+        isPublished: true, // Make sure it's published so it shows up
+        seasonNumber: cupSeason,
       });
 
       await finalMatch.save();
@@ -711,6 +952,44 @@ async function updateCupProgression() {
   } catch (error) {
     console.error('Error updating cup progression:', error);
   }
+}
+
+/** Undo a single result snapshot from league team totals (used when abandoning live). */
+async function revertTeamStatsOnly(match, oldHomeScore, oldAwayScore) {
+  if (oldHomeScore === null || oldHomeScore === undefined || oldAwayScore === null || oldAwayScore === undefined) {
+    return;
+  }
+  const homeTeam = await Team.findById(match.homeTeam);
+  const awayTeam = await Team.findById(match.awayTeam);
+  if (!homeTeam || !awayTeam) return;
+
+  homeTeam.played--;
+  awayTeam.played--;
+  homeTeam.goalsFor -= oldHomeScore;
+  homeTeam.goalsAgainst -= oldAwayScore;
+  awayTeam.goalsFor -= oldAwayScore;
+  awayTeam.goalsAgainst -= oldHomeScore;
+
+  if (homeTeam.form.length > 0) homeTeam.form.pop();
+  if (awayTeam.form.length > 0) awayTeam.form.pop();
+
+  if (oldHomeScore > oldAwayScore) {
+    homeTeam.won--;
+    homeTeam.points -= 3;
+    awayTeam.lost--;
+  } else if (oldHomeScore < oldAwayScore) {
+    awayTeam.won--;
+    awayTeam.points -= 3;
+    homeTeam.lost--;
+  } else {
+    homeTeam.drawn--;
+    awayTeam.drawn--;
+    homeTeam.points--;
+    awayTeam.points--;
+  }
+
+  await homeTeam.save();
+  await awayTeam.save();
 }
 
 // Helper function to update team stats
@@ -791,7 +1070,143 @@ async function updateTeamStats(match, oldHomeScore, oldAwayScore, wasPlayed) {
   await awayTeam.save();
 }
 
-module.exports = router;
+// --- Live match workflow (start → score updates → full time / abandon) ---
+
+router.post('/:id/start-live', authenticateAdmin, async (req, res) => {
+  try {
+    const match = await Match.findById(req.params.id);
+    if (!match) return res.status(404).json({ message: 'Match not found' });
+    if (match.isVoided) return res.status(400).json({ message: 'Void fixtures cannot go live.' });
+    if (match.isPlayed || effectiveMatchState(match) === 'ft') {
+      return res.status(400).json({ message: 'This match is already finished.' });
+    }
+    if (effectiveMatchState(match) === 'live') {
+      return res.status(400).json({ message: 'This match is already live.' });
+    }
+    const { dateMidnightLocal, timeHHMM } = nearestQuarterLocalParts();
+    match.date = dateMidnightLocal;
+    match.time = timeHHMM;
+    match.homeScore = 0;
+    match.awayScore = 0;
+    match.homePenalties = null;
+    match.awayPenalties = null;
+    match.events = [];
+    match.eventsSyncedToStats = true;
+    match.matchState = 'live';
+    match.isPlayed = false;
+
+    if (match.competition === 'league') {
+      await updateTeamStats(match, null, null, false);
+      match.liveLeagueStatsLastHome = 0;
+      match.liveLeagueStatsLastAway = 0;
+    } else {
+      match.liveLeagueStatsLastHome = null;
+      match.liveLeagueStatsLastAway = null;
+    }
+
+    await match.save();
+    await match.populate('homeTeam', 'name logo');
+    await match.populate('awayTeam', 'name logo');
+    res.json(match);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+router.post('/:id/abandon-live', authenticateAdmin, async (req, res) => {
+  try {
+    const match = await Match.findById(req.params.id);
+    if (!match) return res.status(404).json({ message: 'Match not found' });
+    if (effectiveMatchState(match) !== 'live') {
+      return res.status(400).json({ message: 'Only a live match can be abandoned.' });
+    }
+
+    const lh = match.liveLeagueStatsLastHome;
+    const la = match.liveLeagueStatsLastAway;
+    if (match.competition === 'league' && Number.isFinite(lh) && Number.isFinite(la)) {
+      await revertTeamStatsOnly(match, lh, la);
+    }
+
+    match.matchState = 'scheduled';
+    match.isPlayed = false;
+    match.homeScore = null;
+    match.awayScore = null;
+    match.homePenalties = null;
+    match.awayPenalties = null;
+    match.events = [];
+    match.eventsSyncedToStats = true;
+    match.liveLeagueStatsLastHome = null;
+    match.liveLeagueStatsLastAway = null;
+    await match.save();
+    await match.populate('homeTeam', 'name logo');
+    await match.populate('awayTeam', 'name logo');
+    res.json(match);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+router.post('/:id/full-time', authenticateAdmin, async (req, res) => {
+  try {
+    const match = await Match.findById(req.params.id);
+    if (!match) return res.status(404).json({ message: 'Match not found' });
+    if (match.isVoided) return res.status(400).json({ message: 'Void fixtures cannot be completed.' });
+    if (effectiveMatchState(match) !== 'live') {
+      return res.status(400).json({ message: 'Only a live match can be marked full time.' });
+    }
+
+    const h = req.body.homeScore !== undefined ? Number(req.body.homeScore) : match.homeScore;
+    const a = req.body.awayScore !== undefined ? Number(req.body.awayScore) : match.awayScore;
+    if (typeof h !== 'number' || typeof a !== 'number' || Number.isNaN(h) || Number.isNaN(a) || h < 0 || a < 0) {
+      return res.status(400).json({ message: 'Valid homeScore and awayScore (numbers ≥ 0) are required for full time.' });
+    }
+
+    const oldHomeScore = match.homeScore;
+    const oldAwayScore = match.awayScore;
+    const wasPlayed = match.isPlayed;
+    const leagueLiveH = match.liveLeagueStatsLastHome;
+    const leagueLiveA = match.liveLeagueStatsLastAway;
+
+    match.homeScore = h;
+    match.awayScore = a;
+    if (req.body.homePenalties !== undefined) {
+      match.homePenalties = req.body.homePenalties === '' || req.body.homePenalties == null ? null : Number(req.body.homePenalties);
+    }
+    if (req.body.awayPenalties !== undefined) {
+      match.awayPenalties = req.body.awayPenalties === '' || req.body.awayPenalties == null ? null : Number(req.body.awayPenalties);
+    }
+    match.isPlayed = true;
+    match.matchState = 'ft';
+
+    await match.save();
+    await match.populate('homeTeam', 'name logo');
+    await match.populate('awayTeam', 'name logo');
+
+    if (match.competition === 'league' && match.isPlayed) {
+      if (Number.isFinite(leagueLiveH) && Number.isFinite(leagueLiveA)) {
+        await updateTeamStats(match, leagueLiveH, leagueLiveA, true);
+        match.liveLeagueStatsLastHome = null;
+        match.liveLeagueStatsLastAway = null;
+        await match.save();
+      } else {
+        await updateTeamStats(match, oldHomeScore, oldAwayScore, wasPlayed);
+      }
+    }
+    if (match.competition === 'cup' && match.stage === 'semi-final' && match.isPlayed) {
+      await updateCupProgression();
+    }
+    if (match.competition === 'acwpl' && match.isPlayed) {
+      await finalizeAcwplIfClinched();
+    }
+    if (match.competition === 'girls-super-cup' && match.isPlayed) {
+      await finalizeGirlsSuperCupIfClosed();
+    }
+
+    res.json(match);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
 
 // Record or replace match events for stats aggregation
 router.post('/:id/events', authenticateAdmin, async (req, res) => {
@@ -799,24 +1214,46 @@ router.post('/:id/events', authenticateAdmin, async (req, res) => {
     const match = await Match.findById(req.params.id);
     if (!match) return res.status(404).json({ message: 'Match not found' });
 
-    // Ensure there is an active season so event stats have a season bucket
-    let season = await Season.findOne({ isActive: true });
-    if (!season) {
-      const lastSeason = await Season.findOne().sort({ seasonNumber: -1 });
-      const nextSeasonNumber = lastSeason ? lastSeason.seasonNumber + 1 : 1;
-      season = new Season({
-        seasonNumber: nextSeasonNumber,
-        name: `Season ${nextSeasonNumber}`,
-        startDate: new Date(),
-        endDate: new Date(Date.now() + 120 * 24 * 60 * 60 * 1000),
-        isActive: true
-      });
-      await season.save();
-    }
-    const seasonNumber = season.seasonNumber;
-
     const { events } = req.body;
     if (!Array.isArray(events)) return res.status(400).json({ message: 'events array required' });
+
+    /** Live: persist events for user-facing display only; PlayerStats are applied after Full Time. */
+    if (effectiveMatchState(match) === 'live') {
+      match.events = events;
+      match.eventsSyncedToStats = false;
+      await match.save();
+      const refreshed = await Match.findById(match._id)
+        .populate('homeTeam', 'name logo')
+        .populate('awayTeam', 'name logo')
+        .populate('events.player', 'name number')
+        .populate('events.assistPlayer', 'name number');
+      return res.json({
+        message: 'Match events updated (live display)',
+        matchId: match._id,
+        eventsCount: events.length,
+        match: refreshed,
+      });
+    }
+
+    // Bucket = match.seasonNumber once set (at fixture generation), not "whatever season is active now"
+    let seasonNumber = await resolveSeasonNumberForMatch(match);
+    if (seasonNumber == null) {
+      let season = await Season.findOne().sort({ seasonNumber: -1 });
+      if (!season) {
+        const nextSeasonNumber = 1;
+        season = new Season({
+          seasonNumber: nextSeasonNumber,
+          name: `Season ${nextSeasonNumber}`,
+          startDate: new Date(),
+          endDate: new Date(Date.now() + 120 * 24 * 60 * 60 * 1000),
+          isActive: true,
+        });
+        await season.save();
+      }
+      await syncSeasonActiveFlagsToLatest();
+      seasonNumber = season.seasonNumber;
+    }
+    const pinSeasonOnMatch = match.seasonNumber == null || Number.isNaN(Number(match.seasonNumber));
 
     const allowedTypes = ['GOAL', 'CLEAN_SHEET', 'YELLOW_CARD', 'RED_CARD'];
     const allowedSides = ['home', 'away'];
@@ -923,9 +1360,13 @@ router.post('/:id/events', authenticateAdmin, async (req, res) => {
       await PlayerStats.updateOne({ _id: statsDoc._id }, { $set: update });
     };
 
-    // Reverse previous events
-    for (const ev of match.events || []) {
-      await adjustStatsForEvent(ev, -1);
+    const statsAlreadySynced = match.eventsSyncedToStats !== false;
+
+    // Reverse previous events only if they were already counted toward PlayerStats
+    if (statsAlreadySynced) {
+      for (const ev of match.events || []) {
+        await adjustStatsForEvent(ev, -1);
+      }
     }
 
     // Validate and apply new events
@@ -934,10 +1375,24 @@ router.post('/:id/events', authenticateAdmin, async (req, res) => {
     }
 
     match.events = events;
+    match.eventsSyncedToStats = true;
+    if (pinSeasonOnMatch) {
+      match.seasonNumber = seasonNumber;
+    }
     await match.save();
+
+    if (match.competition === 'league' && (match.isPlayed || match.matchState === 'ft')) {
+      try {
+        await finalizeFantasyMatchScoring(match._id);
+      } catch (fantasyErr) {
+        console.error('Fantasy sync after match events:', fantasyErr);
+      }
+    }
 
     res.json({ message: 'Match events updated', matchId: match._id, eventsCount: events.length });
   } catch (error) {
     res.status(400).json({ message: error.message });
   }
 });
+
+module.exports = router;

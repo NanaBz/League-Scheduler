@@ -63,6 +63,11 @@ const seasonSchema = new mongoose.Schema({
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Team'
     },
+    /** Denormalized at archive time so historical fixtures stay readable even if teams change. */
+    homeTeamName: String,
+    homeTeamLogo: String,
+    awayTeamName: String,
+    awayTeamLogo: String,
     homeScore: Number,
     awayScore: Number,
     homePenalties: Number,
@@ -72,7 +77,9 @@ const seasonSchema = new mongoose.Schema({
     matchweek: Number,
     competition: String,
     stage: String,
-    isPlayed: Boolean
+    isPlayed: Boolean,
+    isVoided: { type: Boolean, default: false },
+    matchState: { type: String, enum: ['scheduled', 'live', 'ft'] },
   }],
   // Teams that participated in this season (for reference)
   teams: [{

@@ -3,35 +3,7 @@ const router = express.Router();
 const PlayerStats = require('../models/PlayerStats');
 const Player = require('../models/Player');
 const Team = require('../models/Team');
-const Season = require('../models/Season');
-
-async function getActiveSeasonNumber() {
-  const season = await Season.findOne({ isActive: true }).lean();
-  return season ? season.seasonNumber : null;
-}
-
-/**
- * Prefer an explicitly active season; otherwise use the highest seasonNumber that
- * already has PlayerStats rows (covers databases where `isActive` was never set).
- * Optional `competition` / `team` scopes the stats fallback so we match real buckets.
- */
-async function resolveStatsSeasonNumber({ competition, team } = {}) {
-  const activeNumber = await getActiveSeasonNumber();
-  if (activeNumber != null) return activeNumber;
-
-  const statsFilter = {};
-  if (competition) statsFilter.competition = competition;
-  if (team) statsFilter.team = team;
-
-  const latestStats = await PlayerStats.findOne(statsFilter)
-    .sort({ seasonNumber: -1 })
-    .select('seasonNumber')
-    .lean();
-  if (latestStats) return latestStats.seasonNumber;
-
-  const latestSeason = await Season.findOne().sort({ seasonNumber: -1 }).lean();
-  return latestSeason ? latestSeason.seasonNumber : null;
-}
+const { resolveStatsSeasonNumber } = require('../utils/seasonContext');
 
 /** Manual join so deleted players still expose an id for labels (populate alone drops the ref). */
 async function decorateStatsRows(statsDocs) {
@@ -83,11 +55,15 @@ router.get('/leaderboard', async (req, res) => {
     const { competition, metric = 'goals', limit = 3 } = req.query;
     const seasonNumber = await resolveStatsSeasonNumber({ competition });
     if (!seasonNumber) return res.status(400).json({ message: 'No active season' });
-    const allowedCompetitions = ['league', 'cup', 'super-cup', 'acwpl'];
+    const allowedCompetitions = ['league', 'cup', 'super-cup', 'acwpl', 'girls-super-cup'];
     const allowedMetrics = ['goals', 'assists', 'cleanSheets', 'yellowCards', 'redCards'];
     if (!allowedCompetitions.includes(competition)) return res.status(400).json({ message: 'Invalid competition' });
     if (!allowedMetrics.includes(metric)) return res.status(400).json({ message: 'Invalid metric' });
-    const raw = await PlayerStats.find({ competition, seasonNumber })
+    const raw = await PlayerStats.find({
+      competition,
+      seasonNumber,
+      [metric]: { $gt: 0 },
+    })
       .sort({ [metric]: -1 })
       .limit(parseInt(limit, 10))
       .lean();
@@ -98,26 +74,40 @@ router.get('/leaderboard', async (req, res) => {
   }
 });
 
-// GET /stats/summary?competition=
+// GET /stats/summary?competition=&seasonNumber= (optional seasonNumber for archived seasons)
 router.get('/summary', async (req, res) => {
   try {
     const { competition } = req.query;
-    const seasonNumber = await resolveStatsSeasonNumber({ competition });
+    let seasonNumber;
+    if (req.query.seasonNumber != null && req.query.seasonNumber !== '') {
+      const n = parseInt(req.query.seasonNumber, 10);
+      if (!Number.isNaN(n) && n > 0) seasonNumber = n;
+    }
+    if (seasonNumber == null) {
+      seasonNumber = await resolveStatsSeasonNumber({ competition });
+    }
     if (!seasonNumber) return res.status(400).json({ message: 'No active season' });
-    const allowedCompetitions = ['league', 'cup', 'super-cup', 'acwpl'];
+    const allowedCompetitions = ['league', 'cup', 'super-cup', 'acwpl', 'girls-super-cup'];
     if (!allowedCompetitions.includes(competition)) return res.status(400).json({ message: 'Invalid competition' });
 
-    // Return ALL stats, sorted by each metric (frontend will show top 3 by default)
+    // One list per metric: only rows where that metric > 0 (sorted for leaderboard order)
     const filter = { competition, seasonNumber };
     const [goals, assists, cleanSheets, yellowCards, redCards] = await Promise.all([
-      sortedDecoratedStats(filter, { goals: -1 }),
-      sortedDecoratedStats(filter, { assists: -1 }),
-      sortedDecoratedStats(filter, { cleanSheets: -1 }),
-      sortedDecoratedStats(filter, { yellowCards: -1 }),
-      sortedDecoratedStats(filter, { redCards: -1 }),
+      sortedDecoratedStats({ ...filter, goals: { $gt: 0 } }, { goals: -1 }),
+      sortedDecoratedStats({ ...filter, assists: { $gt: 0 } }, { assists: -1 }),
+      sortedDecoratedStats({ ...filter, cleanSheets: { $gt: 0 } }, { cleanSheets: -1 }),
+      sortedDecoratedStats({ ...filter, yellowCards: { $gt: 0 } }, { yellowCards: -1 }),
+      sortedDecoratedStats({ ...filter, redCards: { $gt: 0 } }, { redCards: -1 }),
     ]);
 
-    res.json({ goals, assists, cleanSheets, yellowCards, redCards });
+    res.json({
+      seasonNumber,
+      goals,
+      assists,
+      cleanSheets,
+      yellowCards,
+      redCards,
+    });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

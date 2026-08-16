@@ -18,7 +18,7 @@ const mongoose = require('mongoose');
 const Match = require('../models/Match');
 const Player = require('../models/Player');
 const PlayerStats = require('../models/PlayerStats');
-const Season = require('../models/Season');
+const { getPrimaryActiveSeasonNumber } = require('../utils/seasonContext');
 
 const URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/league-scheduler';
 
@@ -94,12 +94,11 @@ async function main() {
   await mongoose.connect(URI);
 
   if (!seasonNumber) {
-    const season = await Season.findOne({ isActive: true });
-    if (!season) {
-      console.error('No active season; pass season number as second argument.');
+    seasonNumber = await getPrimaryActiveSeasonNumber();
+    if (seasonNumber == null) {
+      console.error('No Season documents; pass season number as second argument.');
       process.exit(1);
     }
-    seasonNumber = season.seasonNumber;
   }
 
   console.log(`Rebuilding PlayerStats for competition="${competition}" seasonNumber=${seasonNumber}`);

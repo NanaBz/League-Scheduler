@@ -15,13 +15,39 @@ const EditPlayerAvailability = ({ onClose, onSuccess }) => {
   const [availabilityType, setAvailabilityType] = useState('injured'); // 'injured' or 'unknown'
   const [description, setDescription] = useState('');
   const [severity, setSeverity] = useState(50); // 25, 50, 75 (% chance of playing)
+  const [availabilityMatchweek, setAvailabilityMatchweek] = useState(1);
 
-  // Fetch teams on mount
+  useEffect(() => {
+    const loadMw = async () => {
+      try {
+        const { data } = await api.get('/matches', {
+          params: { competition: 'league', includeUnpublished: 'true' },
+        });
+        const list = Array.isArray(data) ? data : [];
+        const now = Date.now();
+        const future = list.filter((m) => m.date && new Date(m.date).getTime() > now && m.matchweek);
+        if (future.length === 0) {
+          setAvailabilityMatchweek(1);
+          return;
+        }
+        setAvailabilityMatchweek(Math.min(...future.map((m) => m.matchweek)));
+      } catch {
+        setAvailabilityMatchweek(1);
+      }
+    };
+    loadMw();
+  }, []);
+
+  // Fetch teams on mount — league competition clubs only (fantasy scope)
   useEffect(() => {
     const fetchTeams = async () => {
       try {
-        const response = await api.get('/teams');
-        setTeams(response.data.filter(t => t && t.name));
+        const response = await api.get('/teams', { params: { category: 'boys' } });
+        setTeams(
+          (response.data || []).filter(
+            (t) => t && t.name && t.competition === 'league' && t.category !== 'girls',
+          ),
+        );
       } catch (error) {
         console.error('Error fetching teams:', error);
       }
@@ -85,11 +111,8 @@ const EditPlayerAvailability = ({ onClose, onSuccess }) => {
 
     setLoading(true);
     try {
-      // Get current matchweek from available matches or default to 1
-      const currentMatchweek = 1; // Can be dynamic from backend if needed
-      
       await api.post(`/fantasy/admin/players/${selectedPlayer._id}/availability`, {
-        matchweek: currentMatchweek,
+        matchweek: availabilityMatchweek,
         injuryDetails: `${availabilityType === 'injured' ? 'Injury' : 'Unknown Status'}: ${description}`,
         chanceOfPlaying: severity
       });
@@ -268,6 +291,9 @@ const EditPlayerAvailability = ({ onClose, onSuccess }) => {
                 <X size={24} color="#999" />
               </button>
             </div>
+            <p style={{ margin: '0 0 16px', fontSize: '0.85rem', color: '#64748b' }}>
+              Availability tag for matchweek <strong>{availabilityMatchweek}</strong> (from the next scheduled fixtures).
+            </p>
 
             {/* Type Selection */}
             <div style={{ marginBottom: '20px' }}>

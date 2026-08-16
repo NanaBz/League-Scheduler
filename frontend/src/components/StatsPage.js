@@ -5,7 +5,8 @@ const COMP_TABS = [
   { id: 'league', label: 'League' },
   { id: 'cup', label: 'Cup' },
   { id: 'super-cup', label: 'Super Cup' },
-  { id: 'acwpl', label: 'ACWPL' }
+  { id: 'acwpl', label: 'ACWPL' },
+  { id: 'girls-super-cup', label: 'Girls Super Cup' },
 ];
 
 export default function StatsPage() {
@@ -65,9 +66,11 @@ export default function StatsPage() {
       grouped[key].teams.push(row.team);
       grouped[key].stat += row[metricKey] || 0;
     });
-    // Convert to array and sort by stat desc
-    const groupedArr = Object.values(grouped).sort((a, b) => b.stat - a.stat);
-    const displayItems = isExpanded ? groupedArr : groupedArr.slice(0, 3);
+    // Only players with a positive value for *this* stat (defense if API ever mixes rows)
+    const rankedPlayers = Object.values(grouped)
+      .filter((row) => row.stat > 0)
+      .sort((a, b) => b.stat - a.stat);
+    const displayItems = isExpanded ? rankedPlayers : rankedPlayers.slice(0, 3);
 
     const handleToggle = (e) => {
       e.preventDefault();
@@ -79,14 +82,14 @@ export default function StatsPage() {
       <div className={`stats-section ${isExpanded ? 'stats-section-expanded' : ''}`}>
         <div className="stats-section-header">
           <h4>{title}</h4>
-          {groupedArr.length > 0 && (
+          {rankedPlayers.length > 3 && (
             <button
               type="button"
               className={`stats-expand-btn ${isExpanded ? 'stats-expand-btn-active' : ''}`}
               onClick={handleToggle}
               aria-label={isExpanded ? `Collapse ${title}` : `Expand ${title}`}
             >
-              {isExpanded ? 'Show less' : `View all (${groupedArr.length})`}
+              {isExpanded ? 'Show less' : `View all (${rankedPlayers.length})`}
             </button>
           )}
         </div>
@@ -133,6 +136,10 @@ export default function StatsPage() {
           >{ct.label}</button>
         ))}
       </div>
+
+      {summary?.seasonNumber != null && (
+        <p className="stats-season-hint">Showing season {summary.seasonNumber}</p>
+      )}
 
       {loading && <div className="loading-inline">Loading stats…</div>}
       {error && <div className="error-inline">{error}</div>}

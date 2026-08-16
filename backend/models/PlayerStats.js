@@ -17,7 +17,7 @@ const playerStatsSchema = new mongoose.Schema({
   },
   competition: {
     type: String,
-    enum: ['league', 'cup', 'super-cup', 'acwpl'],
+    enum: ['league', 'cup', 'super-cup', 'acwpl', 'girls-super-cup'],
     required: true
   },
   goals: { type: Number, default: 0 },

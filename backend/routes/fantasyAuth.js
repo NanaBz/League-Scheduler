@@ -7,6 +7,14 @@ const { sendVerificationEmail } = require('../utils/mailer');
 const normalizeEmail = (email) => (email || '').trim().toLowerCase();
 const generateCode = () => `${Math.floor(100000 + Math.random() * 900000)}`;
 
+/** When true, skip email codes: register/login issue tokens; verify accepts without a valid code. Remove for production. */
+function fantasyEmailVerifyBypass() {
+  const v = process.env.FANTASY_BYPASS_EMAIL_VERIFY;
+  if (v == null || v === '') return false;
+  const s = String(v).trim().toLowerCase();
+  return s === 'true' || s === '1' || s === 'yes';
+}
+
 router.post('/register', async (req, res) => {
   try {
     const { email, password, teamName, managerName } = req.body;
@@ -20,31 +28,56 @@ router.post('/register', async (req, res) => {
       return res.status(400).json({ success: false, message: 'Password is too weak.', errors: passwordValidation.errors });
     }
 
+    const bypass = fantasyEmailVerifyBypass();
+    const code = bypass ? null : generateCode();
+
     let user = await FantasyUser.findOne({ email: normalizedEmail });
     if (user && user.isVerified) {
       return res.status(409).json({ success: false, message: 'Account already exists. Please sign in instead.' });
     }
-
-    const code = generateCode();
 
     if (user) {
       // Reset credentials for existing unverified account
       user.password = password;
       user.teamName = teamName;
       user.managerName = managerName;
-      await user.setVerificationCode(code);
+      if (bypass) {
+        user.isVerified = true;
+        user.verificationCodeHash = null;
+        user.verificationCodeExpires = null;
+      } else {
+        await user.setVerificationCode(code);
+      }
     } else {
       user = new FantasyUser({
         email: normalizedEmail,
         password,
         teamName,
         managerName,
-        isVerified: false
+        isVerified: bypass
       });
-      await user.setVerificationCode(code);
+      if (!bypass) await user.setVerificationCode(code);
     }
 
     await user.save();
+
+    if (bypass) {
+      const token = generateFantasyToken(user._id, user.email);
+      return res.json({
+        success: true,
+        message: 'Account created. Email verification is skipped (testing only).',
+        verificationBypassed: true,
+        token,
+        user: {
+          id: user._id,
+          email: user.email,
+          teamName: user.teamName,
+          managerName: user.managerName,
+          isVerified: true
+        }
+      });
+    }
+
     await sendVerificationEmail(normalizedEmail, code);
 
     return res.json({ success: true, message: 'Registration received. Check your email for the 6-digit verification code.' });
@@ -57,13 +90,38 @@ router.post('/register', async (req, res) => {
 router.post('/verify', async (req, res) => {
   try {
     const { email, code } = req.body;
-    if (!email || !code) {
+    if (!email) {
+      return res.status(400).json({ success: false, message: 'Email is required.' });
+    }
+    if (!fantasyEmailVerifyBypass() && !code) {
       return res.status(400).json({ success: false, message: 'Email and verification code are required.' });
     }
 
     const user = await FantasyUser.findOne({ email: normalizeEmail(email) });
     if (!user) {
       return res.status(404).json({ success: false, message: 'Account not found.' });
+    }
+
+    if (fantasyEmailVerifyBypass()) {
+      user.isVerified = true;
+      user.verificationCodeHash = null;
+      user.verificationCodeExpires = null;
+      user.lastLogin = new Date();
+      await user.save();
+      const token = generateFantasyToken(user._id, user.email);
+      return res.json({
+        success: true,
+        message: 'Email verified (testing bypass).',
+        verificationBypassed: true,
+        token,
+        user: {
+          id: user._id,
+          email: user.email,
+          teamName: user.teamName,
+          managerName: user.managerName,
+          isVerified: user.isVerified
+        }
+      });
     }
 
     const isValid = await user.isVerificationCodeValid(code);
@@ -114,6 +172,27 @@ router.post('/login', async (req, res) => {
     }
 
     if (!user.isVerified) {
+      if (fantasyEmailVerifyBypass()) {
+        user.isVerified = true;
+        user.verificationCodeHash = null;
+        user.verificationCodeExpires = null;
+        user.lastLogin = new Date();
+        await user.save();
+        const token = generateFantasyToken(user._id, user.email);
+        return res.json({
+          success: true,
+          message: 'Login successful (testing: unverified account was activated without email code).',
+          verificationBypassed: true,
+          token,
+          user: {
+            id: user._id,
+            email: user.email,
+            teamName: user.teamName,
+            managerName: user.managerName,
+            isVerified: true
+          }
+        });
+      }
       const code = generateCode();
       await user.setVerificationCode(code);
       await user.save();
@@ -157,6 +236,13 @@ router.post('/resend-code', async (req, res) => {
 
     if (user.isVerified) {
       return res.json({ success: true, message: 'Account already verified. Please sign in.' });
+    }
+
+    if (fantasyEmailVerifyBypass()) {
+      return res.json({
+        success: true,
+        message: 'Email verification is disabled for testing; sign in with your password.'
+      });
     }
 
     const code = generateCode();

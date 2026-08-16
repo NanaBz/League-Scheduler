@@ -210,14 +210,14 @@ export default function PlayerManagement({ onDataChange = () => {} }) {
   };
 
   return (
-    <div>
+    <div className="admin-panel-root">
       <div className="card">
         <h2>Player Management</h2>
         {error && <div className="error-inline" style={{ marginBottom: 10 }}>{error}</div>}
         {/* Tabs for Boys/Girls Teams */}
         {!selectedTeamId && (
           <>
-            <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
+            <div className="admin-team-tabs">
               <button
                 className={`btn btn-tab${activeTab === 'boys' ? ' active' : ''}`}
                 onClick={() => setActiveTab('boys')}
@@ -227,33 +227,36 @@ export default function PlayerManagement({ onDataChange = () => {} }) {
                 onClick={() => setActiveTab('girls')}
               >Girls Teams</button>
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 12 }}>
+            <div className="team-cards admin-player-team-picker">
               {filteredTeams.map(team => (
                 <button
+                  type="button"
                   key={team._id}
                   className={`team-card ${selectedTeamId === team._id ? 'active' : ''}`}
                   onClick={() => setSelectedTeamId(team._id)}
+                  style={{ padding: '10px 12px' }}
                 >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    {team.logo && (
-                      <img
-                        src={team.logo}
-                        alt={team.name}
-                        style={{
-                          width: 28,
-                          height: 28,
-                          borderRadius: '50%',
-                          backgroundColor: team.name === 'Falcons' ? '#94a3b8' : 'transparent',
-                          padding: team.name === 'Falcons' ? 2 : 0,
-                          boxSizing: 'border-box'
-                        }}
-                      />
-                    )}
-                    <div>
-                      <div style={{ fontWeight: 700 }}>{team.name}</div>
-                      <div style={{ fontSize: '0.85em', color: '#555' }}>{team.competition === 'league' ? 'League' : 'ACWPL'}</div>
-                    </div>
-                  </div>
+                  {team.logo && (
+                    <img
+                      src={team.logo}
+                      alt={team.name}
+                      style={{
+                        width: 80,
+                        height: 80,
+                        maxWidth: '26vw',
+                        maxHeight: '26vw',
+                        objectFit: 'contain',
+                        backgroundColor: team.name === 'Falcons' ? '#94a3b8' : 'transparent',
+                        padding: team.name === 'Falcons' ? 4 : 0,
+                        borderRadius: 10,
+                        boxSizing: 'border-box'
+                      }}
+                    />
+                  )}
+                  <span className="admin-player-team-name">{team.name}</span>
+                  <span className="admin-player-team-meta">
+                    {team.competition === 'league' ? 'League' : 'ACWPL'}
+                  </span>
                 </button>
               ))}
             </div>
@@ -263,30 +266,35 @@ export default function PlayerManagement({ onDataChange = () => {} }) {
 
       {selectedTeamId && (
         <>
-          <div className="card">
-            <div style={{ marginBottom: 10 }}>
-              <button className="btn btn-secondary btn-small" onClick={() => setSelectedTeamId(null)}>Back to Teams</button>
+          <div className="card admin-player-roster-card">
+            <div className="admin-player-back-row">
+              <button type="button" className="btn btn-secondary btn-small admin-player-back-btn" onClick={() => setSelectedTeamId(null)}>Back to Teams</button>
             </div>
-            <h3 style={{ padding: '8px 10px', borderRadius: 8, background: '#e2e8f0', color: '#0f172a' }}>
+            <h3 className="admin-player-roster-title">
               Players — {selectedTeam.name}
             </h3>
             {loading && <div>Loading players…</div>}
             {!loading && (
-              <table className="table">
+              <div className="admin-player-table-wrap">
+              <table className="table admin-player-table">
                 <thead>
                   <tr>
-                    <th>Name</th>
-                    <th>#</th>
-                    <th>Position</th>
-                    <th>Captain</th>
-                    <th>V. Captain</th>
-                    <th>Transfer</th>
-                    <th style={{ width: 160 }}>Actions</th>
+                    <th className="admin-player-th-index" scope="col" title="Order in this list">No.</th>
+                    <th scope="col">Name</th>
+                    <th scope="col" title="Shirt number">#</th>
+                    <th scope="col">Position</th>
+                    <th scope="col">Captain</th>
+                    <th scope="col">V. Captain</th>
+                    <th scope="col">Transfer</th>
+                    <th className="admin-player-actions-th" scope="col">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {players.map(p => (
-                    <tr key={p._id}>
+                  {players.map((p, idx) => (
+                    <tr key={p._id} className="admin-player-row">
+                      <td className="admin-player-index-cell" title={`Player ${idx + 1} of ${players.length}`}>
+                        {idx + 1}
+                      </td>
                       <td>
                         <input
                           className="input"
@@ -296,7 +304,7 @@ export default function PlayerManagement({ onDataChange = () => {} }) {
                       </td>
                       <td>
                         <input
-                          className="input"
+                          className="input admin-player-num-input"
                           type="number"
                           value={p.number === null || p.number === undefined ? '' : p.number}
                           onChange={e => updatePlayerField(p._id, 'number', e.target.value)}
@@ -340,38 +348,44 @@ export default function PlayerManagement({ onDataChange = () => {} }) {
                           ))}
                         </select>
                       </td>
-                      <td style={{ display: 'flex', gap: 6 }}>
-                        <button
-                          className="btn btn-success btn-small"
-                          onClick={() => savePlayer(p)}
-                          disabled={savingRow === p._id}
-                        >
-                          {savingRow === p._id ? 'Saving…' : 'Save'}
-                        </button>
-                        <button
-                          className="btn btn-info btn-small"
-                          onClick={() => transferPlayer(p._id, p._transferTarget)}
-                          disabled={!p._transferTarget || savingRow === p._id}
-                        >
-                          Transfer
-                        </button>
-                        <button
-                          className="btn btn-danger btn-small"
-                          onClick={() => deletePlayer(p._id)}
-                        >
-                          Remove
-                        </button>
+                      <td className="admin-player-actions-cell">
+                        <div className="admin-player-action-btns">
+                          <button
+                            type="button"
+                            className="btn btn-success btn-small"
+                            onClick={() => savePlayer(p)}
+                            disabled={savingRow === p._id}
+                          >
+                            {savingRow === p._id ? 'Saving…' : 'Save'}
+                          </button>
+                          <button
+                            type="button"
+                            className="btn btn-info btn-small"
+                            onClick={() => transferPlayer(p._id, p._transferTarget)}
+                            disabled={!p._transferTarget || savingRow === p._id}
+                          >
+                            Transfer
+                          </button>
+                          <button
+                            type="button"
+                            className="btn btn-danger btn-small"
+                            onClick={() => deletePlayer(p._id)}
+                          >
+                            Remove
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}
                   {players.length === 0 && (
-                    <tr><td colSpan={5} style={{ textAlign: 'center', color: '#666' }}>No players yet.</td></tr>
+                    <tr className="admin-player-empty-row"><td colSpan={8} style={{ textAlign: 'center', color: '#666' }}>No players yet.</td></tr>
                   )}
                 </tbody>
               </table>
+              </div>
             )}
 
-            <div style={{ marginTop: 12, paddingTop: 10, borderTop: '1px solid #e5e7eb', display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            <div className="admin-player-add-form">
               <input
                 className="input"
                 placeholder="Name"
@@ -394,28 +408,28 @@ export default function PlayerManagement({ onDataChange = () => {} }) {
               >
                 {POSITIONS.map(pos => <option key={pos} value={pos}>{pos}</option>)}
               </select>
-              <button className="btn btn-success" onClick={addPlayer} disabled={addingPlayer}>
+              <button type="button" className="btn btn-success btn-small admin-player-add-player-btn" onClick={addPlayer} disabled={addingPlayer}>
                 {addingPlayer ? 'Adding…' : 'Add Player'}
               </button>
             </div>
           </div>
 
-          <div className="card">
-            <h3>Coaches — {selectedTeam.name}</h3>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <div className="card admin-player-coaches-card">
+            <h3 className="admin-player-coaches-title">Coaches — {selectedTeam.name}</h3>
+            <div className="admin-player-coach-list">
               {(selectedTeam.staff || []).map((s, idx) => (
-                <div key={`${s.name}-${idx}`} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <span style={{ minWidth: 90, fontWeight: 600 }}>{s.role}</span>
-                  <span>{s.name}</span>
-                  <button className="btn btn-danger btn-small" onClick={() => removeStaff(idx)}>Remove</button>
+                <div key={`${s.name}-${idx}`} className="admin-player-coach-line">
+                  <span className="admin-player-coach-role">{s.role}</span>
+                  <span className="admin-player-coach-name">{s.name}</span>
+                  <button type="button" className="btn btn-danger btn-small" onClick={() => removeStaff(idx)}>Remove</button>
                 </div>
               ))}
               {(!selectedTeam.staff || selectedTeam.staff.length === 0) && (
-                <div style={{ color: '#666' }}>No coaches added.</div>
+                <div className="admin-player-coach-empty">No coaches added.</div>
               )}
             </div>
 
-            <div style={{ marginTop: 12, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            <div className="admin-coach-add-form">
               <select
                 className="input"
                 value={staffForm.role}
@@ -432,7 +446,7 @@ export default function PlayerManagement({ onDataChange = () => {} }) {
                 onChange={e => setStaffForm({ ...staffForm, name: e.target.value })}
                 style={{ minWidth: 200 }}
               />
-              <button className="btn btn-success" onClick={addStaff}>Add Coach</button>
+              <button type="button" className="btn btn-success btn-small admin-coach-add-btn" onClick={addStaff}>Add Coach</button>
             </div>
           </div>
         </>

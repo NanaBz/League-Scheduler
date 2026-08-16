@@ -1124,7 +1124,7 @@ code {
 .layout-with-sidebar { display: flex; gap: 16px; }
 .desktop-only { display: none; }
 @media (min-width: 992px) { .desktop-only { display: block; } }
-.content-area { flex: 1; }
+.content-area { flex: 1; min-width: 0; /* allow flex child to shrink for admin tables on narrow screens */ }
 
 .ls-sidebar { width: 220px; background: #fff; border-radius: 12px; padding: 12px; border: 1px solid #eee; position: sticky; top: 16px; height: max-content; }
 .ls-sidebar-header { display:flex; align-items:center; justify-content: space-between; font-weight: 700; color: var(--text-dark); margin-bottom: 8px; }
@@ -1144,6 +1144,7 @@ code {
 .stats-page .comp-tabs { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
 .comp-tab { padding: 8px 12px; border-radius: 10px; border: 1px solid #eee; background: #fff; cursor: pointer; }
 .comp-tab.active { background: var(--primary-red-lightest); border-color: var(--primary-red-lighter); color: var(--primary-red-dark); }
+.stats-season-hint { margin: -4px 0 12px; font-size: 0.85rem; color: #64748b; }
 .stats-grid { display: grid; grid-template-columns: repeat(auto-fill,minmax(260px,1fr)); gap: 12px; }
 .stats-section { background: #fff; border: 1px solid #eee; border-radius: 12px; padding: 10px; }
 .stats-section-header { display:flex; justify-content: space-between; align-items:center; margin-bottom:8px; }
@@ -1197,6 +1198,522 @@ code {
 .team-card { background:#fff; border:1px solid #eee; border-radius:12px; padding:12px; display:flex; flex-direction:column; align-items:center; gap:8px; cursor:pointer; }
 .team-card.active, .team-card:hover { border-color: var(--primary-red); }
 .team-card img { width:48px; height:48px; object-fit:contain; }
+
+/* Team detail: hero + body stack (UserView Teams / Girls teams) */
+.team-detail-stack {
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 8px 32px rgba(15, 23, 42, 0.1);
+  border: 1px solid rgba(15, 23, 42, 0.06);
+}
+.team-hero-card {
+  position: relative;
+  padding: 1rem 1rem 1.4rem;
+  overflow: hidden;
+}
+.team-hero-card__sheen {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    118deg,
+    transparent 38%,
+    rgba(255, 255, 255, 0.09) 50%,
+    transparent 62%
+  );
+  pointer-events: none;
+}
+.team-hero-back {
+  position: relative;
+  z-index: 2;
+  width: 52px;
+  height: 52px;
+  min-width: 52px;
+  min-height: 52px;
+  border-radius: 50%;
+  border: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: inherit;
+  margin-bottom: 0.75rem;
+  box-shadow:
+    0 3px 18px rgba(0, 0, 0, 0.32),
+    inset 0 0 0 2px rgba(255, 255, 255, 0.22);
+  transition: transform 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
+}
+.team-hero-back svg {
+  flex-shrink: 0;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.5));
+}
+.team-hero-back:hover {
+  transform: scale(1.04);
+  box-shadow:
+    0 4px 22px rgba(0, 0, 0, 0.38),
+    inset 0 0 0 2px rgba(255, 255, 255, 0.32);
+}
+.team-hero-back:active {
+  transform: scale(0.97);
+}
+.team-hero-card--tone-light .team-hero-back {
+  box-shadow:
+    0 3px 16px rgba(15, 23, 42, 0.14),
+    inset 0 0 0 2px rgba(15, 23, 42, 0.12);
+}
+.team-hero-card--tone-light .team-hero-back:hover {
+  box-shadow:
+    0 4px 20px rgba(15, 23, 42, 0.18),
+    inset 0 0 0 2px rgba(15, 23, 42, 0.18);
+}
+.team-hero-card--tone-light .team-hero-back svg {
+  filter: drop-shadow(0 1px 0 rgba(255, 255, 255, 0.9));
+}
+.team-hero-main {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+.team-hero-logo-wrap {
+  flex-shrink: 0;
+  width: 88px;
+  height: 88px;
+  border-radius: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px;
+  box-sizing: border-box;
+}
+.team-hero-logo-wrap img {
+  max-width: 100%;
+  max-height: 100%;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  display: block;
+}
+.team-hero-text {
+  min-width: 0;
+}
+.team-hero-name {
+  margin: 0;
+  font-size: 1.6rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1.08;
+}
+.team-hero-tagline {
+  margin: 0.4rem 0 0;
+  font-size: 0.92rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+.team-detail-body {
+  background: #f8fafc;
+  padding: 1rem 1rem 1.25rem;
+  color: #1e293b;
+}
+@media (min-width: 640px) {
+  .team-hero-card {
+    padding: 1.15rem 1.25rem 1.5rem;
+  }
+  .team-hero-logo-wrap {
+    width: 104px;
+    height: 104px;
+  }
+  .team-hero-name {
+    font-size: 1.9rem;
+  }
+}
+
+/* Admin Player Management team picker — same visual language as user Teams page */
+.admin-panel-root .admin-player-team-picker.team-cards {
+  margin-top: 4px;
+}
+
+.admin-panel-root .admin-player-team-picker .team-card {
+  font-family: inherit;
+  color: #0f172a;
+  border: 1px solid #e5e7eb;
+  text-align: center;
+}
+
+.admin-panel-root .admin-player-team-picker .team-card img {
+  width: 80px;
+  height: 80px;
+  max-width: min(26vw, 104px);
+  max-height: min(26vw, 104px);
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
+.admin-panel-root .admin-player-team-picker .admin-player-team-name {
+  display: block;
+  margin-top: 4px;
+  font-weight: 600;
+  color: #0f172a;
+  font-size: 0.95rem;
+  line-height: 1.2;
+}
+
+.admin-panel-root .admin-player-team-picker .admin-player-team-meta {
+  display: block;
+  font-size: 0.72rem;
+  color: #64748b;
+  font-weight: 500;
+  line-height: 1.25;
+}
+
+/* Admin Player Management — roster & coaches (selected team) */
+.admin-player-back-row {
+  margin-bottom: 8px;
+}
+
+.admin-player-roster-title {
+  padding: 6px 10px;
+  border-radius: 8px;
+  background: #e2e8f0;
+  color: #0f172a;
+  font-size: 1.05rem;
+  margin: 0 0 10px 0;
+}
+
+.admin-player-add-form {
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid #e5e7eb;
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.admin-player-coaches-title {
+  margin: 0 0 10px 0;
+  font-size: 1.1rem;
+}
+
+.admin-player-coach-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.admin-player-coach-line {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.admin-player-coach-role {
+  min-width: 90px;
+  font-weight: 600;
+}
+
+.admin-player-coach-empty {
+  color: #666;
+  font-size: 0.9rem;
+}
+
+.admin-coach-add-form {
+  margin-top: 12px;
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+/* Player roster table: scroll body, sticky header, horizontal scroll on narrow screens */
+.admin-panel-root .admin-player-table-wrap {
+  overflow: auto;
+  max-height: min(52vh, 480px);
+  -webkit-overflow-scrolling: touch;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  margin-bottom: 6px;
+  background: #fff;
+}
+
+.admin-panel-root .admin-player-table {
+  min-width: 780px;
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.admin-panel-root .admin-player-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 6;
+  box-shadow: 0 2px 0 rgba(15, 23, 42, 0.12);
+  padding: 0.38rem 0.45rem !important;
+  font-size: 0.72rem !important;
+  letter-spacing: 0.04em;
+}
+
+.admin-panel-root .admin-player-table th,
+.admin-panel-root .admin-player-table td {
+  padding: 0.4rem 0.45rem !important;
+  vertical-align: middle;
+}
+
+.admin-panel-root .admin-player-table .input,
+.admin-panel-root .admin-player-table select.input {
+  min-height: 30px !important;
+  padding: 0.28rem 0.4rem !important;
+  font-size: 0.8rem !important;
+  margin: 0 !important;
+}
+
+.admin-panel-root .admin-player-table thead th.admin-player-th-index,
+.admin-panel-root .admin-player-table .admin-player-index-cell {
+  width: 2.5rem;
+  min-width: 2.5rem;
+  max-width: 2.75rem;
+  text-align: center;
+  font-weight: 700;
+  color: #475569;
+  font-size: 0.8rem;
+  vertical-align: middle;
+}
+
+.admin-panel-root .admin-player-table thead th.admin-player-th-index {
+  background: var(--red-gradient);
+}
+
+.admin-panel-root .admin-player-table .admin-player-index-cell {
+  background: #f1f5f9;
+  border-right: 1px solid #e2e8f0;
+  user-select: none;
+}
+
+.admin-panel-root .admin-player-table tbody tr:nth-child(even) .admin-player-index-cell {
+  background: #e8edf4;
+}
+
+.admin-panel-root .admin-player-table tbody tr.admin-player-row:hover {
+  transform: none;
+}
+
+.admin-panel-root .admin-player-actions-cell {
+  vertical-align: middle;
+  width: 1%;
+  white-space: nowrap;
+}
+
+.admin-panel-root .admin-player-action-btns {
+  display: inline-flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  gap: 4px;
+  align-items: center;
+}
+
+.admin-panel-root .admin-player-action-btns .btn-small {
+  min-height: 26px !important;
+  min-width: 0 !important;
+  padding: 0.12rem 0.38rem !important;
+  font-size: 0.65rem !important;
+  font-weight: 600 !important;
+  margin: 0 !important;
+  line-height: 1.15 !important;
+  border-radius: 4px !important;
+  text-transform: none !important;
+  letter-spacing: 0.02em !important;
+  box-shadow: none !important;
+  white-space: nowrap;
+}
+
+.admin-panel-root .admin-player-action-btns .btn-small:hover {
+  transform: none !important;
+  box-shadow: none !important;
+}
+
+@media screen and (max-width: 768px) {
+  .admin-panel-root .card.admin-player-roster-card,
+  .admin-panel-root .card.admin-player-coaches-card {
+    padding: 10px 12px 12px;
+  }
+
+  .admin-panel-root .admin-player-back-btn {
+    width: 100%;
+    min-height: 34px !important;
+    padding: 0.3rem 0.5rem !important;
+    font-size: 0.8rem !important;
+    margin: 0 !important;
+    text-transform: none !important;
+    box-shadow: none !important;
+  }
+
+  .admin-panel-root .admin-player-roster-title {
+    font-size: 0.92rem;
+    padding: 6px 8px;
+    margin-bottom: 8px;
+  }
+
+  .admin-panel-root .admin-player-coaches-title {
+    font-size: 0.88rem;
+    margin-bottom: 5px;
+  }
+
+  .admin-panel-root .admin-player-coach-empty {
+    font-size: 0.78rem;
+    margin-bottom: 2px;
+  }
+
+  .admin-panel-root .admin-player-table-wrap {
+    max-height: min(40vh, 340px);
+    margin: 0;
+  }
+
+  .admin-panel-root .admin-player-table {
+    min-width: 720px;
+  }
+
+  .admin-panel-root .admin-player-table thead th {
+    padding: 0.32rem 0.38rem !important;
+    font-size: 0.66rem !important;
+  }
+
+  .admin-panel-root .admin-player-table th,
+  .admin-panel-root .admin-player-table td {
+    padding: 0.32rem 0.38rem !important;
+  }
+
+  .admin-panel-root .admin-player-table .input,
+  .admin-panel-root .admin-player-table select.input {
+    min-height: 28px !important;
+    padding: 0.22rem 0.35rem !important;
+    font-size: 0.76rem !important;
+  }
+
+  .admin-panel-root .admin-player-action-btns .btn-small {
+    min-height: 24px !important;
+    padding: 0.1rem 0.3rem !important;
+    font-size: 0.62rem !important;
+  }
+
+  .admin-panel-root .admin-player-add-form {
+    display: grid;
+    grid-template-columns: 1fr minmax(64px, 76px);
+    gap: 5px 8px;
+    margin-top: 6px;
+    padding-top: 6px;
+    align-items: stretch;
+  }
+
+  .admin-panel-root .admin-player-add-form > *:nth-child(1) {
+    grid-column: 1;
+  }
+
+  .admin-panel-root .admin-player-add-form > *:nth-child(2) {
+    grid-column: 2;
+  }
+
+  .admin-panel-root .admin-player-add-form > *:nth-child(3) {
+    grid-column: 1 / -1;
+  }
+
+  .admin-panel-root .admin-player-add-form > *:nth-child(4) {
+    grid-column: 1 / -1;
+  }
+
+  .admin-panel-root .admin-player-add-form .input,
+  .admin-panel-root .admin-player-add-form select {
+    width: 100% !important;
+    max-width: none !important;
+    min-width: 0 !important;
+    min-height: 30px !important;
+    padding: 0.26rem 0.4rem !important;
+    font-size: 0.78rem !important;
+    margin: 0 !important;
+    box-sizing: border-box;
+  }
+
+  .admin-panel-root .admin-player-add-player-btn {
+    width: 100%;
+    min-height: 30px !important;
+    padding: 0.28rem 0.45rem !important;
+    font-size: 0.76rem !important;
+    margin: 0 !important;
+    text-transform: none !important;
+    box-shadow: none !important;
+    border-radius: 6px !important;
+  }
+
+  .admin-panel-root .admin-player-coach-line {
+    flex-direction: row;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 6px 0;
+    border-bottom: 1px dashed #e5e7eb;
+  }
+
+  .admin-panel-root .admin-player-coach-line:last-of-type {
+    border-bottom: none;
+  }
+
+  .admin-panel-root .admin-player-coach-role {
+    min-width: 0;
+    flex: 0 0 auto;
+    font-size: 0.82rem;
+  }
+
+  .admin-panel-root .admin-player-coach-name {
+    flex: 1 1 auto;
+    min-width: 0;
+    font-size: 0.88rem;
+  }
+
+  .admin-panel-root .admin-player-coach-line .btn-small {
+    flex: 0 0 auto;
+    min-height: 30px !important;
+    padding: 0.22rem 0.4rem !important;
+    font-size: 0.72rem !important;
+    margin: 0 !important;
+    text-transform: none !important;
+    box-shadow: none !important;
+  }
+
+  .admin-panel-root .admin-coach-add-form {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 5px 8px;
+    margin-top: 6px;
+    align-items: stretch;
+  }
+
+  .admin-panel-root .admin-coach-add-form > .admin-coach-add-btn {
+    grid-column: 1 / -1;
+  }
+
+  .admin-panel-root .admin-coach-add-form .input,
+  .admin-panel-root .admin-coach-add-form select {
+    width: 100% !important;
+    min-height: 30px !important;
+    padding: 0.26rem 0.4rem !important;
+    font-size: 0.78rem !important;
+    margin: 0 !important;
+    box-sizing: border-box;
+  }
+
+  .admin-panel-root .admin-coach-add-btn {
+    width: 100%;
+    min-height: 30px !important;
+    padding: 0.28rem 0.45rem !important;
+    font-size: 0.76rem !important;
+    margin: 0 !important;
+    text-transform: none !important;
+    box-shadow: none !important;
+    border-radius: 6px !important;
+  }
+}
+
 .team-detail { background:#fff; border:1px solid #eee; border-radius:12px; padding:12px; }
 .squad-groups { display:grid; grid-template-columns: repeat(auto-fill,minmax(220px,1fr)); gap:12px; }
 .group-title { font-weight:700; margin-bottom:6px; }
@@ -1672,6 +2189,18 @@ code {
 .badge-warning {
   background: #fff3cd;
   color: #856404;
+}
+
+.badge-scheduled {
+  background: linear-gradient(135deg, #fef9c3, #fde047);
+  color: #713f12;
+  border: 1px solid #eab308;
+}
+
+.badge-live {
+  background: linear-gradient(135deg, #1e40af, #2563eb);
+  color: #fff;
+  border: 1px solid #1d4ed8;
 }
 
 .badge-info {
@@ -2640,10 +3169,111 @@ code {
   color: #856404;
 }
 
+.status-badge.state-scheduled {
+  background: linear-gradient(135deg, #fef9c3, #fde047);
+  color: #713f12;
+  border: 1px solid #eab308;
+}
+
+.status-badge.state-live {
+  background: linear-gradient(135deg, #1e40af, #2563eb);
+  color: #fff;
+  border: 1px solid #1d4ed8;
+}
+
+.status-badge.state-ft,
+.status-badge.state-ft.completed {
+  background: #28a745;
+  color: #fff;
+}
+
+.status-badge.state-void {
+  background: #6b7280;
+  color: #fff;
+}
+
 .fixture-actions {
   display: flex;
   gap: 0.5rem;
   flex-wrap: wrap;
+}
+
+@media screen and (max-width: 768px) {
+  .admin-fixture-mgmt-grid {
+    gap: 0.5rem !important;
+    grid-template-columns: 1fr !important;
+  }
+
+  .fixture-management-card {
+    padding: 0.6rem 0.7rem;
+  }
+
+  .fixture-management-card h3 {
+    margin: 0 0 0.45rem 0;
+    font-size: 0.92rem;
+    line-height: 1.25;
+  }
+
+  .fixture-management-card h3 svg {
+    width: 16px !important;
+    height: 16px !important;
+    margin-right: 5px !important;
+  }
+
+  .fixture-management-card .status-info {
+    margin-bottom: 0.5rem;
+  }
+
+  .fixture-management-card .status-info p {
+    font-size: 0.78rem;
+    margin: 0.15rem 0;
+  }
+
+  .fixture-management-card .status-badge {
+    font-size: 0.65rem;
+    padding: 0.12rem 0.32rem;
+    font-weight: 600;
+  }
+
+  .fixture-management-card .fixture-actions {
+    gap: 5px;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: stretch;
+  }
+
+  .fixture-management-card .fixture-actions .btn-small {
+    flex: 1 1 calc(50% - 3px);
+    min-width: 0;
+    width: auto !important;
+    min-height: 30px !important;
+    padding: 0.22rem 0.4rem !important;
+    font-size: 0.68rem !important;
+    font-weight: 600 !important;
+    margin: 0 !important;
+    text-transform: none !important;
+    letter-spacing: 0.02em !important;
+    box-shadow: none !important;
+    line-height: 1.2 !important;
+    border-radius: 5px !important;
+  }
+
+  .fixture-management-card .fixture-actions .btn-small:only-child {
+    flex: 1 1 100%;
+  }
+
+  .fixture-management-card .fixture-actions .btn-small:hover {
+    transform: none !important;
+    box-shadow: none !important;
+  }
+}
+
+@media screen and (max-width: 640px) {
+  .fixture-management-card .fixture-actions .btn-small {
+    min-height: 28px !important;
+    padding: 0.18rem 0.34rem !important;
+    font-size: 0.64rem !important;
+  }
 }
 
 .btn-small {
@@ -3696,6 +4326,12 @@ code {
     border-color: var(--primary-red-light);
     background: linear-gradient(135deg, rgba(220, 38, 38, 0.03) 0%, var(--white) 100%);
   }
+
+  .fixture-card.fixture-live {
+    border-color: #2563eb;
+    background: linear-gradient(135deg, rgba(37, 99, 235, 0.06) 0%, var(--white) 100%);
+    box-shadow: 0 2px 8px rgba(37, 99, 235, 0.12);
+  }
   
   .fixture-header {
     display: flex;
@@ -4341,36 +4977,14 @@ code {
   }
   
   .winner-badge.supercup-winner {
-    background: linear-gradient(135deg, #e9d5ff, #9333ea);
-    color: #6b21a8;
+    background: linear-gradient(135deg, #fff3cd, #ffe8a1);
+    color: #856404;
   }
   
-  /* Mobile Competition Selector */
-  .archived-season-view .competition-selector {
-    display: flex;
-    gap: 0.5rem;
-    margin-bottom: 2rem;
-    padding: 0 1rem;
+  .archived-season-view .archived-competition-filter-wrap {
+    padding: 0 0.75rem;
   }
-  
-  .archived-season-view .competition-selector button {
-    flex: 1;
-    padding: 0.75rem;
-    border: 2px solid var(--primary-red-lightest);
-    background: var(--white);
-    color: var(--dark-gray);
-    border-radius: 10px;
-    font-size: 0.85rem;
-    font-weight: 600;
-    transition: all 0.3s ease;
-  }
-  
-  .archived-season-view .competition-selector button.active {
-    background: var(--primary-red);
-    color: white;
-    border-color: var(--primary-red);
-  }
-  
+
   /* Mobile Matchweek Sections */
   .archived-season-view .matchweek-section {
     margin-bottom: 2rem;
@@ -4480,12 +5094,8 @@ code {
 }
 
 .archived-season-view .archived-badge {
-  position: absolute;
-  top: -12px;
-  right: 15px;
   background: linear-gradient(135deg, #6c757d, #495057);
   color: white;
-  z-index: 10;
   padding: 8px 16px;
   border-radius: 20px;
   font-size: 12px;
@@ -4493,6 +5103,58 @@ code {
   text-transform: uppercase;
   letter-spacing: 0.5px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.archived-season-view .archived-league-table-head {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  padding: 10px 12px 0 12px;
+}
+
+.archived-season-view .archived-badge-inline {
+  position: static;
+}
+
+.archived-season-view .archived-league-table-wrap {
+  padding-top: 4px;
+}
+
+.archived-season-view .archived-competition-filter-wrap {
+  max-width: 440px;
+  margin: 0 auto 1.25rem auto;
+  padding: 0 0.5rem;
+}
+
+.archived-season-view .archived-round-filter {
+  margin-bottom: 1rem;
+}
+
+.archived-team-avatar-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.archived-team-avatar-wrap .team-logo {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  object-fit: contain;
+}
+
+.archived-team-avatar-fallback {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #fecaca, #fca5a5);
+  color: #7f1d1d;
+  font-weight: 800;
+  font-size: 0.85rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 /* Archived Season Enhanced Styles */
@@ -4539,7 +5201,7 @@ code {
 }
 
 .archived-season-view .cup-stage h3 {
-  background: linear-gradient(135deg, #667eea, #764ba2);
+  background: var(--red-gradient);
   color: white;
   padding: 1rem 1.8rem;
   border-radius: 10px;
@@ -4549,45 +5211,11 @@ code {
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  box-shadow: 0 3px 10px rgba(102, 126, 234, 0.3);
+  box-shadow: 0 4px 15px rgba(220, 38, 38, 0.28);
 }
 
-.archived-season-view .competition-selector {
-  display: flex;
-  background: #f8f9fa;
-  border-radius: 15px;
-  padding: 6px;
-  margin-bottom: 2rem;
-  box-shadow: 0 3px 12px rgba(0, 0, 0, 0.1);
-  border: 2px solid #e9ecef;
-}
-
-.archived-season-view .competition-selector button {
-  flex: 1;
-  padding: 14px 24px;
-  border: none;
-  background: transparent;
-  color: #6c757d;
-  font-weight: 600;
-  border-radius: 10px;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  font-size: 1rem;
-  position: relative;
-}
-
-.archived-season-view .competition-selector button.active {
-  background: linear-gradient(135deg, #667eea, #764ba2);
-  color: white;
-  transform: translateY(-2px);
-  box-shadow: 0 6px 16px rgba(102, 126, 234, 0.3);
-}
-
-.archived-season-view .competition-selector button:hover:not(.active) {
-  background: white;
-  color: #495057;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  transform: translateY(-1px);
+.archived-season-view .archived-competition-nav {
+  margin-bottom: 0.5rem;
 }
 
 /* Enhanced match display for archived seasons */
@@ -4631,6 +5259,112 @@ code {
   color: #856404;
   margin-top: 0.3rem;
   font-style: italic;
+}
+
+/* Archived season refresh: stats, fixture cards (all breakpoints) */
+.archived-season-view .archived-competition-content {
+  max-width: 960px;
+  margin: 0 auto;
+}
+
+.archived-season-view .archived-section-title {
+  display: flex;
+  align-items: center;
+  font-size: 1.15rem;
+  color: #1e293b;
+  margin: 1.75rem 0 0.75rem 0;
+  font-weight: 700;
+}
+
+.archived-season-view .archived-stats-block {
+  margin-bottom: 0.5rem;
+}
+
+.archived-season-view .archived-stats-hint {
+  font-size: 0.9rem;
+  color: #64748b;
+  margin: 0 0 12px 0;
+}
+
+.archived-season-view .archived-stats-empty,
+.archived-season-view .archived-stats-error {
+  font-size: 0.95rem;
+  color: #64748b;
+  padding: 12px;
+  background: #f8fafc;
+  border-radius: 10px;
+  border: 1px solid #e2e8f0;
+}
+
+.archived-season-view .archived-stats-error {
+  color: #b91c1c;
+  border-color: #fecaca;
+  background: #fef2f2;
+}
+
+.archived-season-view .fixtures-archive .fixture-card.archived {
+  background: var(--white);
+  border-radius: 12px;
+  padding: 1rem;
+  box-shadow: 0 2px 8px rgba(220, 38, 38, 0.1);
+  border: 2px solid var(--primary-red-lightest);
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+.archived-season-view .fixtures-archive .fixture-card.archived.played {
+  border-color: #28a745;
+  background: linear-gradient(135deg, rgba(40, 167, 69, 0.03) 0%, var(--white) 100%);
+}
+
+.archived-season-view .fixtures-archive .fixture-card.archived.scheduled {
+  border-color: var(--primary-red-light);
+  background: linear-gradient(135deg, rgba(220, 38, 38, 0.03) 0%, var(--white) 100%);
+}
+
+.archived-season-view .fixtures-archive .fixture-card.archived.cup-archive.super-cup {
+  border-color: var(--primary-red);
+  background: linear-gradient(135deg, rgba(220, 38, 38, 0.06) 0%, var(--white) 100%);
+}
+
+.archived-season-view .super-cup-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #991b1b;
+  background: #fee2e2;
+  padding: 4px 8px;
+  border-radius: 999px;
+}
+
+.archived-season-view .archived-fixtures-mobile .fixture-card.archived .fixture-teams {
+  align-items: center;
+}
+
+.archived-season-view .archived-fixtures-mobile .team-section.home,
+.archived-season-view .archived-fixtures-mobile .team-section.away {
+  justify-content: center;
+}
+
+.archived-season-view .cup-stage-header h3 {
+  text-transform: none;
+}
+
+.winner-badge.acwpl-winner {
+  background: linear-gradient(135deg, #fee2e2, #fecaca);
+  color: #7f1d1d;
+  border: 1px solid #fca5a5;
+}
+
+.winner-badge.gsc-winner {
+  background: linear-gradient(135deg, #fee2e2, #fecdd3);
+  color: #7f1d1d;
+  border: 1px solid #fda4af;
 }
 
 /* ========================================
@@ -4905,9 +5639,8 @@ code {
     max-width: 300px;
   }
   
-  .archived-season-view .competition-selector {
-    flex-direction: column;
-    gap: 6px;
+  .archived-season-view .archived-competition-nav {
+    padding: 0 0.5rem;
   }
   
   .archived-season-view .match-teams {
@@ -6581,4 +7314,1180 @@ code {
   display: flex;
   flex-wrap: wrap;
   gap: 0.5rem;
+}
+
+/* ========== Admin: mobile-friendly layout (fixtures + shared admin shell) ========== */
+.admin-mobile-nav {
+  display: none;
+}
+
+@media screen and (max-width: 768px) {
+  .admin-mobile-nav {
+    display: flex !important;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    gap: 8px;
+    margin-bottom: 14px;
+    padding: 4px;
+    background: #f1f5f9;
+    border-radius: 12px;
+    border: 1px solid #e2e8f0;
+  }
+
+  .admin-mobile-nav button {
+    flex: 1;
+    min-height: 44px;
+    border: none;
+    border-radius: 10px;
+    background: #fff;
+    font-weight: 600;
+    font-size: 0.85rem;
+    color: #334155;
+    cursor: pointer;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+  }
+
+  .admin-mobile-nav button.active {
+    background: var(--primary-red-lightest);
+    color: var(--primary-red-dark);
+    box-shadow: inset 0 0 0 2px rgba(220, 38, 38, 0.22);
+  }
+}
+
+.admin-panel-root {
+  max-width: 100%;
+  overflow-x: hidden;
+  box-sizing: border-box;
+  padding-bottom: 0.75rem;
+}
+
+.admin-guide-card .admin-guide-steps {
+  margin: 0;
+  padding-left: 1.25rem;
+  line-height: 1.55;
+  font-size: 0.95rem;
+}
+
+@media screen and (max-width: 768px) {
+  .admin-guide-card h2 {
+    font-size: 1.15rem;
+  }
+
+  .admin-guide-card .admin-guide-steps {
+    font-size: 0.9rem;
+    padding-left: 1.1rem;
+  }
+}
+
+.admin-controls-stack {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+}
+
+.admin-controls-stack .btn {
+  flex: 1 1 200px;
+  min-height: 46px;
+  font-size: 0.9rem;
+}
+
+/* Mobile: denser admin controls — shorter buttons, 2 columns where it fits */
+@media screen and (max-width: 640px) {
+  .admin-controls-card h2 {
+    font-size: 1.1rem;
+    margin-bottom: 0.65rem;
+  }
+
+  .admin-controls-stack {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.45rem;
+  }
+
+  .admin-controls-stack .btn {
+    flex: none;
+    width: 100%;
+    min-height: 40px;
+    padding: 0.45rem 0.55rem;
+    font-size: 0.78rem;
+    line-height: 1.2;
+    border-radius: 8px;
+  }
+
+  .admin-controls-stack .btn svg {
+    width: 15px !important;
+    height: 15px !important;
+    margin-right: 4px !important;
+  }
+
+  .admin-controls-stack .btn-danger,
+  .admin-controls-stack .btn:last-child {
+    grid-column: 1 / -1;
+  }
+}
+
+.admin-backup-banner {
+  margin-bottom: 20px;
+  padding: 15px;
+  background: #f8f9fa;
+  border-radius: 8px;
+  border: 1px solid #dee2e6;
+}
+
+.admin-backup-title {
+  margin: 0 0 10px;
+  font-size: 16px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.admin-backup-title-icon {
+  flex-shrink: 0;
+}
+
+.admin-backup-desc {
+  margin: 0 0 12px;
+  font-size: 13px;
+  color: #666;
+  line-height: 1.45;
+}
+
+.admin-backup-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+@media screen and (max-width: 640px) {
+  .admin-backup-banner {
+    margin-bottom: 12px;
+    padding: 10px 12px;
+  }
+
+  .admin-backup-title {
+    font-size: 14px;
+    margin-bottom: 6px;
+  }
+
+  .admin-backup-title-icon {
+    width: 16px !important;
+    height: 16px !important;
+  }
+
+  .admin-backup-desc {
+    font-size: 12px;
+    margin-bottom: 8px;
+    line-height: 1.4;
+  }
+
+  .admin-backup-actions {
+    flex-direction: row;
+    gap: 8px;
+  }
+
+  .admin-backup-actions .btn {
+    flex: 1;
+    min-width: 0;
+    min-height: 38px;
+    padding: 0.45rem 0.5rem;
+    font-size: 0.75rem;
+    justify-content: center;
+  }
+
+  .admin-backup-actions .btn svg {
+    width: 14px !important;
+    height: 14px !important;
+    margin-right: 4px !important;
+  }
+}
+
+.admin-filter-section.filter-section {
+  flex-wrap: wrap;
+}
+
+@media screen and (max-width: 640px) {
+  .admin-filter-section.filter-section {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .admin-filter-section.filter-section select {
+    width: 100%;
+    min-height: 44px;
+    font-size: 1rem;
+  }
+}
+
+/* Admin fixture editor: correct 9-column grid (separate from UserView .match-row) */
+.admin-edit-matches .admin-match-header.match-header,
+.admin-edit-matches .match-row.admin-match-row {
+  display: grid;
+  grid-template-columns:
+    minmax(108px, 1fr)
+    minmax(80px, 0.75fr)
+    minmax(72px, 1.1fr)
+    minmax(48px, 0.6fr)
+    minmax(48px, 0.6fr)
+    minmax(72px, 1.1fr)
+    minmax(36px, 0.42fr)
+    minmax(84px, 0.85fr)
+    minmax(120px, 1.15fr);
+  gap: 0.6rem;
+  align-items: center;
+}
+
+.admin-edit-matches.admin-league-numbered .admin-match-header.match-header,
+.admin-edit-matches.admin-league-numbered .match-row.admin-match-row {
+  grid-template-columns:
+    minmax(28px, 0.32fr)
+    minmax(108px, 1fr)
+    minmax(80px, 0.75fr)
+    minmax(72px, 1.1fr)
+    minmax(48px, 0.6fr)
+    minmax(48px, 0.6fr)
+    minmax(72px, 1.1fr)
+    minmax(36px, 0.42fr)
+    minmax(84px, 0.85fr)
+    minmax(120px, 1.15fr);
+}
+
+.admin-edit-matches .admin-league-fixture-num {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.75rem;
+  height: 1.75rem;
+  padding: 0 6px;
+  border-radius: 8px;
+  font-weight: 700;
+  font-size: 0.85rem;
+  color: #0f172a;
+  background: linear-gradient(135deg, #e2e8f0, #f1f5f9);
+  border: 1px solid #cbd5e1;
+}
+
+.admin-edit-matches .admin-match-input-date {
+  width: 100%;
+  max-width: 140px;
+  min-height: 40px;
+}
+
+.admin-edit-matches .admin-match-input-time {
+  width: 100%;
+  max-width: 96px;
+  min-height: 40px;
+}
+
+.admin-edit-matches .admin-score-cell .input {
+  min-height: 40px;
+  max-width: 64px;
+}
+
+.admin-edit-matches .admin-match-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+
+.admin-edit-matches .admin-match-actions .btn-small {
+  min-height: 40px;
+}
+
+@media screen and (max-width: 768px) {
+  .admin-edit-matches .admin-match-header.match-header {
+    display: none;
+  }
+
+  .admin-edit-matches .admin-fixture-wrap {
+    margin-bottom: 12px;
+  }
+
+  .admin-edit-matches .match-row.admin-match-row {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.65rem;
+    padding: 14px;
+    border: 1px solid #e2e8f0;
+    border-radius: 14px;
+    margin-bottom: 0;
+    background: #fff;
+    box-shadow: 0 2px 8px rgba(15, 23, 42, 0.06);
+    border-bottom: none;
+  }
+
+  .admin-edit-matches .match-row.admin-match-row > div::before {
+    content: attr(data-label);
+    display: block;
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    color: #64748b;
+    text-transform: uppercase;
+    margin-bottom: 0.35rem;
+  }
+
+  .admin-edit-matches .admin-match-input-date,
+  .admin-edit-matches .admin-match-input-time,
+  .admin-edit-matches .admin-score-cell .input,
+  .admin-edit-matches .admin-score-cell input[type="number"] {
+    width: 100% !important;
+    max-width: none !important;
+    box-sizing: border-box;
+  }
+
+  .admin-edit-matches .admin-score-cell {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .admin-edit-matches .admin-score-cell .penalty-input {
+    flex: 0 0 auto;
+    width: 52px !important;
+    max-width: 52px !important;
+  }
+
+  .admin-edit-matches .admin-match-actions {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: stretch;
+    gap: 6px;
+  }
+
+  .admin-edit-matches .admin-match-actions .btn-small {
+    flex: 1 1 calc(33.333% - 4px);
+    min-width: 0;
+    width: auto !important;
+    margin: 0 !important;
+    min-height: 32px !important;
+    padding: 0.26rem 0.42rem !important;
+    font-size: 0.72rem !important;
+    font-weight: 600 !important;
+    text-transform: none !important;
+    letter-spacing: 0.02em !important;
+    box-shadow: none !important;
+    line-height: 1.25 !important;
+    border-radius: 6px !important;
+  }
+
+  .admin-edit-matches .admin-match-actions .btn-small:only-child {
+    flex: 1 1 100%;
+  }
+
+  .admin-edit-matches .admin-match-actions .btn-small:hover {
+    transform: none !important;
+    box-shadow: none !important;
+  }
+}
+
+/* Edit Matches tab: denser mobile layout (fixture cards, filters, goalscorer, league table) */
+@media screen and (max-width: 640px) {
+  .admin-edit-matches.card {
+    padding-left: 10px;
+    padding-right: 10px;
+    padding-top: 12px;
+    padding-bottom: 12px;
+  }
+
+  .admin-edit-matches > h2 {
+    font-size: 1.05rem;
+    margin-bottom: 0.6rem;
+    line-height: 1.25;
+  }
+
+  .admin-edit-matches > h2 svg {
+    width: 18px !important;
+    height: 18px !important;
+    margin-right: 6px !important;
+    vertical-align: middle;
+  }
+
+  .admin-edit-matches .admin-filter-section.filter-section {
+    gap: 6px;
+    margin-bottom: 8px;
+  }
+
+  .admin-edit-matches .admin-filter-section.filter-section select {
+    min-height: 36px;
+    font-size: 0.8125rem;
+    padding: 0.3rem 0.45rem;
+  }
+
+  .admin-edit-matches .admin-fixture-wrap {
+    margin-bottom: 8px;
+  }
+
+  .admin-edit-matches .match-row.admin-match-row {
+    gap: 0.4rem;
+    padding: 9px 10px;
+    border-radius: 10px;
+    box-shadow: 0 1px 4px rgba(15, 23, 42, 0.05);
+  }
+
+  .admin-edit-matches .match-row.admin-match-row > div::before {
+    font-size: 0.58rem;
+    margin-bottom: 0.15rem;
+    letter-spacing: 0.03em;
+  }
+
+  .admin-edit-matches .admin-match-input-date,
+  .admin-edit-matches .admin-match-input-time {
+    min-height: 34px !important;
+    padding: 0.3rem 0.4rem !important;
+    font-size: 0.8125rem !important;
+  }
+
+  .admin-edit-matches .admin-score-cell .input,
+  .admin-edit-matches .admin-score-cell input[type="number"] {
+    min-height: 34px !important;
+    padding: 0.3rem 0.4rem !important;
+    font-size: 0.8125rem !important;
+  }
+
+  .admin-edit-matches .match-row.admin-match-row > div[data-label="Home"] strong,
+  .admin-edit-matches .match-row.admin-match-row > div[data-label="Away"] strong {
+    font-size: 0.9rem;
+    line-height: 1.25;
+  }
+
+  .admin-edit-matches .match-row.admin-match-row > div[data-label="MW"] {
+    font-size: 0.875rem;
+  }
+
+  .admin-edit-matches .match-row.admin-match-row .badge {
+    font-size: 0.62rem;
+    padding: 0.18rem 0.42rem;
+    line-height: 1.2;
+  }
+
+  .admin-edit-matches .admin-score-cell {
+    gap: 6px;
+  }
+
+  .admin-edit-matches .admin-match-actions {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: stretch;
+    gap: 5px;
+  }
+
+  .admin-edit-matches .admin-match-actions .btn-small {
+    flex: 1 1 calc(33.333% - 4px);
+    min-width: 0;
+    width: auto !important;
+    min-height: 30px !important;
+    padding: 0.2rem 0.38rem !important;
+    font-size: 0.66rem !important;
+    font-weight: 600 !important;
+    margin: 0 !important;
+    text-transform: none !important;
+    letter-spacing: 0.02em !important;
+    box-shadow: none !important;
+    line-height: 1.2 !important;
+    border-radius: 5px !important;
+  }
+
+  .admin-edit-matches .admin-match-actions .btn-small:only-child {
+    flex: 1 1 100%;
+  }
+
+  .admin-edit-matches .admin-match-actions .btn-small:hover {
+    transform: none !important;
+    box-shadow: none !important;
+  }
+
+  .admin-edit-matches .goalscorer-admin-root {
+    padding: 7px !important;
+    margin-top: 6px !important;
+    border-width: 1px !important;
+    border-radius: 5px !important;
+  }
+
+  .admin-edit-matches .goalscorer-admin-root h4 {
+    font-size: 0.9rem !important;
+    margin-bottom: 7px !important;
+    margin-top: 0 !important;
+  }
+
+  .admin-edit-matches .goalscorer-admin-root h5 {
+    font-size: 0.8rem !important;
+    margin-bottom: 5px !important;
+  }
+
+  .admin-edit-matches .goalscorer-goals-list {
+    gap: 7px !important;
+  }
+
+  .admin-edit-matches .goalscorer-side-block {
+    margin-bottom: 10px !important;
+  }
+
+  .admin-edit-matches .goalscorer-goal-block {
+    padding: 6px 7px !important;
+    gap: 4px !important;
+    border-radius: 4px !important;
+  }
+
+  .admin-edit-matches .goalscorer-goal-line .input,
+  .admin-edit-matches .goalscorer-goal-line select,
+  .admin-edit-matches .goalscorer-assist-row .input,
+  .admin-edit-matches .goalscorer-assist-row select {
+    min-height: 36px !important;
+    padding: 0.35rem 0.45rem !important;
+    font-size: 0.8125rem !important;
+  }
+
+  .admin-edit-matches .goalscorer-goal-label {
+    min-width: 0;
+    font-size: 0.8rem;
+  }
+
+  .admin-edit-matches .goalscorer-assist-label {
+    font-size: 0.8rem;
+  }
+
+  .admin-edit-matches .goalscorer-goal-line .btn-small {
+    width: auto !important;
+    min-height: 28px !important;
+    padding: 0.16rem 0.42rem !important;
+    font-size: 0.66rem !important;
+    margin: 0 !important;
+    text-transform: none !important;
+    box-shadow: none !important;
+  }
+
+  .admin-edit-matches .goalscorer-panel-section {
+    margin-top: 10px !important;
+    padding-top: 7px !important;
+  }
+
+  .admin-edit-matches .goalscorer-panel-section h4 {
+    font-size: 0.88rem !important;
+    margin-bottom: 7px !important;
+  }
+
+  .admin-edit-matches .goalscorer-team-panel {
+    padding: 7px !important;
+    border-radius: 5px !important;
+  }
+
+  .admin-edit-matches .goalscorer-team-panel .btn-small:not(.goalscorer-card-add-btn) {
+    min-height: 32px !important;
+    padding: 0.25rem 0.35rem !important;
+    font-size: 0.7rem !important;
+  }
+
+  .admin-edit-matches .goalscorer-admin-root .goalscorer-card-add-btn {
+    min-height: 28px !important;
+    padding: 0.16rem 0.34rem !important;
+    font-size: 0.62rem !important;
+  }
+
+  .admin-league-table-card.card {
+    padding-left: 10px;
+    padding-right: 10px;
+    padding-top: 12px;
+    padding-bottom: 12px;
+  }
+
+  .admin-league-table-card > h2 {
+    font-size: 1.05rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .admin-league-table-card .admin-table-scroll {
+    margin-top: 4px;
+  }
+
+  .admin-league-table-card .admin-table-scroll .table {
+    font-size: 0.78rem;
+    min-width: 480px;
+  }
+
+  .admin-league-table-card .admin-table-scroll .table th,
+  .admin-league-table-card .admin-table-scroll .table td {
+    padding: 0.3rem 0.35rem;
+  }
+}
+
+.admin-table-scroll {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  margin-top: 8px;
+}
+
+.admin-table-scroll .table {
+  min-width: 520px;
+}
+
+.goalscorer-goal-line {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.goalscorer-goal-line .input,
+.goalscorer-goal-line select {
+  flex: 1 1 160px;
+  min-width: 0;
+  min-height: 42px;
+}
+
+.goalscorer-goal-label {
+  min-width: 72px;
+  font-weight: 600;
+}
+
+.goalscorer-assist-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  padding-left: 0;
+}
+
+.goalscorer-assist-label {
+  min-width: 56px;
+  font-size: 0.9em;
+  color: #666;
+  font-weight: 500;
+}
+
+/* Goalscorer — Cards / Clean sheets panels */
+.goalscorer-cards-grid,
+.goalscorer-clean-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.goalscorer-cards-panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.goalscorer-cards-team-name {
+  min-width: 0;
+  flex: 1 1 120px;
+  line-height: 1.25;
+}
+
+.goalscorer-card-actions {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  flex: 0 1 auto;
+}
+
+.goalscorer-cards-empty {
+  color: #666;
+  font-size: 0.88em;
+  margin-top: 2px;
+}
+
+.goalscorer-card-line {
+  display: grid;
+  grid-template-columns: 1fr minmax(88px, auto);
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+.goalscorer-card-line:last-child {
+  margin-bottom: 0;
+}
+
+.goalscorer-card-player-select {
+  width: 100% !important;
+  max-width: none !important;
+  margin: 0 !important;
+  min-width: 0;
+}
+
+.goalscorer-card-meta {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: nowrap;
+}
+
+.goalscorer-card-type-label {
+  font-size: 0.78rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.goalscorer-card-type-label.is-yellow {
+  color: #b8860b;
+}
+
+.goalscorer-card-type-label.is-red {
+  color: #c1121f;
+}
+
+.goalscorer-card-remove-btn {
+  min-width: 56px;
+}
+
+.goalscorer-clean-label {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin: 0;
+  width: 100%;
+  cursor: pointer;
+  font-weight: normal;
+}
+
+.goalscorer-clean-label.is-disabled {
+  cursor: default;
+}
+
+.goalscorer-clean-label.is-disabled .goalscorer-clean-sub {
+  color: #888;
+}
+
+.goalscorer-clean-checkbox {
+  margin-top: 3px;
+  flex-shrink: 0;
+}
+
+.goalscorer-clean-text {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  min-width: 0;
+  flex: 1;
+}
+
+.goalscorer-clean-team {
+  line-height: 1.25;
+}
+
+.goalscorer-clean-sub {
+  font-size: 0.82rem;
+  color: #555;
+  line-height: 1.2;
+}
+
+.goalscorer-clean-hint {
+  font-size: 0.74rem;
+  color: #777;
+  line-height: 1.35;
+}
+
+.goalscorer-clean-player-wrap {
+  margin-top: 8px;
+}
+
+.goalscorer-clean-player-select {
+  width: 100% !important;
+  max-width: none !important;
+  margin: 0 !important;
+}
+
+@media screen and (max-width: 768px) {
+  .goalscorer-admin-root {
+    padding: 8px !important;
+  }
+
+  .goalscorer-admin-root .goalscorer-cards-section,
+  .goalscorer-admin-root .goalscorer-clean-section {
+    margin-top: 10px !important;
+    padding-top: 6px !important;
+  }
+
+  .goalscorer-admin-root .goalscorer-cards-heading,
+  .goalscorer-admin-root .goalscorer-clean-heading {
+    font-size: 0.82rem !important;
+    margin-bottom: 5px !important;
+    margin-top: 0 !important;
+  }
+
+  .goalscorer-admin-root .goalscorer-cards-grid,
+  .goalscorer-admin-root .goalscorer-clean-grid {
+    grid-template-columns: 1fr;
+    gap: 7px;
+  }
+
+  .goalscorer-admin-root .goalscorer-cards-grid .goalscorer-team-panel {
+    padding: 5px 7px !important;
+    border-radius: 5px !important;
+  }
+
+  .goalscorer-admin-root .goalscorer-clean-grid .goalscorer-team-panel {
+    padding: 6px 7px !important;
+  }
+
+  .goalscorer-admin-root .goalscorer-cards-panel-header {
+    flex-direction: row;
+    flex-wrap: nowrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px;
+    margin-bottom: 3px;
+  }
+
+  .goalscorer-admin-root .goalscorer-cards-team-name {
+    font-size: 0.86rem;
+    flex: 1 1 auto;
+    min-width: 0;
+    margin: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .goalscorer-admin-root .goalscorer-card-actions {
+    width: auto;
+    flex: 0 0 auto;
+    gap: 4px;
+    justify-content: flex-end;
+  }
+
+  .goalscorer-admin-root .goalscorer-card-add-btn {
+    flex: 0 0 auto !important;
+    width: auto !important;
+    min-width: 2.25rem !important;
+    min-height: 30px !important;
+    padding: 0.2rem 0.42rem !important;
+    font-size: 0.68rem !important;
+    font-weight: 700 !important;
+    margin: 0 !important;
+    text-transform: none !important;
+    letter-spacing: 0.02em !important;
+    line-height: 1.15 !important;
+    border-radius: 5px !important;
+    box-shadow: none !important;
+  }
+
+  .goalscorer-admin-root .goalscorer-card-add-btn:hover {
+    transform: none !important;
+    box-shadow: none !important;
+  }
+
+  .goalscorer-admin-root .goalscorer-cards-empty {
+    font-size: 0.72rem;
+    margin-top: 2px;
+    line-height: 1.25;
+  }
+
+  .goalscorer-admin-root .goalscorer-card-line {
+    grid-template-columns: 1fr;
+    gap: 4px;
+    align-items: stretch;
+    margin-bottom: 5px !important;
+  }
+
+  .goalscorer-admin-root .goalscorer-card-player-select {
+    min-height: 34px !important;
+    padding: 0.32rem 0.4rem !important;
+    font-size: 0.78rem !important;
+  }
+
+  .goalscorer-admin-root .goalscorer-card-meta {
+    justify-content: flex-start;
+    gap: 5px;
+  }
+
+  .goalscorer-admin-root .goalscorer-card-type-label {
+    font-size: 0.72rem;
+  }
+
+  .goalscorer-admin-root .goalscorer-card-remove-btn {
+    min-width: 54px !important;
+    min-height: 30px !important;
+    padding: 0.2rem 0.32rem !important;
+    font-size: 0.68rem !important;
+    margin: 0 !important;
+    box-shadow: none !important;
+  }
+
+  .goalscorer-admin-root .goalscorer-clean-sub {
+    font-size: 0.75rem;
+  }
+
+  .goalscorer-admin-root .goalscorer-clean-hint {
+    font-size: 0.68rem;
+  }
+
+  .goalscorer-admin-root .goalscorer-clean-player-select {
+    min-height: 34px !important;
+    padding: 0.32rem 0.4rem !important;
+    font-size: 0.78rem !important;
+  }
+
+  .goalscorer-admin-root .goalscorer-clean-player-wrap {
+    margin-top: 5px;
+  }
+
+  .goalscorer-admin-root .goalscorer-clean-checkbox {
+    margin-top: 2px;
+  }
+
+  .goalscorer-assist-row {
+    padding-left: 0 !important;
+    flex-direction: column;
+    align-items: stretch !important;
+  }
+
+  .goalscorer-assist-row .input,
+  .goalscorer-assist-row select {
+    width: 100%;
+  }
+
+  .goalscorer-goal-line {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .goalscorer-goal-line .goalscorer-goal-label {
+    flex: 0 0 100%;
+    margin-bottom: 0;
+  }
+
+  .goalscorer-goal-line .input,
+  .goalscorer-goal-line select {
+    flex: 1 1 140px;
+    min-width: 0;
+    width: auto !important;
+    min-height: 36px !important;
+  }
+
+  .goalscorer-goal-line .btn-small {
+    width: auto !important;
+    max-width: 100%;
+    align-self: center;
+    flex: 0 0 auto;
+    min-height: 30px !important;
+    padding: 0.2rem 0.5rem !important;
+    font-size: 0.7rem !important;
+    margin: 0 !important;
+    text-transform: none !important;
+    letter-spacing: 0.02em !important;
+    box-shadow: none !important;
+    border-radius: 5px !important;
+  }
+
+  .goalscorer-goal-line .btn-small:hover {
+    transform: none !important;
+    box-shadow: none !important;
+  }
+}
+
+@media screen and (max-width: 640px) {
+  .goalscorer-admin-root .goalscorer-card-add-btn {
+    min-height: 28px !important;
+    min-width: 2rem !important;
+    padding: 0.16rem 0.34rem !important;
+    font-size: 0.62rem !important;
+  }
+}
+
+.badge-danger {
+  background: #f8d7da;
+  color: #721c24;
+}
+
+@media screen and (max-width: 768px) {
+  .admin-panel-root .card {
+    padding-left: 14px;
+    padding-right: 14px;
+  }
+}
+
+.admin-team-tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+@media screen and (max-width: 640px) {
+  .admin-team-tabs .btn {
+    flex: 1 1 calc(50% - 4px);
+    min-height: 44px;
+  }
+}
+
+.admin-fantasy-dash-btns {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+@media screen and (max-width: 768px) {
+  .admin-fantasy-dash-btns {
+    flex-direction: column;
+  }
+
+  .admin-fantasy-dash-btns .btn {
+    width: 100%;
+    margin-left: 0 !important;
+  }
+}
+
+/* Competition picker: small caption above trigger/select */
+.competition-filter-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.competition-filter-field-caption {
+  display: block;
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--primary-red-dark);
+  line-height: 1.15;
+  margin: 0 0 1px 2px;
+}
+
+/* Fixture round filter (mobile sheet + trigger) */
+.fixture-filter-trigger {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 0.55rem 0.75rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #0f172a;
+  background: #fff;
+  border: 2px solid var(--primary-red-lightest, #fecaca);
+  border-radius: 8px;
+  cursor: pointer;
+  box-sizing: border-box;
+}
+
+.fixture-filter-sheet-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  background: rgba(127, 29, 29, 0.42);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+
+.fixture-filter-sheet {
+  width: 100%;
+  max-width: 100%;
+  max-height: 85vh;
+  overflow: auto;
+  border-radius: 16px 16px 0 0;
+  background: linear-gradient(
+    165deg,
+    var(--primary-red-dark) 0%,
+    var(--primary-red) 45%,
+    #991b1b 100%
+  );
+  color: #fff;
+  padding: 8px 16px 20px;
+  box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.28);
+  scrollbar-color: var(--primary-red-lighter) rgba(255, 255, 255, 0.12);
+  scrollbar-width: thin;
+}
+
+.fixture-filter-sheet::-webkit-scrollbar {
+  width: 8px;
+}
+
+.fixture-filter-sheet::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 0 16px 0 0;
+}
+
+.fixture-filter-sheet::-webkit-scrollbar-thumb {
+  background: var(--primary-red-lighter);
+  border-radius: 999px;
+}
+
+.fixture-filter-sheet::-webkit-scrollbar-thumb:hover {
+  background: var(--primary-red-lightest);
+}
+
+.fixture-filter-sheet-handle {
+  width: 40px;
+  height: 4px;
+  border-radius: 999px;
+  background: var(--primary-red-lighter);
+  margin: 4px auto 12px;
+  opacity: 0.9;
+}
+
+.fixture-filter-sheet-title {
+  margin: 0 0 12px;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #fff;
+  letter-spacing: 0.02em;
+}
+
+.fixture-filter-sheet-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.fixture-filter-sheet-option {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 4px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  border-bottom: 1px solid rgba(254, 226, 226, 0.22);
+  border-radius: 8px;
+  margin-bottom: 2px;
+}
+
+.fixture-filter-sheet-option:hover {
+  background: rgba(254, 226, 226, 0.12);
+}
+
+.fixture-filter-sheet-option:last-of-type {
+  border-bottom: none;
+}
+
+.fixture-filter-sheet-option input[type='radio'] {
+  width: 20px;
+  height: 20px;
+  accent-color: var(--primary-red-lightest);
+}
+
+/* Competition sheet: label left, radio right */
+.fixture-filter-sheet-option--spread {
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.fixture-filter-sheet-option--spread span {
+  flex: 1;
+  text-align: left;
+}
+
+.fixture-filter-sheet-option--spread input[type='radio'] {
+  flex-shrink: 0;
 }

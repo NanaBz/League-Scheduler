@@ -20,7 +20,7 @@
 
 .pick-team-header h2 {
   margin: 0;
-  color: white;
+  color: #0f172a;
   font-size: 1.4rem;
   font-weight: 800;
   flex: 1;
@@ -38,6 +38,40 @@
   font-size: 0.85rem;
   color: #666;
   font-weight: 600;
+}
+
+.formation-display {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 8px 12px;
+  margin-bottom: 14px;
+  padding: 12px 14px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+}
+
+.formation-display__label {
+  font-size: 0.85rem;
+  font-weight: 800;
+  color: #334155;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.formation-display__value {
+  font-size: 1.35rem;
+  font-weight: 900;
+  color: #0f172a;
+  line-height: 1;
+}
+
+.formation-display__hint {
+  width: 100%;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #64748b;
 }
 
 .back-link {
@@ -139,6 +173,19 @@
 .chip-card.status-played .chip-status {
   background: rgba(128, 128, 128, 0.2);
   color: rgba(128, 128, 128, 0.8);
+}
+
+.chip-card.status-inactive {
+  border-color: rgba(255, 255, 255, 0.08);
+  background: rgba(0, 0, 0, 0.12);
+  color: rgba(255, 255, 255, 0.35);
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+.chip-card.status-inactive .chip-status {
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.45);
 }
 
 .chip-card.disabled {

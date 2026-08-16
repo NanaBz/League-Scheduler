@@ -1,19 +1,33 @@
 import React, { useState, useEffect } from 'react';
 import { ArrowLeft, TrendingUp, TrendingDown, Minus } from 'lucide-react';
+import api from '../utils/api';
 import './LeaguesAndCups.css';
 import OverallLeague from './OverallLeague';
 // import OverallTeamModal from './OverallTeamModal';
 import OverallTeamPitchModal from './OverallTeamPitchModal';
 import ConfigureLeaguesPage from './ConfigureLeaguesPage';
-import generateMockLeague from '../utils/fantasyMockData';
 
 export default function LeaguesAndCups({ onBack }) {
   const [activeTab, setActiveTab] = useState('leagues'); // 'leagues' | 'cups'
   const [showConfigure, setShowConfigure] = useState(false);
-  const [currentGameweek] = useState(() => {
-    const saved = localStorage.getItem('fantasyCurrentGameweek');
-    return saved ? parseInt(saved) : 1;
-  });
+  const [currentGameweek, setCurrentGameweek] = useState(1);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const { data } = await api.get('/fantasy/season');
+        if (!cancelled && data?.success) {
+          setCurrentGameweek(data.currentGameweek || 1);
+        }
+      } catch {
+        /* keep default */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   // Mock data - replace with real backend data
   const overallLeague = {
@@ -64,13 +78,26 @@ export default function LeaguesAndCups({ onBack }) {
   const [showOverallTable, setShowOverallTable] = useState(false);
   const [leagueEntries, setLeagueEntries] = useState([]);
   const [selectedTeam, setSelectedTeam] = useState(null);
+  const [latestCompletedGameweek, setLatestCompletedGameweek] = useState(0);
 
-  // Load mock league data with async API call
+  // Load overall league from registered fantasy managers
   useEffect(() => {
-    generateMockLeague(currentGameweek).then(setLeagueEntries).catch(err => {
-      console.error('Failed to load league:', err);
-      setLeagueEntries([]);
-    });
+    let cancelled = false;
+    (async () => {
+      try {
+        const { data } = await api.get('/fantasy/overall-league');
+        if (!cancelled && data?.success) {
+          setLeagueEntries(Array.isArray(data.entries) ? data.entries : []);
+          setLatestCompletedGameweek(data.latestCompletedGameweek || 0);
+        }
+      } catch (err) {
+        console.error('Failed to load overall league:', err);
+        if (!cancelled) setLeagueEntries([]);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, [currentGameweek]);
 
   const openOverall = () => setShowOverallTable(true);
@@ -147,7 +174,11 @@ export default function LeaguesAndCups({ onBack }) {
 
           {/* Invitational Leagues Section removed as requested */}
           {selectedTeam && (
-            <OverallTeamPitchModal team={selectedTeam} onClose={closeTeamModal} />
+            <OverallTeamPitchModal
+              team={selectedTeam}
+              latestCompletedGameweek={latestCompletedGameweek}
+              onClose={closeTeamModal}
+            />
           )}
         </div>
       ) : (

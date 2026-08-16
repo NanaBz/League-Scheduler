@@ -43,7 +43,7 @@ const SAMPLE_PLAYERS = [
   { id: 'P020', name: 'Player Twenty', position: 'MID' }
 ];
 
-const CHIPS = ['WC', 'FH', 'BB', 'TC', 'DGW'];
+const CHIPS = ['WC', 'FH', 'BB', 'TC', 'DC'];
 
 function randPoints() { return Math.floor(Math.random() * 13); }
 function randChip() { return CHIPS[Math.floor(Math.random() * 5)]; }
@@ -176,8 +176,13 @@ function buildLineup(players, currentGw = 1) {
 
   const buildCard = (p, idx, isCapt = false, isVC = false) => {
     let points = p.gwPoints ?? randPoints();
-    if (isCapt) points *= 2;
-    if (chipUsed === 'TC' && isCapt) points *= 1.5;
+    if (chipUsed === 'TC' && isCapt) {
+      points *= 3;
+    } else if (chipUsed === 'DC' && (isCapt || isVC)) {
+      points *= 2;
+    } else if (isCapt) {
+      points *= 2;
+    }
     return { ...p, points, isCaptain: isCapt, isViceCaptain: isVC, chipUsed: isCapt ? chipUsed : null };
   };
 
@@ -211,9 +216,11 @@ function buildLineup(players, currentGw = 1) {
   };
 }
 
-export async function generateMockLeague(currentGw = 1) {
+export async function generateMockLeague(currentGw = 1, options = {}) {
+  const { preseason = false } = options;
   try {
-    const { data: allPlayers } = await api.get('/players');
+    const { data } = await api.get('/fantasy/players');
+    const allPlayers = data.players || [];
     
     const entries = TEAM_NAMES.slice(0, 32).map((team, i) => {
       const user = USER_NAMES[i % USER_NAMES.length];
@@ -221,12 +228,12 @@ export async function generateMockLeague(currentGw = 1) {
       const lineup = buildLineup(roster, currentGw);
       
       return {
-        pos: i + 1,
+        pos: preseason ? null : i + 1,
         team,
         user,
-        gw: lineup.totalPoints,
-        total: 800 + Math.floor(Math.random() * 400),
-        delta: ['up', 'down', 'same'][Math.floor(Math.random() * 3)],
+        gw: preseason ? 0 : lineup.totalPoints,
+        total: preseason ? 0 : 800 + Math.floor(Math.random() * 400),
+        delta: preseason ? 'same' : ['up', 'down', 'same'][Math.floor(Math.random() * 3)],
         players: roster,
         lineup,
       };
@@ -242,12 +249,12 @@ export async function generateMockLeague(currentGw = 1) {
       }
       const lineup = buildLineup(players, currentGw);
       return {
-        pos: i + 1,
+        pos: preseason ? null : i + 1,
         team,
         user: USER_NAMES[i % USER_NAMES.length],
-        gw: lineup.totalPoints,
-        total: 800 + Math.floor(Math.random() * 400),
-        delta: ['up', 'down', 'same'][Math.floor(Math.random() * 3)],
+        gw: preseason ? 0 : lineup.totalPoints,
+        total: preseason ? 0 : 800 + Math.floor(Math.random() * 400),
+        delta: preseason ? 'same' : ['up', 'down', 'same'][Math.floor(Math.random() * 3)],
         players,
         lineup,
       };

@@ -35,9 +35,10 @@ export default function PlayerPickerModal({ lockedPosition, selectedIds = [], on
   useEffect(() => {
     const fetchTeams = async () => {
       try {
-        const { data } = await api.get('/teams');
-        setTeams((data || [])
-          .filter(t => t && t.competition !== 'acwpl' && t.name !== 'Orion' && t.name !== 'Firestorm'));
+        const { data } = await api.get('/teams', { params: { category: 'boys' } });
+        setTeams((data || []).filter(
+          (t) => t && t.competition === 'league' && t.category !== 'girls'
+        ));
       } catch {
         setTeams([]);
       }

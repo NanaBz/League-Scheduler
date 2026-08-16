@@ -111,11 +111,7 @@
     .leagues-cups-subheader h3 { font-size: 1.05rem; }
   }
 
-.overall-league {
-  background: linear-gradient(135deg, #581c87 0%, #7c3aed 100%);
-  border: none;
-  color: white;
-}
+/* .overall-league styles live in OverallLeague.css (red/black fantasy theme) */
 
 .league-info h3 {
   margin: 0 0 4px 0;

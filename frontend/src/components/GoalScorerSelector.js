@@ -6,6 +6,39 @@ import {
   resizeGoalsToScores,
 } from '../utils/matchEventsForm';
 
+function playerDisplayLabel(p) {
+  if (!p) return '';
+  const n = p.number;
+  if (n != null && n !== '') return `${n} - ${p.name || ''}`;
+  return String(p.name || '');
+}
+
+function sortPlayersByName(players) {
+  return [...players].sort((a, b) =>
+    String(a.name || '').localeCompare(String(b.name || ''), undefined, { sensitivity: 'base' })
+  );
+}
+
+function PlayerSelect({ players, value, onChange, selectPlaceholder = 'Select player…', disabled, style, selectClassName }) {
+  const sorted = useMemo(() => sortPlayersByName(players), [players]);
+  return (
+    <select
+      className={selectClassName || 'input'}
+      value={value || ''}
+      onChange={(e) => onChange(e.target.value)}
+      disabled={disabled}
+      style={{ flex: 1, minWidth: 0, width: '100%', ...style }}
+    >
+      <option value="">{selectPlaceholder}</option>
+      {sorted.map((p) => (
+        <option key={p._id} value={p._id}>
+          {playerDisplayLabel(p)}
+        </option>
+      ))}
+    </select>
+  );
+}
+
 const defaultCleanSheets = () => ({
   home: { enabled: false, playerId: '' },
   away: { enabled: false, playerId: '' },
@@ -177,24 +210,27 @@ export default function GoalScorerSelector({ match, homeScore, awayScore, onGoal
   const awayCleanSheetAllowed = homeGoalsParsed !== null && homeGoalsParsed === 0;
 
   return (
-    <div style={{ 
+    <div
+      className="goalscorer-admin-root"
+      style={{
       backgroundColor: '#f8f9fa', 
       padding: '12px', 
       borderRadius: '6px', 
       marginTop: '10px',
       border: '2px solid #dee2e6'
-    }}>
+    }}
+    >
       <h4 style={{ marginTop: 0, marginBottom: '12px' }}>Select Goalscorers & Events</h4>
       
       {error && <div style={{ color: '#dc3545', marginBottom: '10px' }}>Error: {error}</div>}
       {loading && <div style={{ color: '#0066cc', marginBottom: '10px' }}>Loading players...</div>}
 
       {hScore > 0 && (
-        <div style={{ marginBottom: '15px' }}>
+        <div className="goalscorer-side-block" style={{ marginBottom: '15px' }}>
           <h5 style={{ marginBottom: '8px' }}>{match.homeTeam.name} Goals ({hScore})</h5>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          <div className="goalscorer-goals-list" style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
             {goalscorers.home.map((goal, idx) => (
-              <div key={`home-${idx}`} style={{ 
+              <div key={`home-${idx}`} className="goalscorer-goal-block" style={{ 
                 display: 'flex', 
                 flexDirection: 'column',
                 gap: '6px',
@@ -203,25 +239,21 @@ export default function GoalScorerSelector({ match, homeScore, awayScore, onGoal
                 borderRadius: '4px',
                 border: '1px solid #dee2e6'
               }}>
-                <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                  <span style={{ minWidth: '60px', fontWeight: 500 }}>Goal #{idx + 1}:</span>
+                <div className="goalscorer-goal-line" style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8 }}>
+                  <span className="goalscorer-goal-label">Goal #{idx + 1}:</span>
                   
                   {goal.isOwnGoal ? (
                     <>
-                      <select
+                      <PlayerSelect
+                        players={getOwnGoalTeamPlayers('home')}
                         value={goal.scorerId}
-                        onChange={(e) => updateGoalscorer('home', idx, e.target.value, true)}
-                        className="input"
-                        style={{ flex: 1 }}
-                      >
-                        <option value="">Select own goal scorer ({match.awayTeam.name})...</option>
-                        {getOwnGoalTeamPlayers('home').map(p => (
-                          <option key={p._id} value={p._id}>
-                            {p.number ? `${p.number} - ` : ''}{p.name}
-                          </option>
-                        ))}
-                      </select>
+                        onChange={(id) => updateGoalscorer('home', idx, id, true)}
+                        selectPlaceholder={`Select own goal — ${match.awayTeam.name}`}
+                        selectClassName="input"
+                        style={{ flex: 1, minWidth: 0 }}
+                      />
                       <button
+                        type="button"
                         onClick={() => updateGoalscorer('home', idx, goal.scorerId, false)}
                         className="btn btn-secondary btn-small"
                         title="Switch to normal goal"
@@ -231,20 +263,16 @@ export default function GoalScorerSelector({ match, homeScore, awayScore, onGoal
                     </>
                   ) : (
                     <>
-                      <select
+                      <PlayerSelect
+                        players={getPlayersByTeam('home')}
                         value={goal.scorerId}
-                        onChange={(e) => updateGoalscorer('home', idx, e.target.value, false)}
-                        className="input"
-                        style={{ flex: 1 }}
-                      >
-                        <option value="">Select scorer ({match.homeTeam.name})...</option>
-                        {getPlayersByTeam('home').map(p => (
-                          <option key={p._id} value={p._id}>
-                            {p.number ? `${p.number} - ` : ''}{p.name}
-                          </option>
-                        ))}
-                      </select>
+                        onChange={(id) => updateGoalscorer('home', idx, id, false)}
+                        selectPlaceholder={`Select scorer — ${match.homeTeam.name}`}
+                        selectClassName="input"
+                        style={{ flex: 1, minWidth: 0 }}
+                      />
                       <button
+                        type="button"
                         onClick={() => updateGoalscorer('home', idx, goal.scorerId, true)}
                         className="btn btn-info btn-small"
                         title="Mark as own goal"
@@ -257,23 +285,16 @@ export default function GoalScorerSelector({ match, homeScore, awayScore, onGoal
                 
                 {/* Assist selector - only for non-own goals */}
                 {!goal.isOwnGoal && goal.scorerId && (
-                  <div style={{ display: 'flex', gap: '8px', alignItems: 'center', paddingLeft: '68px' }}>
-                    <span style={{ minWidth: '50px', fontSize: '0.9em', color: '#666' }}>Assist:</span>
-                    <select
-                      value={goal.assistId}
-                      onChange={(e) => updateAssist('home', idx, e.target.value)}
-                      className="input"
-                      style={{ flex: 1, fontSize: '0.9em' }}
-                    >
-                      <option value="">No assist / Unassisted</option>
-                      {getPlayersByTeam('home')
-                        .filter(p => p._id !== goal.scorerId) // Can't assist own goal
-                        .map(p => (
-                          <option key={p._id} value={p._id}>
-                            {p.number ? `${p.number} - ` : ''}{p.name}
-                          </option>
-                        ))}
-                    </select>
+                  <div className="goalscorer-assist-row" style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8 }}>
+                    <span className="goalscorer-assist-label">Assist:</span>
+                    <PlayerSelect
+                      players={getPlayersByTeam('home').filter((p) => p._id !== goal.scorerId)}
+                      value={goal.assistId || ''}
+                      onChange={(id) => updateAssist('home', idx, id)}
+                      selectPlaceholder="No assist / unassisted — or choose player"
+                      selectClassName="input"
+                      style={{ flex: 1, minWidth: 0 }}
+                    />
                   </div>
                 )}
               </div>
@@ -283,11 +304,11 @@ export default function GoalScorerSelector({ match, homeScore, awayScore, onGoal
       )}
 
       {aScore > 0 && (
-        <div style={{ marginBottom: '15px' }}>
+        <div className="goalscorer-side-block" style={{ marginBottom: '15px' }}>
           <h5 style={{ marginBottom: '8px' }}>{match.awayTeam.name} Goals ({aScore})</h5>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          <div className="goalscorer-goals-list" style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
             {goalscorers.away.map((goal, idx) => (
-              <div key={`away-${idx}`} style={{ 
+              <div key={`away-${idx}`} className="goalscorer-goal-block" style={{ 
                 display: 'flex', 
                 flexDirection: 'column',
                 gap: '6px',
@@ -296,25 +317,21 @@ export default function GoalScorerSelector({ match, homeScore, awayScore, onGoal
                 borderRadius: '4px',
                 border: '1px solid #dee2e6'
               }}>
-                <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                  <span style={{ minWidth: '60px', fontWeight: 500 }}>Goal #{idx + 1}:</span>
+                <div className="goalscorer-goal-line" style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8 }}>
+                  <span className="goalscorer-goal-label">Goal #{idx + 1}:</span>
                   
                   {goal.isOwnGoal ? (
                     <>
-                      <select
+                      <PlayerSelect
+                        players={getOwnGoalTeamPlayers('away')}
                         value={goal.scorerId}
-                        onChange={(e) => updateGoalscorer('away', idx, e.target.value, true)}
-                        className="input"
-                        style={{ flex: 1 }}
-                      >
-                        <option value="">Select own goal scorer ({match.homeTeam.name})...</option>
-                        {getOwnGoalTeamPlayers('away').map(p => (
-                          <option key={p._id} value={p._id}>
-                            {p.number ? `${p.number} - ` : ''}{p.name}
-                          </option>
-                        ))}
-                      </select>
+                        onChange={(id) => updateGoalscorer('away', idx, id, true)}
+                        selectPlaceholder={`Select own goal — ${match.homeTeam.name}`}
+                        selectClassName="input"
+                        style={{ flex: 1, minWidth: 0 }}
+                      />
                       <button
+                        type="button"
                         onClick={() => updateGoalscorer('away', idx, goal.scorerId, false)}
                         className="btn btn-secondary btn-small"
                         title="Switch to normal goal"
@@ -324,20 +341,16 @@ export default function GoalScorerSelector({ match, homeScore, awayScore, onGoal
                     </>
                   ) : (
                     <>
-                      <select
+                      <PlayerSelect
+                        players={getPlayersByTeam('away')}
                         value={goal.scorerId}
-                        onChange={(e) => updateGoalscorer('away', idx, e.target.value, false)}
-                        className="input"
-                        style={{ flex: 1 }}
-                      >
-                        <option value="">Select scorer ({match.awayTeam.name})...</option>
-                        {getPlayersByTeam('away').map(p => (
-                          <option key={p._id} value={p._id}>
-                            {p.number ? `${p.number} - ` : ''}{p.name}
-                          </option>
-                        ))}
-                      </select>
+                        onChange={(id) => updateGoalscorer('away', idx, id, false)}
+                        selectPlaceholder={`Select scorer — ${match.awayTeam.name}`}
+                        selectClassName="input"
+                        style={{ flex: 1, minWidth: 0 }}
+                      />
                       <button
+                        type="button"
                         onClick={() => updateGoalscorer('away', idx, goal.scorerId, true)}
                         className="btn btn-info btn-small"
                         title="Mark as own goal"
@@ -350,23 +363,16 @@ export default function GoalScorerSelector({ match, homeScore, awayScore, onGoal
                 
                 {/* Assist selector - only for non-own goals */}
                 {!goal.isOwnGoal && goal.scorerId && (
-                  <div style={{ display: 'flex', gap: '8px', alignItems: 'center', paddingLeft: '68px' }}>
-                    <span style={{ minWidth: '50px', fontSize: '0.9em', color: '#666' }}>Assist:</span>
-                    <select
-                      value={goal.assistId}
-                      onChange={(e) => updateAssist('away', idx, e.target.value)}
-                      className="input"
-                      style={{ flex: 1, fontSize: '0.9em' }}
-                    >
-                      <option value="">No assist / Unassisted</option>
-                      {getPlayersByTeam('away')
-                        .filter(p => p._id !== goal.scorerId) // Can't assist own goal
-                        .map(p => (
-                          <option key={p._id} value={p._id}>
-                            {p.number ? `${p.number} - ` : ''}{p.name}
-                          </option>
-                        ))}
-                    </select>
+                  <div className="goalscorer-assist-row" style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8 }}>
+                    <span className="goalscorer-assist-label">Assist:</span>
+                    <PlayerSelect
+                      players={getPlayersByTeam('away').filter((p) => p._id !== goal.scorerId)}
+                      value={goal.assistId || ''}
+                      onChange={(id) => updateAssist('away', idx, id)}
+                      selectPlaceholder="No assist / unassisted — or choose player"
+                      selectClassName="input"
+                      style={{ flex: 1, minWidth: 0 }}
+                    />
                   </div>
                 )}
               </div>
@@ -390,36 +396,34 @@ export default function GoalScorerSelector({ match, homeScore, awayScore, onGoal
       )}
 
       {/* Cards */}
-      <div style={{ marginTop: '16px', paddingTop: '10px', borderTop: '1px solid #dee2e6' }}>
-        <h4 style={{ marginBottom: '10px' }}>Cards</h4>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+      <div className="goalscorer-panel-section goalscorer-cards-section" style={{ marginTop: '16px', paddingTop: '10px', borderTop: '1px solid #dee2e6' }}>
+        <h4 className="goalscorer-cards-heading" style={{ marginBottom: '10px' }}>Cards</h4>
+        <div className="goalscorer-cards-grid">
           {[{ side: 'home', label: match.homeTeam.name }, { side: 'away', label: match.awayTeam.name }].map(({ side, label }) => (
-            <div key={side} style={{ background: '#fff', border: '1px solid #dee2e6', borderRadius: 6, padding: 10 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-                <strong>{label}</strong>
-                <div style={{ display: 'flex', gap: 6 }}>
-                  <button className="btn btn-warning btn-small" onClick={() => addCard(side, 'YELLOW_CARD')}>+ Yellow</button>
-                  <button className="btn btn-danger btn-small" onClick={() => addCard(side, 'RED_CARD')}>+ Red</button>
+            <div key={side} className="goalscorer-team-panel" style={{ background: '#fff', border: '1px solid #dee2e6', borderRadius: 6, padding: 10 }}>
+              <div className="goalscorer-cards-panel-header">
+                <strong className="goalscorer-cards-team-name">{label}</strong>
+                <div className="goalscorer-card-actions">
+                  <button type="button" className="btn btn-warning btn-small goalscorer-card-add-btn" title="Add yellow card" onClick={() => addCard(side, 'YELLOW_CARD')}>+ Y</button>
+                  <button type="button" className="btn btn-danger btn-small goalscorer-card-add-btn" title="Add red card" onClick={() => addCard(side, 'RED_CARD')}>+ R</button>
                 </div>
               </div>
               {(cards[side] || []).length === 0 && (
-                <div style={{ color: '#666', fontSize: '0.9em' }}>No cards added</div>
+                <div className="goalscorer-cards-empty">No cards added</div>
               )}
               {(cards[side] || []).map((card, idx) => (
-                <div key={`${side}-card-${idx}`} style={{ display: 'grid', gridTemplateColumns: '1fr 90px', gap: 6, alignItems: 'center', marginBottom: 6 }}>
-                  <select
-                    className="input"
+                <div key={`${side}-card-${idx}`} className="goalscorer-card-line" style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8 }}>
+                  <PlayerSelect
+                    players={getPlayersByTeam(side)}
                     value={card.playerId}
-                    onChange={(e) => updateCard(side, idx, { playerId: e.target.value })}
-                  >
-                    <option value="">Select player</option>
-                    {getPlayersByTeam(side).map(p => (
-                      <option key={p._id} value={p._id}>{p.number ? `${p.number} - ` : ''}{p.name}</option>
-                    ))}
-                  </select>
-                  <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
-                    <span style={{ fontSize: '0.8em', color: card.type === 'YELLOW_CARD' ? '#b8860b' : '#c1121f' }}>{card.type === 'YELLOW_CARD' ? 'Yellow' : 'Red'}</span>
-                    <button className="btn btn-secondary btn-small" style={{ minWidth: '60px' }} onClick={() => removeCard(side, idx)}>Remove</button>
+                    onChange={(id) => updateCard(side, idx, { playerId: id })}
+                    selectPlaceholder="Select player"
+                    selectClassName="input goalscorer-card-player-select"
+                    style={{ flex: 1, minWidth: 0 }}
+                  />
+                  <div className="goalscorer-card-meta">
+                    <span className={`goalscorer-card-type-label ${card.type === 'YELLOW_CARD' ? 'is-yellow' : 'is-red'}`}>{card.type === 'YELLOW_CARD' ? 'Yellow' : 'Red'}</span>
+                    <button type="button" className="btn btn-secondary btn-small goalscorer-card-remove-btn" onClick={() => removeCard(side, idx)}>Remove</button>
                   </div>
                 </div>
               ))}
@@ -429,33 +433,37 @@ export default function GoalScorerSelector({ match, homeScore, awayScore, onGoal
       </div>
 
       {/* Clean sheets */}
-      <div style={{ marginTop: '16px', paddingTop: '10px', borderTop: '1px solid #dee2e6' }}>
-        <h4 style={{ marginBottom: '10px' }}>Clean Sheets</h4>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+      <div className="goalscorer-panel-section goalscorer-clean-section" style={{ marginTop: '16px', paddingTop: '10px', borderTop: '1px solid #dee2e6' }}>
+        <h4 className="goalscorer-clean-heading" style={{ marginBottom: '10px' }}>Clean Sheets</h4>
+        <div className="goalscorer-clean-grid">
           {[{ side: 'home', label: match.homeTeam.name, allowed: homeCleanSheetAllowed }, { side: 'away', label: match.awayTeam.name, allowed: awayCleanSheetAllowed }].map(({ side, label, allowed }) => (
-            <div key={side} style={{ background: '#fff', border: '1px solid #dee2e6', borderRadius: 6, padding: 10 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <div key={side} className="goalscorer-team-panel goalscorer-clean-panel" style={{ background: '#fff', border: '1px solid #dee2e6', borderRadius: 6, padding: 10 }}>
+              <label className={`goalscorer-clean-label ${!allowed ? 'is-disabled' : ''}`}>
                 <input
                   type="checkbox"
+                  className="goalscorer-clean-checkbox"
                   checked={cleanSheets[side].enabled && allowed}
                   disabled={!allowed}
                   onChange={(e) => toggleCleanSheet(side, e.target.checked && allowed)}
                 />
-                <span><strong>{label}</strong> clean sheet</span>
-                {!allowed && <span style={{ color: '#666', fontSize: '0.85em' }}>(opponent scored)</span>}
-              </div>
+                <span className="goalscorer-clean-text">
+                  <span className="goalscorer-clean-team"><strong>{label}</strong></span>
+                  <span className="goalscorer-clean-sub">Clean sheet</span>
+                  {!allowed && (
+                    <span className="goalscorer-clean-hint">Unavailable — opponent scored.</span>
+                  )}
+                </span>
+              </label>
               {cleanSheets[side].enabled && allowed && (
-                <div style={{ marginTop: 8 }}>
-                  <select
-                    className="input"
+                <div className="goalscorer-clean-player-wrap" style={{ marginTop: 8 }}>
+                  <PlayerSelect
+                    players={getPlayersByTeam(side)}
                     value={cleanSheets[side].playerId}
-                    onChange={(e) => updateCleanSheetPlayer(side, e.target.value)}
-                  >
-                    <option value="">Select player for clean sheet</option>
-                    {getPlayersByTeam(side).map(p => (
-                      <option key={p._id} value={p._id}>{p.number ? `${p.number} - ` : ''}{p.name}</option>
-                    ))}
-                  </select>
+                    onChange={(id) => updateCleanSheetPlayer(side, id)}
+                    selectPlaceholder="Select player for clean sheet"
+                    selectClassName="input goalscorer-clean-player-select"
+                    style={{ width: '100%' }}
+                  />
                 </div>
               )}
             </div>
