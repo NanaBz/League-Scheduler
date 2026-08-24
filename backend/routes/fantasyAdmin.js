@@ -61,6 +61,7 @@ router.post('/reset-season', authenticateAdmin, async (req, res) => {
       message: 'Fantasy season reset. All manager squads and matchweek data cleared.',
       currentGameweek,
       cleared,
+      archive: cleared.archiveResult || null,
     });
   } catch (error) {
     return res.status(500).json({ success: false, message: error.message });

@@ -11,6 +11,7 @@ import { deriveCurrentGameweek, deriveGameweekInfo } from '../utils/fantasyGamew
 import { useFantasyDeadlineNotifications } from '../utils/fantasyDeadlineNotifications';
 import { canExpandFixtureDetails, FixtureMatchStatsExpanded } from './FixtureMatchStatsPanel';
 import OverallTeamPitchModal from './OverallTeamPitchModal';
+import FantasyManagerProfile from './FantasyManagerProfile';
 import './FantasyDashboard.css';
 
 const FANTASY_MIN_MATCHWEEK = 1;
@@ -72,7 +73,7 @@ function getTeamLogoClass(teamName) {
   return `${baseClass} ${teamClass}`;
 }
 
-export default function FantasyDashboardCard({ user, onPickTeam, onTransfers, onLeaguesCups }) {
+export default function FantasyDashboardCard({ user, onPickTeam, onTransfers, onLeaguesCups, onProfileViewChange }) {
   const [matches, setMatches] = useState([]);
   const [loading, setLoading] = useState(false);
   const [serverSeasonInfo, setServerSeasonInfo] = useState(null);
@@ -83,6 +84,11 @@ export default function FantasyDashboardCard({ user, onPickTeam, onTransfers, on
   const [highestModalOpen, setHighestModalOpen] = useState(false);
   const [fixtureWeek, setFixtureWeek] = useState(FANTASY_MIN_MATCHWEEK);
   const [expandedFixtureIds, setExpandedFixtureIds] = useState(() => new Set());
+  const [showProfile, setShowProfile] = useState(false);
+
+  useEffect(() => {
+    onProfileViewChange?.(showProfile);
+  }, [showProfile, onProfileViewChange]);
 
   const toggleFixtureExpand = useCallback((matchId) => {
     const id = String(matchId);
@@ -210,8 +216,16 @@ export default function FantasyDashboardCard({ user, onPickTeam, onTransfers, on
 
   return (
     <>
+    {showProfile ? (
+      <FantasyManagerProfile user={user} onClose={() => setShowProfile(false)} />
+    ) : (
     <div className="fantasy-card">
-      <div className="top-row">
+      <button
+        type="button"
+        className="top-row top-row--clickable"
+        onClick={() => setShowProfile(true)}
+        aria-label="Open manager profile"
+      >
         <div className="user-block">
           <div className="avatar">{initials}</div>
           <div className="names">
@@ -219,9 +233,8 @@ export default function FantasyDashboardCard({ user, onPickTeam, onTransfers, on
             <div className="manager">{user?.managerName || 'Manager'}</div>
           </div>
         </div>
-        {/* Right arrow hint (visual only) */}
-        <div aria-hidden style={{ fontWeight: 900, fontSize: 18, opacity: 0.9 }}>→</div>
-      </div>
+        <span className="fantasy-card-profile-arrow" aria-hidden>→</span>
+      </button>
 
       <div className="divider" />
 
@@ -307,7 +320,9 @@ export default function FantasyDashboardCard({ user, onPickTeam, onTransfers, on
         <button type="button" className="btn-pill" onClick={onTransfers}>Transfers</button>
       </div>
     </div>
+    )}
 
+    {!showProfile ? (
     <section className="fantasy-upcoming-fixtures" aria-label="League fixtures by matchweek">
       <h3 className="fantasy-upcoming-title">Upcoming fixtures</h3>
       <div className="fantasy-mw-nav">
@@ -441,6 +456,7 @@ export default function FantasyDashboardCard({ user, onPickTeam, onTransfers, on
         )}
       </div>
     </section>
+    ) : null}
 
     {pointsModalOpen ? (
       <OverallTeamPitchModal

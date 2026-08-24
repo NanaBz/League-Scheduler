@@ -3,6 +3,7 @@ const FantasySquad = require('../models/FantasySquad');
 const Player = require('../models/Player');
 const { isMatchweekComplete } = require('./fantasyMatchweek');
 const { lineupWithResolvedCaptains } = require('./fantasyCaptainRoles');
+const { getTransferCostForGameweek } = require('./fantasyFreeTransfers');
 
 function recalcPerformanceTotal(p) {
   const goals = p.goals || 0;
@@ -122,8 +123,10 @@ async function rescoreGameweek(matchweek, matches) {
       viceCaptainId: resolvedLineup.viceCaptainId,
       chipUsed: doc.chipUsed,
     });
+    const transferHitPoints = await getTransferCostForGameweek(doc.fantasyUser, mw);
     doc.lineup = resolvedLineup;
-    doc.points = total;
+    doc.transferHitPoints = transferHitPoints;
+    doc.points = Math.max(0, total - transferHitPoints);
     if (complete) doc.isLocked = true;
     await doc.save();
   }

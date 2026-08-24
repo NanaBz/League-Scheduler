@@ -53,11 +53,42 @@
   font-weight: 800;
   font-size: 1.05rem;
   letter-spacing: 0.2px;
+  color: #fff;
 }
 
 .fantasy-card .names .manager {
   font-size: .9rem;
-  opacity: 0.9;
+  color: rgba(255, 255, 255, 0.88);
+}
+
+.fantasy-card .top-row--clickable {
+  width: 100%;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+  padding: 0;
+  color: #fff;
+}
+
+.fantasy-card .top-row--clickable .avatar {
+  color: #fff;
+}
+
+.fantasy-card .top-row--clickable:hover .names .team {
+  text-decoration: underline;
+}
+
+.fantasy-card .top-row--clickable:focus-visible {
+  outline: 2px solid rgba(255, 255, 255, 0.85);
+  outline-offset: 3px;
+  border-radius: 8px;
+}
+
+.fantasy-card-profile-arrow {
+  font-weight: 900;
+  font-size: 18px;
+  color: rgba(255, 255, 255, 0.92);
 }
 
 .fantasy-card .divider {
@@ -400,6 +431,30 @@
   background: #f8fafc;
 }
 
+.fantasy-lc-cup-embed {
+  margin-top: 4px;
+  border-radius: 14px;
+  overflow: hidden;
+  background: #0a0a0a;
+  border: 1px solid rgba(15, 23, 42, 0.12);
+}
+
+.fantasy-lc-cup-embed .acfpl-cup-page {
+  max-width: 100%;
+}
+
+.fantasy-lc-cup-embed .acfpl-cup-page--embed {
+  padding-bottom: 20px;
+}
+
+.fantasy-lc-cup-embed .acfpl-cup-page--embed .acfpl-cup-page__hero {
+  padding: 16px 14px;
+}
+
+.fantasy-lc-cup-embed .acfpl-cup-page--embed .acfpl-cup-page__title {
+  font-size: 1.25rem;
+}
+
 /* League & Cup switch (above Overall strip) */
 .fantasy-lc-section {
   margin-top: 16px;
@@ -627,4 +682,73 @@
   color: #b91c1c;
   line-height: 1.45;
   max-width: 36rem;
+}
+
+.fpl-league-status {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+  margin-bottom: 12px;
+  padding: 14px 16px;
+  border-radius: 14px;
+  border: 1px solid rgba(15, 23, 42, 0.1);
+  background: #fff;
+}
+
+.fpl-league-status__icon {
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.fpl-league-status--champion {
+  border-color: rgba(220, 38, 38, 0.35);
+  background: linear-gradient(135deg, #fff5f5 0%, #fff 100%);
+  box-shadow: 0 0 24px rgba(220, 38, 38, 0.08);
+}
+
+.fpl-league-status--champion .fpl-league-status__icon {
+  color: var(--primary-red, #dc2626);
+}
+
+.fpl-league-status--runner-up {
+  border-color: rgba(15, 23, 42, 0.15);
+  background: linear-gradient(135deg, #f8fafc 0%, #fff 100%);
+}
+
+.fpl-league-status--runner-up .fpl-league-status__icon {
+  color: #64748b;
+}
+
+.fpl-league-status--finished .fpl-league-status__icon {
+  color: #94a3b8;
+}
+
+.fpl-league-status__title {
+  margin: 0 0 4px;
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.fpl-league-status__text {
+  margin: 0;
+  font-size: 0.85rem;
+  line-height: 1.5;
+  color: #475569;
+}
+
+.fpl-league-status__text strong {
+  color: #0f172a;
+}
+
+.fantasy-lc-section .fpl-season-podium {
+  margin-bottom: 12px;
+}
+
+.fantasy-lc-section .fpl-season-podium--compact .fpl-season-podium__card {
+  padding: 16px 14px;
+}
+
+.fantasy-lc-section .fpl-season-podium__pending {
+  margin-bottom: 12px;
 }

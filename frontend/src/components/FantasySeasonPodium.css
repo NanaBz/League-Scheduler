@@ -1,0 +1,120 @@
+.fpl-season-podium {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 14px;
+  margin-bottom: 18px;
+}
+
+@media (min-width: 720px) {
+  .fpl-season-podium:not(.fpl-season-podium--compact) {
+    grid-template-columns: 1.05fr 0.95fr;
+    align-items: stretch;
+  }
+}
+
+.fpl-season-podium__card {
+  padding: 20px 18px;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: #111;
+  text-align: center;
+  color: #fff;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .fpl-season-podium__card--champion {
+    animation: fplPodiumFadeIn 0.4s ease-out;
+  }
+
+  .fpl-season-podium__card--runner-up {
+    animation: fplPodiumFadeIn 0.4s ease-out 0.08s backwards;
+  }
+}
+
+@keyframes fplPodiumFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.fpl-season-podium__card--champion {
+  background: linear-gradient(160deg, #1a0808 0%, #111 45%, #3f0f0f 100%);
+  border-color: rgba(220, 38, 38, 0.45);
+  box-shadow: 0 0 32px rgba(220, 38, 38, 0.15);
+}
+
+.fpl-season-podium__card--runner-up {
+  background: linear-gradient(160deg, #141414 0%, #111 55%, #1a1a1a 100%);
+  border-color: rgba(255, 255, 255, 0.18);
+}
+
+.fpl-season-podium__card--yours {
+  box-shadow:
+    0 0 0 1px rgba(220, 38, 38, 0.35),
+    0 0 28px rgba(220, 38, 38, 0.12);
+}
+
+.fpl-season-podium__icon-wrap {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 8px;
+  color: var(--primary-red, #dc2626);
+}
+
+.fpl-season-podium__card--runner-up .fpl-season-podium__icon-wrap {
+  color: rgba(255, 255, 255, 0.75);
+}
+
+.fpl-season-podium__badge {
+  margin: 0 0 10px;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.fpl-season-podium__team {
+  margin: 0 0 8px;
+  font-size: clamp(1.25rem, 4vw, 1.6rem);
+  font-weight: 900;
+  letter-spacing: -0.02em;
+}
+
+.fpl-season-podium__points {
+  margin: 0 0 12px;
+  font-size: 0.88rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  color: rgba(255, 255, 255, 0.78);
+  font-variant-numeric: tabular-nums;
+}
+
+.fpl-season-podium__message {
+  margin: 0;
+  font-size: 0.85rem;
+  line-height: 1.5;
+  color: rgba(255, 255, 255, 0.72);
+}
+
+.fpl-season-podium__pending {
+  margin: 0 0 16px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.04);
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.75);
+  text-align: center;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fpl-season-podium__card--champion,
+  .fpl-season-podium__card--runner-up {
+    animation: none !important;
+  }
+}

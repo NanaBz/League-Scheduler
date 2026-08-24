@@ -1,11 +1,13 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ArrowLeft, BarChart3, Crown, Star, Target, Zap } from 'lucide-react';
 import api, { parseApiErrorMessage } from '../utils/api';
 import {
   countSquadPlayers,
+  fantasyUserId,
   loadLineupFromLocalStorage,
   loadSquadFromLocalStorage,
   normalizeSquadShape,
+  resolveSquadFromApiAndCache,
   saveLineupToLocalStorage,
   saveSquadToLocalStorage,
 } from '../utils/fantasySquadStorage';
@@ -22,6 +24,7 @@ import {
   swapLineupPlayers,
   validateLineup,
   applyDefaultCaptainRoles,
+  lineupPayloadsEqual,
 } from '../utils/fantasyLineup';
 import JerseyIcon from './JerseyIcon';
 import { getTeamCode, kitColors } from '../utils/fantasyKitColors';
@@ -90,8 +93,17 @@ export default function PickTeam({ user, onBack, onGoToTransfers }) {
   const [playerModal, setPlayerModal] = useState(null);
   const [chipStatus, setChipStatus] = useState(() => buildChipStatusForGameweek(1));
   const [activeChip, setActiveChip] = useState(null);
+  const [chipState, setChipState] = useState(null);
+  const [serverSquadCount, setServerSquadCount] = useState(0);
   const [chipModalId, setChipModalId] = useState(null);
   const [feedback, setFeedback] = useState(null);
+  const [savedSnapshot, setSavedSnapshot] = useState(null);
+  const [unsavedModalOpen, setUnsavedModalOpen] = useState(false);
+  const [pendingNavigation, setPendingNavigation] = useState(null);
+  const hydrateRetryRef = useRef(0);
+  const savedBaselineRef = useRef(null);
+  const historyTrapActiveRef = useRef(false);
+  const skipHistoryCleanupRef = useRef(false);
 
   const derivedGameweekInfo = useMemo(() => deriveGameweekInfo(matches), [matches]);
   const upcomingInfo = useMemo(() => {
@@ -103,11 +115,15 @@ export default function PickTeam({ user, onBack, onGoToTransfers }) {
   const currentGameweek = upcomingInfo.week || 1;
 
   useEffect(() => {
-    setChipStatus((prev) => buildChipStatusForGameweek(currentGameweek, prev, chipHistory));
-  }, [currentGameweek, chipHistory]);
+    setChipStatus((prev) =>
+      buildChipStatusForGameweek(currentGameweek, prev, chipHistory, activeChip, chipState)
+    );
+  }, [currentGameweek, chipHistory, activeChip, chipState]);
 
   const loadData = useCallback(async () => {
     setLoading(true);
+    savedBaselineRef.current = null;
+    setSavedSnapshot(null);
     try {
       const matchRes = await api.get('/matches', { params: { competition: 'league' } });
       const matchList = Array.isArray(matchRes.data) ? matchRes.data : [];
@@ -118,79 +134,135 @@ export default function PickTeam({ user, onBack, onGoToTransfers }) {
       } catch (err) {
         setServerSeasonInfo(null);
       }
-      try {
-        const chipsRes = await api.get('/fantasy/my-chips');
-        if (chipsRes?.data?.success) {
-          setChipHistory(chipsRes.data.chipHistory || {});
-        }
-      } catch (err) {
-        setChipHistory({});
-      }
-      const gameweek = deriveGameweekInfo(matchList).week || 1;
-
       let rawSquad = null;
       let savedLineup = null;
       let transferInOrder = [];
+      let serverChipState = null;
+      let apiSquadCount = 0;
       try {
         const squadRes = await api.get('/fantasy/my-squad');
         if (squadRes.data?.success) {
           rawSquad = squadRes.data.squad;
           savedLineup = squadRes.data.lineup;
           transferInOrder = squadRes.data.transferInOrder || [];
+          serverChipState = squadRes.data.chipState || null;
+          apiSquadCount =
+            typeof squadRes.data.squadPlayerCount === 'number'
+              ? squadRes.data.squadPlayerCount
+              : countSquadPlayers(rawSquad);
         }
       } catch {
         /* fall back to local cache */
       }
 
-      if (user?.id) {
-        const cached = loadSquadFromLocalStorage(user.id);
-        if (cached && countSquadPlayers(cached) === 13) {
-          if (!rawSquad || countSquadPlayers(rawSquad) < 13) {
-            rawSquad = normalizeSquadShape(cached);
-          }
-        }
-        if (!savedLineup) {
-          savedLineup = loadLineupFromLocalStorage(user.id);
+      const uid = fantasyUserId(user);
+      if ((!rawSquad || countSquadPlayers(rawSquad) === 0) && uid) {
+        const cachedOnly = loadSquadFromLocalStorage(uid);
+        if (countSquadPlayers(cachedOnly) > 0) {
+          rawSquad = cachedOnly;
         }
       }
 
-      if (rawSquad && countSquadPlayers(rawSquad) > 0) {
-        const refreshed = refreshSquadFixtures(rawSquad, matchList, gameweek);
+      let history = chipHistory;
+      try {
+        const chipsRes = await api.get('/fantasy/my-chips');
+        if (chipsRes?.data?.success) {
+          history = chipsRes.data.chipHistory || {};
+          setChipHistory(history);
+          if (chipsRes.data.chipState) serverChipState = chipsRes.data.chipState;
+        }
+      } catch {
+        if (serverChipState?.chipHistory) {
+          history = serverChipState.chipHistory;
+          setChipHistory(history);
+        }
+      }
+
+      const gameweek = deriveGameweekInfo(matchList).week || 1;
+      rawSquad = resolveSquadFromApiAndCache(rawSquad, uid, apiSquadCount, {
+        preferApi: serverChipState?.freeHitExpired === true,
+      });
+      let resolvedCount = countSquadPlayers(rawSquad);
+      if (apiSquadCount >= 13 && resolvedCount < 13 && uid) {
+        const cached = loadSquadFromLocalStorage(uid);
+        if (countSquadPlayers(cached) === 13) {
+          rawSquad = normalizeSquadShape(cached);
+          resolvedCount = 13;
+        }
+      }
+      setServerSquadCount(Math.max(apiSquadCount, resolvedCount));
+      setChipState(serverChipState);
+      const resolvedChip =
+        serverChipState?.activeChip || savedLineup?.chipUsed || null;
+
+      if (uid && !savedLineup) {
+        savedLineup = loadLineupFromLocalStorage(uid);
+      }
+
+      if (resolvedCount >= 13 || apiSquadCount >= 13) {
+        const refreshed = refreshSquadFixtures(
+          normalizeSquadShape(rawSquad),
+          matchList,
+          gameweek
+        );
         setSquad(refreshed);
-        if (user?.id) saveSquadToLocalStorage(user.id, refreshed);
+        if (uid) saveSquadToLocalStorage(uid, refreshed);
+        if (uid && countSquadPlayers(refreshed) === 13 && apiSquadCount < 13) {
+          api.put('/fantasy/my-squad', { squad: refreshed }).catch(() => {});
+        }
 
-        const players = flattenSquad(refreshed);
-
-        if (savedLineup && countSquadPlayers(refreshed) === 13) {
-          const byId = new Map(players.map((p) => [playerId(p), p]));
-          const hydrated = hydrateLineupFromPayload(savedLineup, byId);
-          const relaid = relayoutLineup(hydrated);
-          const check = validateLineup(relaid);
-          const baseLineup = check.ok
-            ? relaid
-            : buildLineupFromSquad(players, {
-                captainId: savedLineup.captainId,
-                viceCaptainId: savedLineup.viceCaptainId,
-              });
-          const order = transferInOrder.length ? transferInOrder : players.map(playerId);
-          setLineup(applyDefaultCaptainRoles(baseLineup, order));
-          // If the saved lineup has a chip used, set it as active
-          if (savedLineup?.chipUsed) {
-            setActiveChip(savedLineup.chipUsed);
+        try {
+          const players = flattenSquad(refreshed);
+          if (players.length === 13) {
+            if (savedLineup) {
+              const byId = new Map(players.map((p) => [playerId(p), p]));
+              const hydrated = hydrateLineupFromPayload(savedLineup, byId);
+              const relaid = relayoutLineup(hydrated);
+              const check = validateLineup(relaid);
+              const baseLineup = check.ok
+                ? relaid
+                : buildLineupFromSquad(players, {
+                    captainId: savedLineup.captainId,
+                    viceCaptainId: savedLineup.viceCaptainId,
+                  });
+              const order = transferInOrder.length ? transferInOrder : players.map(playerId);
+              setLineup(applyDefaultCaptainRoles(baseLineup, order));
+            } else {
+              const order = transferInOrder.length ? transferInOrder : players.map(playerId);
+              setLineup(applyDefaultCaptainRoles(buildLineupFromSquad(players), order));
+            }
+          } else {
+            setLineup(null);
           }
-        } else if (players.length === 13) {
-          const order = transferInOrder.length ? transferInOrder : players.map(playerId);
-          setLineup(applyDefaultCaptainRoles(buildLineupFromSquad(players), order));
-        } else {
-          setLineup(null);
+        } catch {
+          const players = flattenSquad(refreshed);
+          if (players.length === 13) {
+            setLineup(
+              applyDefaultCaptainRoles(
+                buildLineupFromSquad(players),
+                transferInOrder.length ? transferInOrder : players.map(playerId)
+              )
+            );
+          } else {
+            setLineup(null);
+          }
         }
       } else {
         setSquad(null);
         setLineup(null);
       }
-    } catch {
-      setSquad(null);
-      setLineup(null);
+      setActiveChip(resolvedChip);
+      setChipStatus(buildChipStatusForGameweek(gameweek, {}, history, resolvedChip, serverChipState));
+    } catch (err) {
+      console.error('Pick team load failed:', err);
+      const uid = fantasyUserId(user);
+      const cached = uid ? loadSquadFromLocalStorage(uid) : null;
+      if (countSquadPlayers(cached) === 13) {
+        setSquad(normalizeSquadShape(cached));
+        setServerSquadCount(13);
+        const players = flattenSquad(cached);
+        setLineup(applyDefaultCaptainRoles(buildLineupFromSquad(players), players.map(playerId)));
+      }
     } finally {
       setLoading(false);
     }
@@ -202,6 +274,8 @@ export default function PickTeam({ user, onBack, onGoToTransfers }) {
 
   const players = useMemo(() => flattenSquad(squad), [squad]);
   const squadComplete = players.length === 13;
+  const squadDisplayCount = Math.max(players.length, serverSquadCount);
+  const squadHydrating = !loading && serverSquadCount >= 13 && players.length < 13;
   const formation = formationFromLineup(lineup);
   const deadlinePassed = isPastDeadline(upcomingInfo.deadline);
 
@@ -260,7 +334,7 @@ export default function PickTeam({ user, onBack, onGoToTransfers }) {
     setChipModalId(chipId);
   };
 
-  const handlePlayChip = () => {
+  const handlePlayChip = async () => {
     if (!chipModalId) return;
     if (
       isTransferChip(chipModalId) &&
@@ -274,47 +348,220 @@ export default function PickTeam({ user, onBack, onGoToTransfers }) {
       setChipModalId(null);
       return;
     }
-    if (activeChip === chipModalId) {
-      setActiveChip(null);
-      setChipStatus((prev) =>
-        buildChipStatusForGameweek(currentGameweek, { ...prev, [chipModalId]: 'available' })
-      );
-    } else if (activeChip) {
+
+    const cancelling = activeChip === chipModalId;
+    const nextChip = cancelling ? null : chipModalId;
+
+    if (nextChip && activeChip && activeChip !== nextChip) {
       setFeedback({
         title: 'One chip at a time',
         message: 'Cancel your active chip before playing another.',
         type: 'warning',
       });
+      setChipModalId(null);
       return;
-    } else {
-      setActiveChip(chipModalId);
-      setChipStatus((prev) => ({ ...prev, [chipModalId]: 'active' }));
+    }
+
+    if (nextChip && chipState?.used?.[chipModalId]) {
+      const usedGw = chipState?.usedGameweek?.[chipModalId];
+      setFeedback({
+        title: 'Chip already used',
+        message: usedGw
+          ? `This chip was already played in Gameweek ${usedGw}. Each chip can only be used once per season.`
+          : 'This chip has already been used this season.',
+        type: 'warning',
+      });
+      setChipModalId(null);
+      return;
+    }
+
+    if (nextChip && isTransferChip(chipModalId)) {
+      const uid = fantasyUserId(user);
+      let squadToSave = squad;
+      if (countSquadPlayers(squadToSave) < 13 && uid) {
+        const cached = loadSquadFromLocalStorage(uid);
+        if (countSquadPlayers(cached) === 13) {
+          squadToSave = normalizeSquadShape(cached);
+          setSquad(squadToSave);
+        }
+      }
+      if (countSquadPlayers(squadToSave) === 13) {
+        try {
+          await api.put('/fantasy/my-squad', { squad: squadToSave });
+          if (uid) saveSquadToLocalStorage(uid, squadToSave);
+        } catch (err) {
+          setFeedback({
+            title: 'Squad not saved',
+            message: parseApiErrorMessage(err, 'Save your squad before playing this chip.'),
+            type: 'error',
+          });
+          setChipModalId(null);
+          return;
+        }
+      }
+    }
+
+    try {
+      const { data } = await api.put('/fantasy/my-chip', { chip: nextChip });
+      if (!data?.success) {
+        setFeedback({
+          title: 'Chip not saved',
+          message: data?.message || 'Could not update chip.',
+          type: 'error',
+        });
+        setChipModalId(null);
+        return;
+      }
+      const cs = data.chipState;
+      setChipState(cs || null);
+      if (cs?.chipHistory) setChipHistory(cs.chipHistory);
+      setActiveChip(cs?.activeChip || null);
+      setChipStatus(
+        buildChipStatusForGameweek(
+          currentGameweek,
+          {},
+          cs?.chipHistory || chipHistory,
+          cs?.activeChip || null,
+          cs
+        )
+      );
+      if (nextChip && isTransferChip(nextChip)) {
+        setFeedback({
+          title: `${chipModalId === 'WC' ? 'Wildcard' : 'Free Hit'} active`,
+          message:
+            chipModalId === 'WC'
+              ? 'Unlimited transfers in Transfers. Squad changes are permanent.'
+              : 'Unlimited transfers this gameweek only. Your squad reverts next gameweek.',
+          type: 'success',
+        });
+      } else if (nextChip) {
+        setFeedback({
+          title: `${FANTASY_CHIPS.find((c) => c.id === nextChip)?.name || 'Chip'} active`,
+          message: `Chip is active for Gameweek ${currentGameweek}. Save your team to confirm.`,
+          type: 'success',
+        });
+      }
+    } catch (err) {
+      setFeedback({
+        title: 'Chip not saved',
+        message: parseApiErrorMessage(err, 'Could not update chip.'),
+        type: 'error',
+      });
+      setChipModalId(null);
+      return;
     }
     setChipModalId(null);
   };
 
-  const handleSave = async () => {
+  const currentSnapshot = useMemo(() => {
+    if (!lineup) return null;
+    return lineupToPayload(lineup, { chipUsed: activeChip });
+  }, [lineup, activeChip]);
+
+  const isDirty = useMemo(() => {
+    if (!currentSnapshot || !savedSnapshot) return false;
+    return !lineupPayloadsEqual(currentSnapshot, savedSnapshot);
+  }, [currentSnapshot, savedSnapshot]);
+
+  useEffect(() => {
+    if (loading || !lineup || !squadComplete || savedBaselineRef.current) return;
+    const snapshot = lineupToPayload(lineup, { chipUsed: activeChip });
+    savedBaselineRef.current = snapshot;
+    setSavedSnapshot(snapshot);
+  }, [loading, lineup, squadComplete, activeChip]);
+
+  const attemptNavigation = useCallback(
+    (navigateFn) => {
+      if (!navigateFn) return;
+      if (!isDirty) {
+        navigateFn();
+        return;
+      }
+      setPendingNavigation(() => navigateFn);
+      setUnsavedModalOpen(true);
+    },
+    [isDirty]
+  );
+
+  const closeUnsavedModal = useCallback(() => {
+    setUnsavedModalOpen(false);
+    setPendingNavigation(null);
+  }, []);
+
+  const leaveWithoutSaving = useCallback(() => {
+    setUnsavedModalOpen(false);
+    const navigateFn = pendingNavigation;
+    setPendingNavigation(null);
+    skipHistoryCleanupRef.current = true;
+    navigateFn?.();
+  }, [pendingNavigation]);
+
+  useEffect(() => {
+    if (!isDirty) {
+      if (unsavedModalOpen) {
+        setUnsavedModalOpen(false);
+        setPendingNavigation(null);
+      } else if (historyTrapActiveRef.current && !skipHistoryCleanupRef.current) {
+        historyTrapActiveRef.current = false;
+        window.history.back();
+      }
+      skipHistoryCleanupRef.current = false;
+      return undefined;
+    }
+
+    const onBeforeUnload = (event) => {
+      event.preventDefault();
+      event.returnValue = '';
+    };
+
+    const onPopState = () => {
+      window.history.pushState({ pickTeamGuard: true }, '');
+      setPendingNavigation(() => () => {
+        skipHistoryCleanupRef.current = true;
+        historyTrapActiveRef.current = false;
+        window.history.back();
+      });
+      setUnsavedModalOpen(true);
+    };
+
+    window.addEventListener('beforeunload', onBeforeUnload);
+    window.addEventListener('popstate', onPopState);
+
+    if (!historyTrapActiveRef.current) {
+      window.history.pushState({ pickTeamGuard: true }, '');
+      historyTrapActiveRef.current = true;
+    }
+
+    return () => {
+      window.removeEventListener('beforeunload', onBeforeUnload);
+      window.removeEventListener('popstate', onPopState);
+    };
+  }, [isDirty, unsavedModalOpen]);
+
+  const handleSave = async ({ quiet = false } = {}) => {
     if (deadlinePassed) {
       setFeedback({
         title: 'Deadline passed',
         message: 'The gameweek deadline has passed. Your team is locked until the next gameweek.',
         type: 'warning',
       });
-      return;
+      return false;
     }
     const check = validateLineup(lineup);
     if (!check.ok) {
       setFeedback({ title: 'Invalid lineup', message: check.message, type: 'warning' });
-      return;
+      return false;
     }
     setSaving(true);
     const payload = lineupToPayload(lineup, { chipUsed: activeChip });
     try {
       const { data } = await api.put('/fantasy/my-lineup', { lineup: payload });
       if (user?.id) {
-        saveLineupToLocalStorage(user.id, payload);
-        if (squad) saveSquadToLocalStorage(user.id, squad);
+        saveLineupToLocalStorage(fantasyUserId(user), payload);
+        if (squad) saveSquadToLocalStorage(fantasyUserId(user), squad);
       }
+      let lineupForSnapshot = lineup;
+      let chipForSnapshot = activeChip;
       if (data?.lineup && squad) {
         const players = flattenSquad(squad);
         const byId = new Map(players.map((p) => [playerId(p), p]));
@@ -322,38 +569,93 @@ export default function PickTeam({ user, onBack, onGoToTransfers }) {
         const relaid = relayoutLineup(hydrated);
         if (relaid && validateLineup(relaid).ok) {
           setLineup(relaid);
+          lineupForSnapshot = relaid;
         }
       }
-      // Update chip history with newly used chip
-      if (activeChip) {
-        setChipHistory((prev) => ({
-          ...prev,
-          [currentGameweek]: activeChip
-        }));
-        setChipStatus((prev) => ({ ...prev, [activeChip]: 'played' }));
-        setActiveChip(null);
+      if (data?.chipState) {
+        setChipState(data.chipState);
+        if (data.chipState.chipHistory) setChipHistory(data.chipState.chipHistory);
+        chipForSnapshot = data.chipState.activeChip || activeChip || null;
+        setActiveChip(chipForSnapshot);
+        setChipStatus(
+          buildChipStatusForGameweek(
+            currentGameweek,
+            {},
+            data.chipState.chipHistory || chipHistory,
+            chipForSnapshot,
+            data.chipState
+          )
+        );
       }
-      setFeedback({
-        title: 'Team saved',
-        message: `Your starting 9 and bench are saved for Gameweek ${currentGameweek}. They stay until you make transfers.`,
-        type: 'success',
-      });
+      if (!quiet) {
+        setFeedback({
+          title: 'Team saved',
+          message: `Your starting 9 and bench are saved for Gameweek ${currentGameweek}. They stay until you make transfers.`,
+          type: 'success',
+        });
+      }
+      const snapshot = lineupToPayload(lineupForSnapshot, { chipUsed: chipForSnapshot });
+      savedBaselineRef.current = snapshot;
+      setSavedSnapshot(snapshot);
+      return true;
     } catch (err) {
       if (user?.id) {
-        saveLineupToLocalStorage(user.id, payload);
-        if (squad) saveSquadToLocalStorage(user.id, squad);
+        saveLineupToLocalStorage(fantasyUserId(user), payload);
+        if (squad) saveSquadToLocalStorage(fantasyUserId(user), squad);
       }
-      setFeedback({
-        title: 'Save failed',
-        message: parseApiErrorMessage(err, 'Could not save your team.'),
-        type: 'error',
-      });
+      if (!quiet) {
+        setFeedback({
+          title: 'Save failed',
+          message: parseApiErrorMessage(err, 'Could not save your team.'),
+          type: 'error',
+        });
+      }
+      return false;
     } finally {
       setSaving(false);
     }
   };
 
-  if (loading) {
+  const handleSaveFromUnsavedModal = async () => {
+    const ok = await handleSave({ quiet: false });
+    if (!ok) return;
+    setUnsavedModalOpen(false);
+    const navigateFn = pendingNavigation;
+    setPendingNavigation(null);
+    skipHistoryCleanupRef.current = Boolean(navigateFn);
+    navigateFn?.();
+  };
+
+  const handleSaveClick = () => {
+    handleSave();
+  };
+
+  useEffect(() => {
+    if (!squadHydrating) {
+      hydrateRetryRef.current = 0;
+      return undefined;
+    }
+    const uid = fantasyUserId(user);
+    const cached = uid ? loadSquadFromLocalStorage(uid) : null;
+    if (countSquadPlayers(cached) === 13) {
+      const refreshed = refreshSquadFixtures(
+        normalizeSquadShape(cached),
+        matches,
+        currentGameweek
+      );
+      setSquad(refreshed);
+      const flat = flattenSquad(refreshed);
+      setLineup(applyDefaultCaptainRoles(buildLineupFromSquad(flat), flat.map(playerId)));
+      hydrateRetryRef.current = 0;
+      return undefined;
+    }
+    if (hydrateRetryRef.current >= 1) return undefined;
+    hydrateRetryRef.current += 1;
+    loadData();
+    return undefined;
+  }, [squadHydrating, user, matches, currentGameweek, loadData]);
+
+  if (loading || squadHydrating) {
     return (
       <div className="pick-team-container fantasy-section">
         <p style={{ color: '#64748b', textAlign: 'center', padding: 40 }}>Loading your squad…</p>
@@ -362,21 +664,39 @@ export default function PickTeam({ user, onBack, onGoToTransfers }) {
   }
 
   if (!squadComplete) {
+    const transferChipActive =
+      !squadComplete &&
+      (chipState?.unlimitedTransfers ||
+        (isTransferChip(activeChip) && transferChipsAvailableForGameweek(currentGameweek)));
+
     return (
       <div className="pick-team-container fantasy-section">
-        <button type="button" className="back-link" onClick={onBack}>
+        <button type="button" className="back-link" onClick={() => attemptNavigation(onBack)}>
           <ArrowLeft size={18} aria-hidden />
           <span>Back</span>
         </button>
         <div className="transfers-prompt">
           <div className="prompt-icon" aria-hidden>👕</div>
-          <h3>Complete transfers first</h3>
+          <h3>{transferChipActive ? 'Head to Transfers' : 'Complete transfers first'}</h3>
           <p>
-            Pick team unlocks once all <strong>13 players</strong> are saved in Transfers
-            ({players.length}/13 so far).
+            {transferChipActive ? (
+              <>
+                <strong>{activeChip === 'WC' ? 'Wildcard' : 'Free Hit'}</strong> is active — unlimited
+                transfers in Transfers. Pick all <strong>13 players</strong>, tap{' '}
+                <strong>Save squad</strong>, then return here ({squadDisplayCount}/13 saved).
+                {activeChip === 'WC'
+                  ? ' Squad changes are permanent.'
+                  : ' Your squad reverts next gameweek.'}
+              </>
+            ) : (
+              <>
+                Pick team unlocks once all <strong>13 players</strong> are saved in Transfers
+                ({squadDisplayCount}/13 so far).
+              </>
+            )}
           </p>
           {onGoToTransfers ? (
-            <button type="button" className="fantasy-btn fantasy-btn-primary" onClick={onGoToTransfers}>
+            <button type="button" className="fantasy-btn fantasy-btn-primary" onClick={() => attemptNavigation(onGoToTransfers)}>
               Go to Transfers
             </button>
           ) : null}
@@ -389,7 +709,7 @@ export default function PickTeam({ user, onBack, onGoToTransfers }) {
     <div className="pick-team-container fantasy-section">
       <div className="pick-team-header">
         <div>
-          <button type="button" className="back-link" onClick={onBack}>
+          <button type="button" className="back-link" onClick={() => attemptNavigation(onBack)}>
             <ArrowLeft size={18} aria-hidden />
             <span>Back</span>
           </button>
@@ -415,13 +735,15 @@ export default function PickTeam({ user, onBack, onGoToTransfers }) {
               className={`chip-card status-${status} ${isDisabled ? 'disabled' : ''}`}
               onClick={() => handleChipClick(id)}
               disabled={isDisabled}
-              aria-label={`${name} — ${chipStatusLabel(status)}`}
+              aria-label={`${name} — ${chipStatusLabel(status, id, chipState)}`}
             >
               <span className="chip-icon">
                 <Icon size={22} strokeWidth={2.2} />
               </span>
               <span className="chip-name">{name}</span>
-              <span className={`chip-status status-${status}`}>{chipStatusLabel(status)}</span>
+              <span className={`chip-status status-${status}`}>
+                {chipStatusLabel(status, id, chipState)}
+              </span>
             </button>
           );
         })}
@@ -523,7 +845,7 @@ export default function PickTeam({ user, onBack, onGoToTransfers }) {
         className="fantasy-btn fantasy-btn-primary"
         style={{ width: '100%', marginTop: 8 }}
         disabled={saving || deadlinePassed}
-        onClick={handleSave}
+        onClick={handleSaveClick}
       >
         {deadlinePassed
           ? 'Deadline passed — team locked'
@@ -566,6 +888,25 @@ export default function PickTeam({ user, onBack, onGoToTransfers }) {
           message={feedback.message}
           type={feedback.type}
           onClose={() => setFeedback(null)}
+        />
+      ) : null}
+
+      {unsavedModalOpen ? (
+        <ValidationModal
+          title="Unsaved Changes"
+          message="You have unsaved changes to your team. If you leave now, your changes will be lost."
+          type="warning"
+          actionText="Stay and Continue"
+          onClose={closeUnsavedModal}
+          secondaryAction={{
+            label: 'Leave Without Saving',
+            onClick: leaveWithoutSaving,
+          }}
+          saveAction={{
+            label: saving ? 'Saving…' : 'Save',
+            onClick: handleSaveFromUnsavedModal,
+            disabled: saving || deadlinePassed,
+          }}
         />
       ) : null}
     </div>

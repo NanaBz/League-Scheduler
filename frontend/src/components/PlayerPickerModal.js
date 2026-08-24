@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import api from '../utils/api';
+import { displaySelectionPercentage, displayTotalPoints } from '../utils/fantasyPlayerStatsDisplay';
 import './PlayerPickerModal.css';
 
 const POSITION_OPTIONS = [
@@ -29,6 +30,7 @@ export default function PlayerPickerModal({ lockedPosition, selectedIds = [], on
   const [clubLabel, setClubLabel] = useState('All Clubs');
   const [players, setPlayers] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [loadError, setLoadError] = useState('');
 
   useEffect(() => { if (lockedPosition) setPosition(lockedPosition); }, [lockedPosition]);
 
@@ -51,6 +53,7 @@ export default function PlayerPickerModal({ lockedPosition, selectedIds = [], on
   useEffect(() => {
     const queryPlayers = async () => {
       setLoading(true);
+      setLoadError('');
       try {
         const params = new URLSearchParams();
         if (position && position !== 'ALL') params.append('position', position);
@@ -62,6 +65,7 @@ export default function PlayerPickerModal({ lockedPosition, selectedIds = [], on
         setPlayers(data.players || []);
       } catch {
         setPlayers([]);
+        setLoadError('Could not load players. Please try again.');
       } finally {
         setLoading(false);
       }
@@ -139,8 +143,13 @@ export default function PlayerPickerModal({ lockedPosition, selectedIds = [], on
           </div>
         </div>
         <div className="ppm-list">
-          {loading ? <div className="ppm-loading">Loading…</div> : (
-            players.length === 0 ? <div className="ppm-empty">No players found</div> : (
+          {loading ? (
+            <div className="ppm-loading">Loading…</div>
+          ) : loadError ? (
+            <div className="ppm-empty ppm-empty--error">{loadError}</div>
+          ) : players.length === 0 ? (
+            <div className="ppm-empty">No players found</div>
+          ) : (
               players.map(p => {
                 const isTaken = selectedIds.includes(p._id);
                 return (
@@ -155,8 +164,8 @@ export default function PlayerPickerModal({ lockedPosition, selectedIds = [], on
                     </div>
                     <div className="ppm-meta">
                       <div className="ppm-price">{(p.fantasyPrice || 0).toFixed(1)}m</div>
-                      <div className="ppm-stat">Sel: {p.selectionPercentage?.toFixed ? p.selectionPercentage.toFixed(1) : p.selectionPercentage}%</div>
-                      <div className="ppm-stat">Pts: {p.totalPoints}</div>
+                      <div className="ppm-stat">Sel: {displaySelectionPercentage(p.selectionPercentage)}%</div>
+                      <div className="ppm-stat">Pts: {displayTotalPoints(p.totalPoints)}</div>
                       <div className="ppm-next">
                         {p.nextThree?.length ? p.nextThree.map((n, i) => (
                           <span key={i} className="ppm-next-pill">GW{n.matchweek || '?'}: {n.opponent || 'TBD'}</span>
@@ -166,8 +175,7 @@ export default function PlayerPickerModal({ lockedPosition, selectedIds = [], on
                   </div>
                 );
               })
-            )
-          )}
+            )}
         </div>
       </div>
     </div>

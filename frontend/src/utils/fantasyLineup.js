@@ -366,6 +366,35 @@ export function lineupToPayload(lineup, options = {}) {
   };
 }
 
+function normalizeIdList(arr) {
+  return (arr || []).map((id) => String(id)).filter(Boolean);
+}
+
+/** Canonical payload shape for comparing saved vs current pick-team state. */
+export function normalizeLineupPayload(payload) {
+  if (!payload) return null;
+  return {
+    formation: payload.formation || null,
+    starters: {
+      gk: normalizeIdList(payload.starters?.gk),
+      df: normalizeIdList(payload.starters?.df),
+      mf: normalizeIdList(payload.starters?.mf),
+      att: normalizeIdList(payload.starters?.att),
+    },
+    bench: normalizeIdList(payload.bench),
+    captainId: payload.captainId ? String(payload.captainId) : null,
+    viceCaptainId: payload.viceCaptainId ? String(payload.viceCaptainId) : null,
+    chipUsed: payload.chipUsed || null,
+  };
+}
+
+export function lineupPayloadsEqual(a, b) {
+  const left = normalizeLineupPayload(a);
+  const right = normalizeLineupPayload(b);
+  if (!left || !right) return left === right;
+  return JSON.stringify(left) === JSON.stringify(right);
+}
+
 export function hydrateLineupFromPayload(payload, playersById) {
   const resolvePlayer = (idOrPlayer) => {
     if (!idOrPlayer) return null;

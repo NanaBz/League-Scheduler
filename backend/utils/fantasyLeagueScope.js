@@ -3,6 +3,7 @@
  * Cup, Super Cup, ACWPL, and girls competitions must not affect fantasy data or admin tools.
  */
 const FANTASY_MATCH_COMPETITION = 'league';
+const FANTASY_MAX_MATCHWEEK = 10;
 
 function assertFantasyLeagueMatch(match, res) {
   if (!match) {
@@ -21,5 +22,6 @@ function assertFantasyLeagueMatch(match, res) {
 
 module.exports = {
   FANTASY_MATCH_COMPETITION,
+  FANTASY_MAX_MATCHWEEK,
   assertFantasyLeagueMatch,
 };

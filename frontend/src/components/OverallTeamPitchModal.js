@@ -29,7 +29,6 @@ function displayToLineupShape(display) {
 
 function PitchPlayer({ player, showPoints = true }) {
   if (!player) return null;
-  const pid = player._id || player.id;
   return (
     <div
       className="pv-player-slot"

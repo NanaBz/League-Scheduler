@@ -21,6 +21,7 @@ export default function FantasyAuth() {
   const [loadingMe, setLoadingMe] = useState(!!localStorage.getItem(TOKEN_KEY));
   const [tab, setTab] = useState('login'); // login | register | verify
   const [subView, setSubView] = useState(null); // null | pick | transfers | leagues
+  const [managerProfileOpen, setManagerProfileOpen] = useState(false);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
 
@@ -196,7 +197,7 @@ export default function FantasyAuth() {
       );
     }
     if (subView === 'leagues') {
-      return <LeaguesAndCups onBack={() => setSubView(null)} />;
+      return <LeaguesAndCups onBack={() => setSubView(null)} user={user} />;
     }
 
     return (
@@ -212,8 +213,9 @@ export default function FantasyAuth() {
           onPickTeam={() => setSubView('pick')}
           onTransfers={() => setSubView('transfers')}
           onLeaguesCups={() => setSubView('leagues')}
+          onProfileViewChange={setManagerProfileOpen}
         />
-        <FantasyLeagueCupSection user={user} />
+        {!managerProfileOpen ? <FantasyLeagueCupSection user={user} /> : null}
       </div>
     );
   }

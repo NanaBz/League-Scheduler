@@ -55,6 +55,11 @@ const FantasySquadSchema = new mongoose.Schema({
   chipUsed: {
     type: String,
     default: null
+  },
+  /** Points deducted for extra transfers this gameweek (4 per transfer). */
+  transferHitPoints: {
+    type: Number,
+    default: 0
   }
 }, {
   timestamps: true

@@ -345,6 +345,21 @@
   margin-bottom: 24px;
 }
 
+.cups-content--acfpl {
+  background: #0a0a0a;
+  margin: 0 -16px;
+  padding: 16px;
+  min-height: 60vh;
+  border-radius: 16px 16px 0 0;
+}
+
+@media (max-width: 768px) {
+  .cups-content--acfpl {
+    margin: 0 -12px;
+    padding: 12px;
+  }
+}
+
 .cup-bracket {
   padding: 40px 20px;
   background: #f9fafb;

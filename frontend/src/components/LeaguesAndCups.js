@@ -1,13 +1,27 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { ArrowLeft, TrendingUp, TrendingDown, Minus } from 'lucide-react';
 import api from '../utils/api';
 import './LeaguesAndCups.css';
 import OverallLeague from './OverallLeague';
-// import OverallTeamModal from './OverallTeamModal';
 import OverallTeamPitchModal from './OverallTeamPitchModal';
 import ConfigureLeaguesPage from './ConfigureLeaguesPage';
+import AcityCupBracket from './AcityCupBracket';
+import FantasySeasonPodium, { FANTASY_MAX_MATCHWEEK } from './FantasySeasonPodium';
+import FantasyLeagueUserStatus from './FantasyLeagueUserStatus';
+import { deriveUserLeagueStatus, isSameFantasyUser, normalizeSeasonResults } from '../utils/fantasyLeagueStatus';
 
-export default function LeaguesAndCups({ onBack }) {
+function sameManager(row, user) {
+  if (!user || !row) return false;
+  if (row.fantasyUserId && user.id && String(row.fantasyUserId) === String(user.id)) return true;
+  const a = String(row.user || '').trim().toLowerCase();
+  const b = String(user.managerName || '').trim().toLowerCase();
+  if (a && b && a === b) return true;
+  const t = String(row.team || '').trim().toLowerCase();
+  const ut = String(user.teamName || '').trim().toLowerCase();
+  return Boolean(t && ut && t === ut);
+}
+
+export default function LeaguesAndCups({ onBack, user }) {
   const [activeTab, setActiveTab] = useState('leagues'); // 'leagues' | 'cups'
   const [showConfigure, setShowConfigure] = useState(false);
   const [currentGameweek, setCurrentGameweek] = useState(1);
@@ -30,57 +44,70 @@ export default function LeaguesAndCups({ onBack }) {
   }, []);
 
   // Mock data - replace with real backend data
-  const overallLeague = {
-    name: 'Overall Acity League',
-    rank: 39,
-    rankChange: 1, // positive = up, negative = down, 0 = same
-    totalPlayers: 150
-  };
+  const [leagueEntries, setLeagueEntries] = useState([]);
+  const [selectedTeam, setSelectedTeam] = useState(null);
+  const [latestCompletedGameweek, setLatestCompletedGameweek] = useState(0);
+  const [seasonComplete, setSeasonComplete] = useState(false);
+  const [champion, setChampion] = useState(null);
+  const [runnerUp, setRunnerUp] = useState(null);
+  const [preseason, setPreseason] = useState(true);
 
-  // User's joined/created leagues removed (no longer needed)
+  const userRank = useMemo(() => {
+    if (preseason || !leagueEntries.length || !user) return null;
+    const row = leagueEntries.find((r) => sameManager(r, user));
+    return row?.pos ?? null;
+  }, [leagueEntries, user, preseason]);
+
+  const seasonResults = useMemo(
+    () =>
+      normalizeSeasonResults({
+        seasonComplete,
+        latestCompletedGameweek,
+        preseason,
+        champion,
+        runnerUp,
+        entries: leagueEntries,
+        maxMatchweek: FANTASY_MAX_MATCHWEEK,
+      }),
+    [seasonComplete, latestCompletedGameweek, preseason, champion, runnerUp, leagueEntries]
+  );
+
+  const leagueStatus = useMemo(
+    () =>
+      deriveUserLeagueStatus({
+        seasonComplete: seasonResults.seasonComplete,
+        champion: seasonResults.champion,
+        runnerUp: seasonResults.runnerUp,
+        user,
+        displayRank: userRank,
+        userEntry: leagueEntries.find((r) => isSameFantasyUser(r, user)) || null,
+      }),
+    [seasonResults, user, userRank, leagueEntries]
+  );
+
+  const overallLeague = useMemo(
+    () => ({
+      name: 'Overall Acity League',
+      rank: userRank ?? '—',
+      rankChange: 0,
+      totalPlayers: leagueEntries.length,
+    }),
+    [userRank, leagueEntries.length]
+  );
 
   const getRankIndicator = (change) => {
     if (change > 0) {
       return { icon: <TrendingUp size={20} />, color: '#10b981', text: `+${change}` };
     } else if (change < 0) {
       return { icon: <TrendingDown size={20} />, color: '#ef4444', text: change };
-    } else {
-      return { icon: <Minus size={20} />, color: '#9ca3af', text: '—' };
     }
+    return { icon: <Minus size={20} />, color: '#9ca3af', text: '—' };
   };
-  // User leagues rendering removed. Only Acity League and Cup logic remains.
-
-  // Cup status logic moved to its own function
-  function cupStatus() {
-    if (currentGameweek === 9) {
-      return {
-        status: 'active',
-        round: 'Semi Finals',
-        message: 'Cup Semi Finals are live!'
-      };
-    } else if (currentGameweek === 10) {
-      return {
-        status: 'active',
-        round: 'Final',
-        message: 'Cup Final is live!'
-      };
-    } else {
-      return {
-        status: 'completed',
-        message: 'Cup has concluded. Check back next season!'
-      };
-    }
-  }
 
   const rankIndicator = getRankIndicator(overallLeague.rankChange);
-  const cup = cupStatus();
 
   const [showOverallTable, setShowOverallTable] = useState(false);
-  const [leagueEntries, setLeagueEntries] = useState([]);
-  const [selectedTeam, setSelectedTeam] = useState(null);
-  const [latestCompletedGameweek, setLatestCompletedGameweek] = useState(0);
 
-  // Load overall league from registered fantasy managers
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -89,6 +116,10 @@ export default function LeaguesAndCups({ onBack }) {
         if (!cancelled && data?.success) {
           setLeagueEntries(Array.isArray(data.entries) ? data.entries : []);
           setLatestCompletedGameweek(data.latestCompletedGameweek || 0);
+          setSeasonComplete(Boolean(data.seasonComplete));
+          setChampion(data.champion || null);
+          setRunnerUp(data.runnerUp || null);
+          setPreseason(data.preseason !== false);
         }
       } catch (err) {
         console.error('Failed to load overall league:', err);
@@ -146,15 +177,36 @@ export default function LeaguesAndCups({ onBack }) {
             <ConfigureLeaguesPage onBack={() => setShowConfigure(false)} />
           ) : !showOverallTable ? (
             <>
+              <FantasyLeagueUserStatus status={leagueStatus} />
+              <FantasySeasonPodium
+                seasonComplete={seasonResults.seasonComplete}
+                champion={seasonResults.champion}
+                runnerUp={seasonResults.runnerUp}
+                user={user}
+                latestCompletedGameweek={latestCompletedGameweek}
+                maxMatchweek={FANTASY_MAX_MATCHWEEK}
+                compact
+              />
               <div className="league-overall-card" onClick={openOverall} role="button" aria-label="Open Overall Acity League">
                 <div className="league-overall-card-header">
                   <h3>Overall Acity League</h3>
                   <div className="rank-indicator" style={{ color: rankIndicator.color }}>
-                    {rankIndicator.icon}
+                    {typeof overallLeague.rank === 'number' ? (
+                      <>
+                        <span className="league-overall-rank">{overallLeague.rank}</span>
+                        {rankIndicator.icon}
+                      </>
+                    ) : (
+                      rankIndicator.icon
+                    )}
                     <span style={{ marginLeft: 6 }}>{rankIndicator.text}</span>
                   </div>
                 </div>
-                <p className="league-overall-sub">Tap to view full standings</p>
+                <p className="league-overall-sub">
+                  {seasonResults.seasonComplete && seasonResults.champion
+                    ? `Season complete · Champion: ${seasonResults.champion.teamName}`
+                    : 'Tap to view full standings'}
+                </p>
               </div>
 
               {/* Removed Configure Leagues and Invitational Classic Leagues logic as requested */}
@@ -168,7 +220,20 @@ export default function LeaguesAndCups({ onBack }) {
                 </button>
                 <h3>Overall Acity League Standings</h3>
               </div>
-              <OverallLeague entries={leagueEntries} onRowClick={onRowClick} />
+              <FantasyLeagueUserStatus status={leagueStatus} />
+              <FantasySeasonPodium
+                seasonComplete={seasonResults.seasonComplete}
+                champion={seasonResults.champion}
+                runnerUp={seasonResults.runnerUp}
+                user={user}
+                latestCompletedGameweek={latestCompletedGameweek}
+                maxMatchweek={FANTASY_MAX_MATCHWEEK}
+              />
+              <OverallLeague
+                entries={leagueEntries}
+                onRowClick={onRowClick}
+                seasonComplete={seasonResults.seasonComplete}
+              />
             </div>
           )}
 
@@ -182,59 +247,8 @@ export default function LeaguesAndCups({ onBack }) {
           )}
         </div>
       ) : (
-        <div className="cups-content">
-          {cup.status === 'upcoming' ? (
-            <div className="cup-upcoming">
-              <div className="cup-icon">🏆</div>
-              <h3>Acity Cup</h3>
-              <p className="cup-message">{cup.message}</p>
-              <div className="cup-details">
-                <p>{cup.details}</p>
-              </div>
-              <div className="cup-schedule">
-                <h4>Cup Schedule</h4>
-                <div className="schedule-list">
-                  <div className="schedule-item">
-                    <span className="schedule-round">Round of 32</span>
-                    <span className="schedule-gw">Gameweek 6</span>
-                  </div>
-                  <div className="schedule-item">
-                    <span className="schedule-round">Round of 16</span>
-                    <span className="schedule-gw">Gameweek 7</span>
-                  </div>
-                  <div className="schedule-item">
-                    <span className="schedule-round">Quarter Finals</span>
-                    <span className="schedule-gw">Gameweek 8</span>
-                  </div>
-                  <div className="schedule-item">
-                    <span className="schedule-round">Semi Finals</span>
-                    <span className="schedule-gw">Gameweek 9</span>
-                  </div>
-                  <div className="schedule-item">
-                    <span className="schedule-round">Final</span>
-                    <span className="schedule-gw">Gameweek 10</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          ) : cup.status === 'active' ? (
-            <div className="cup-active">
-              <div className="cup-round-header">
-                <div className="cup-icon">🏆</div>
-                <h3>{cup.round}</h3>
-                <p className="cup-message">{cup.message}</p>
-              </div>
-              <div className="cup-bracket">
-                <p className="bracket-placeholder">Cup bracket will be displayed here</p>
-              </div>
-            </div>
-          ) : (
-            <div className="cup-completed">
-              <div className="cup-icon">🏆</div>
-              <h3>Cup Completed</h3>
-              <p className="cup-message">{cup.message}</p>
-            </div>
-          )}
+        <div className="cups-content cups-content--acfpl">
+          <AcityCupBracket variant="full" user={user} />
         </div>
       )}
     </div>

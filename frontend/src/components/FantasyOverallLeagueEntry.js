@@ -3,6 +3,9 @@ import { ArrowLeft, ChevronDown, ChevronUp, Minus } from 'lucide-react';
 import api from '../utils/api';
 import OverallLeague from './OverallLeague';
 import OverallTeamPitchModal from './OverallTeamPitchModal';
+import FantasySeasonPodium, { FANTASY_MAX_MATCHWEEK } from './FantasySeasonPodium';
+import FantasyLeagueUserStatus from './FantasyLeagueUserStatus';
+import { deriveUserLeagueStatus, isSameFantasyUser, normalizeSeasonResults } from '../utils/fantasyLeagueStatus';
 import './FantasyDashboard.css';
 
 function sameManager(row, user) {
@@ -24,6 +27,9 @@ export default function FantasyOverallLeagueEntry({ user }) {
   const [selectedTeam, setSelectedTeam] = useState(null);
   const [preseason, setPreseason] = useState(true);
   const [latestCompletedGameweek, setLatestCompletedGameweek] = useState(0);
+  const [seasonComplete, setSeasonComplete] = useState(false);
+  const [champion, setChampion] = useState(null);
+  const [runnerUp, setRunnerUp] = useState(null);
 
   const loadStandings = useCallback(async () => {
     setLoading(true);
@@ -34,6 +40,9 @@ export default function FantasyOverallLeagueEntry({ user }) {
         setEntries(Array.isArray(data.entries) ? data.entries : []);
         setPreseason(data.preseason !== false);
         setLatestCompletedGameweek(data.latestCompletedGameweek || 0);
+        setSeasonComplete(Boolean(data.seasonComplete));
+        setChampion(data.champion || null);
+        setRunnerUp(data.runnerUp || null);
       } else {
         setEntries([]);
         setLoadError(data?.message || 'Could not load standings.');
@@ -74,6 +83,38 @@ export default function FantasyOverallLeagueEntry({ user }) {
     return { displayRank: row.pos ?? idx + 1, delta: row.delta || 'same' };
   }, [entries, user, rankingLive]);
 
+  const seasonResults = useMemo(
+    () =>
+      normalizeSeasonResults({
+        seasonComplete,
+        latestCompletedGameweek,
+        preseason,
+        champion,
+        runnerUp,
+        entries,
+        maxMatchweek: FANTASY_MAX_MATCHWEEK,
+      }),
+    [seasonComplete, latestCompletedGameweek, preseason, champion, runnerUp, entries]
+  );
+
+  const userEntry = useMemo(
+    () => entries.find((r) => isSameFantasyUser(r, user)) || null,
+    [entries, user]
+  );
+
+  const leagueStatus = useMemo(
+    () =>
+      deriveUserLeagueStatus({
+        seasonComplete: seasonResults.seasonComplete,
+        champion: seasonResults.champion,
+        runnerUp: seasonResults.runnerUp,
+        user,
+        displayRank,
+        userEntry,
+      }),
+    [seasonResults, user, displayRank, userEntry]
+  );
+
   const openStandings = useCallback(() => {
     setShowStandings(true);
     loadStandings();
@@ -99,7 +140,23 @@ export default function FantasyOverallLeagueEntry({ user }) {
         ) : loadError ? (
           <p className="fantasy-oal-loading fantasy-oal-error">{loadError}</p>
         ) : (
-          <OverallLeague entries={entries} onRowClick={setSelectedTeam} hideLastUpdated />
+          <>
+            <FantasyLeagueUserStatus status={leagueStatus} />
+            <FantasySeasonPodium
+              seasonComplete={seasonResults.seasonComplete}
+              champion={seasonResults.champion}
+              runnerUp={seasonResults.runnerUp}
+              user={user}
+              latestCompletedGameweek={latestCompletedGameweek}
+              maxMatchweek={FANTASY_MAX_MATCHWEEK}
+            />
+            <OverallLeague
+              entries={entries}
+              onRowClick={setSelectedTeam}
+              hideLastUpdated
+              seasonComplete={seasonResults.seasonComplete}
+            />
+          </>
         )}
         {selectedTeam ? (
           <OverallTeamPitchModal
@@ -117,6 +174,20 @@ export default function FantasyOverallLeagueEntry({ user }) {
 
   return (
     <div className="fantasy-oal-block">
+      {!loading && !loadError ? (
+        <>
+          <FantasyLeagueUserStatus status={leagueStatus} />
+          <FantasySeasonPodium
+            seasonComplete={seasonResults.seasonComplete}
+            champion={seasonResults.champion}
+            runnerUp={seasonResults.runnerUp}
+            user={user}
+            latestCompletedGameweek={latestCompletedGameweek}
+            maxMatchweek={FANTASY_MAX_MATCHWEEK}
+            compact
+          />
+        </>
+      ) : null}
       <button
         type="button"
         className="fantasy-oal-strip"

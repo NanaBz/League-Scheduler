@@ -8,6 +8,7 @@ export default function ValidationModal({
   onClose,
   actionText = 'OK',
   secondaryAction,
+  saveAction,
 }) {
   if (!message) return null;
 
@@ -28,8 +29,23 @@ export default function ValidationModal({
         </div>
         <div className="vm-actions">
           {secondaryAction ? (
-            <button type="button" className="vm-btn vm-btn-secondary" onClick={secondaryAction.onClick}>
+            <button
+              type="button"
+              className="vm-btn vm-btn-secondary"
+              onClick={secondaryAction.onClick}
+              disabled={secondaryAction.disabled}
+            >
               {secondaryAction.label}
+            </button>
+          ) : null}
+          {saveAction ? (
+            <button
+              type="button"
+              className="vm-btn vm-btn-success"
+              onClick={saveAction.onClick}
+              disabled={saveAction.disabled}
+            >
+              {saveAction.label}
             </button>
           ) : null}
           <button type="button" className={`vm-btn vm-btn-${type}`} onClick={onClose}>

@@ -39,6 +39,39 @@ export function countSquadPlayers(squad) {
   return Object.values(squad).flat().filter(Boolean).length;
 }
 
+export function fantasyUserId(user) {
+  if (!user) return null;
+  const id = user.id || user._id;
+  return id ? String(id) : null;
+}
+
+/** Prefer whichever source has more players (API vs local cache). */
+export function resolveSquadFromApiAndCache(apiSquad, userId, serverPlayerCount = 0, options = {}) {
+  const { preferApi = false } = options;
+  const fromApi = normalizeSquadShape(apiSquad || EMPTY_SQUAD);
+  const cached = userId ? loadSquadFromLocalStorage(userId) : null;
+  const apiCount = countSquadPlayers(fromApi);
+  const cacheCount = countSquadPlayers(cached);
+
+  if (preferApi && apiCount >= 13) return fromApi;
+  if (serverPlayerCount >= 13 && cacheCount >= 13 && apiCount >= 13) {
+    const apiIds = squadPlayerIds(fromApi).sort().join(',');
+    const cacheIds = squadPlayerIds(cached).sort().join(',');
+    if (apiIds !== cacheIds) return fromApi;
+  }
+  if (serverPlayerCount >= 13 && cacheCount >= 13) return normalizeSquadShape(cached);
+  if (cacheCount > apiCount) return normalizeSquadShape(cached);
+  if (serverPlayerCount >= 13 && apiCount >= 13) return fromApi;
+  return fromApi;
+}
+
+function squadPlayerIds(squad) {
+  return Object.values(squad || {})
+    .flat()
+    .filter(Boolean)
+    .map((p) => String(p._id || p.id));
+}
+
 export function lineupStorageKey(userId) {
   if (!userId) return null;
   return `fantasyLineup:${userId}`;

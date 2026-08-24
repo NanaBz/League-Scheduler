@@ -41,6 +41,10 @@ const FantasyDraftSquadSchema = new mongoose.Schema({
     type: Number,
     default: null,
   },
+  freeHitBaselineTransferInOrder: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Player',
+  }],
 }, {
   timestamps: true
 });

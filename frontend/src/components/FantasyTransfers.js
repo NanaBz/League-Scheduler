@@ -3,12 +3,24 @@ import { ArrowLeft } from 'lucide-react';
 import api from '../utils/api';
 import {
   EMPTY_SQUAD,
+  countSquadPlayers,
+  fantasyUserId,
   loadSquadFromLocalStorage,
   normalizeSquadShape,
+  resolveSquadFromApiAndCache,
   saveSquadToLocalStorage,
 } from '../utils/fantasySquadStorage';
 import { deriveGameweekInfo } from '../utils/fantasyGameweek';
-import { transferChipSummaryLabel } from '../utils/fantasyChips';
+import {
+  freeTransfersDisplay,
+  transferChipDisplayLabel,
+} from '../utils/fantasyChips';
+import { validateSquadClubLimits } from '../utils/fantasySquadValidation';
+import {
+  countPendingTransfers,
+  isStagedSquadDirty,
+  previewTransferSummary,
+} from '../utils/fantasyTransfers';
 import { isPastDeadline } from '../utils/fantasyMatchweek';
 import {
   formatPitchFixture,
@@ -22,7 +34,7 @@ import PlayerDetailsModal from './PlayerDetailsModal';
 import ValidationModal from './ValidationModal';
 
 export default function FantasyTransfers({ user, onBack, onGoToPickTeam }) {
-  const userId = user?.id;
+  const userId = fantasyUserId(user);
   const [view, setView] = useState('pitch'); // 'pitch' | 'list'
   const [matches, setMatches] = useState([]);
   const [serverSeasonInfo, setServerSeasonInfo] = useState(null);
@@ -33,16 +45,53 @@ export default function FantasyTransfers({ user, onBack, onGoToPickTeam }) {
   const [detailsSlot, setDetailsSlot] = useState(null); // { position, index }
   const [validationError, setValidationError] = useState(null);
   const [squad, setSquad] = useState(() => normalizeSquadShape(EMPTY_SQUAD));
-  const saveTimerRef = useRef(null);
+  const [chipState, setChipState] = useState(null);
+  const [transferState, setTransferState] = useState(null);
+  const [savedSquad, setSavedSquad] = useState(null);
+  const [saveStatus, setSaveStatus] = useState('idle'); // idle | saving | saved | error
+  const [saveError, setSaveError] = useState('');
+  const [unsavedModalOpen, setUnsavedModalOpen] = useState(false);
+  const [pendingNavigation, setPendingNavigation] = useState(null);
   const squadHydratedRef = useRef(false);
+  const historyTrapActiveRef = useRef(false);
+  const skipHistoryCleanupRef = useRef(false);
 
-  const persistSquad = useCallback(async (nextSquad, userKey) => {
-    if (!userKey) return;
+  const persistSquad = useCallback(async (nextSquad, userKey, { showFeedback = false, gameweek } = {}) => {
+    if (!userKey) return { ok: false };
+    const count = countSquadPlayers(nextSquad);
     saveSquadToLocalStorage(userKey, nextSquad);
+    if (count !== 13) {
+      setSaveStatus('idle');
+      return { ok: false, reason: 'incomplete' };
+    }
+    setSaveStatus('saving');
+    setSaveError('');
     try {
-      await api.put('/fantasy/my-squad', { squad: nextSquad });
+      const { data } = await api.put('/fantasy/my-squad', { squad: nextSquad });
+      if (!data?.success) {
+        throw new Error(data?.message || 'Could not save your squad.');
+      }
+      if (data?.chipState) setChipState(data.chipState);
+      if (data?.transferState) setTransferState(data.transferState);
+      setSavedSquad(normalizeSquadShape(nextSquad));
+      setSaveStatus('saved');
+      if (showFeedback) {
+        setValidationError({
+          title: 'Squad saved',
+          message: `Your 13-player squad is saved for Gameweek ${gameweek || '—'}. Head to Pick team to set your starting XI.`,
+          type: 'success',
+        });
+      }
+      return { ok: true, data };
     } catch (err) {
-      console.error('Failed to save squad:', err.response?.data || err.message);
+      const message = err.response?.data?.message || err.message || 'Could not save your squad.';
+      setSaveStatus('error');
+      setSaveError(message);
+      console.error('Failed to save squad:', message);
+      if (showFeedback) {
+        setValidationError({ title: 'Save Failed', message, type: 'error' });
+      }
+      return { ok: false, error: message };
     }
   }, []);
 
@@ -63,16 +112,44 @@ export default function FantasyTransfers({ user, onBack, onGoToPickTeam }) {
         const { data } = await api.get('/fantasy/my-squad');
         if (cancelled) return;
         if (data?.success && data.squad) {
-          setSquad(normalizeSquadShape(data.squad));
-          saveSquadToLocalStorage(userId, data.squad);
+          const apiHydratedCount = countSquadPlayers(data.squad);
+          const serverCount =
+            typeof data.squadPlayerCount === 'number' ? data.squadPlayerCount : apiHydratedCount;
+          const preferApi = data.chipState?.freeHitExpired === true;
+          let resolved = resolveSquadFromApiAndCache(data.squad, userId, serverCount, { preferApi });
+          if (serverCount >= 13 && countSquadPlayers(resolved) < 13) {
+            const cached = loadSquadFromLocalStorage(userId);
+            if (countSquadPlayers(cached) === 13) {
+              resolved = normalizeSquadShape(cached);
+            }
+          }
+          const normalized = normalizeSquadShape(resolved);
+          setSquad(normalized);
+          setSavedSquad(normalized);
+          saveSquadToLocalStorage(userId, resolved);
+          if (data.chipState) setChipState(data.chipState);
+          if (data.transferState) setTransferState(data.transferState);
+          if (countSquadPlayers(resolved) === 13) {
+            setSaveStatus(serverCount >= 13 ? 'saved' : 'idle');
+          }
+          if (userId && countSquadPlayers(resolved) === 13 && serverCount < 13) {
+            api.put('/fantasy/my-squad', { squad: resolved }).then(() => setSaveStatus('saved')).catch((err) => {
+              setSaveStatus('error');
+              setSaveError(err.response?.data?.message || 'Could not sync squad to server.');
+            });
+          }
         } else {
           const cached = loadSquadFromLocalStorage(userId);
-          setSquad(cached ? normalizeSquadShape(cached) : normalizeSquadShape(EMPTY_SQUAD));
+          const normalized = cached ? normalizeSquadShape(cached) : normalizeSquadShape(EMPTY_SQUAD);
+          setSquad(normalized);
+          setSavedSquad(normalized);
         }
       } catch {
         if (!cancelled) {
           const cached = loadSquadFromLocalStorage(userId);
-          setSquad(cached ? normalizeSquadShape(cached) : normalizeSquadShape(EMPTY_SQUAD));
+          const normalized = cached ? normalizeSquadShape(cached) : normalizeSquadShape(EMPTY_SQUAD);
+          setSquad(normalized);
+          setSavedSquad(normalized);
         }
       } finally {
         if (!cancelled) {
@@ -86,20 +163,6 @@ export default function FantasyTransfers({ user, onBack, onGoToPickTeam }) {
       cancelled = true;
     };
   }, [userId]);
-
-  // Debounced save — only after initial load for this user
-  useEffect(() => {
-    if (!userId || !squadHydratedRef.current || squadLoading) return undefined;
-
-    if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
-    saveTimerRef.current = setTimeout(() => {
-      persistSquad(squad, userId);
-    }, 400);
-
-    return () => {
-      if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
-    };
-  }, [squad, userId, squadLoading, persistSquad]);
 
   // Fetch matches for deadline computation and server season info
   useEffect(() => {
@@ -123,9 +186,102 @@ export default function FantasyTransfers({ user, onBack, onGoToPickTeam }) {
     fetchSeasonInfo();
   }, []);
 
-  // Summary values — to be wired to backend later
-  const cost = 0;
+  // Summary values
   const totalBudget = 100.0;
+
+  const pendingTransfers = useMemo(
+    () => countPendingTransfers(savedSquad, squad),
+    [savedSquad, squad]
+  );
+
+  const isDirty = useMemo(() => {
+    const baseline = savedSquad || normalizeSquadShape(EMPTY_SQUAD);
+    return isStagedSquadDirty(baseline, squad);
+  }, [savedSquad, squad]);
+
+  const attemptNavigation = useCallback(
+    (navigateFn) => {
+      if (!navigateFn) return;
+      if (!isDirty) {
+        navigateFn();
+        return;
+      }
+      setPendingNavigation(() => navigateFn);
+      setUnsavedModalOpen(true);
+    },
+    [isDirty]
+  );
+
+  const closeUnsavedModal = useCallback(() => {
+    setUnsavedModalOpen(false);
+    setPendingNavigation(null);
+  }, []);
+
+  const discardStagedTransfers = useCallback(() => {
+    const baseline = savedSquad || normalizeSquadShape(EMPTY_SQUAD);
+    const restored = normalizeSquadShape(baseline);
+    setSquad(restored);
+    if (userId) saveSquadToLocalStorage(userId, restored);
+  }, [savedSquad, userId]);
+
+  const leaveWithoutSaving = useCallback(() => {
+    setUnsavedModalOpen(false);
+    const navigateFn = pendingNavigation;
+    setPendingNavigation(null);
+    discardStagedTransfers();
+    skipHistoryCleanupRef.current = true;
+    navigateFn?.();
+  }, [pendingNavigation, discardStagedTransfers]);
+
+  useEffect(() => {
+    if (!isDirty) {
+      if (unsavedModalOpen) {
+        setUnsavedModalOpen(false);
+        setPendingNavigation(null);
+      } else if (historyTrapActiveRef.current && !skipHistoryCleanupRef.current) {
+        historyTrapActiveRef.current = false;
+        window.history.back();
+      }
+      skipHistoryCleanupRef.current = false;
+      return undefined;
+    }
+
+    const onBeforeUnload = (event) => {
+      event.preventDefault();
+      event.returnValue = '';
+    };
+
+    const onPopState = () => {
+      window.history.pushState({ transfersGuard: true }, '');
+      setPendingNavigation(() => () => {
+        skipHistoryCleanupRef.current = true;
+        historyTrapActiveRef.current = false;
+        discardStagedTransfers();
+        window.history.back();
+      });
+      setUnsavedModalOpen(true);
+    };
+
+    window.addEventListener('beforeunload', onBeforeUnload);
+    window.addEventListener('popstate', onPopState);
+
+    if (!historyTrapActiveRef.current) {
+      window.history.pushState({ transfersGuard: true }, '');
+      historyTrapActiveRef.current = true;
+    }
+
+    return () => {
+      window.removeEventListener('beforeunload', onBeforeUnload);
+      window.removeEventListener('popstate', onPopState);
+    };
+  }, [isDirty, unsavedModalOpen, discardStagedTransfers]);
+
+  const transferSummary = useMemo(
+    () => previewTransferSummary(transferState, pendingTransfers),
+    [transferState, pendingTransfers]
+  );
+
+  const cost = transferSummary.transferCost;
   
   const totalSpent = useMemo(() => {
     return Object.values(squad)
@@ -144,12 +300,14 @@ export default function FantasyTransfers({ user, onBack, onGoToPickTeam }) {
     return derivedGameweekInfo;
   }, [derivedGameweekInfo, serverSeasonInfo]);
 
-  // Free transfers: GW1 unlimited, GW2+ 1 per week
   const currentGameweek = upcomingInfo.week || 1;
-  const freeTransfersAvailable = currentGameweek === 1 ? 999 : 1;
+  const unlimitedTransfers = chipState?.unlimitedTransfers === true;
+  const freeTransfersLabel = freeTransfersDisplay(currentGameweek, chipState, transferState);
   const deadlinePassed = isPastDeadline(upcomingInfo.deadline);
-  const wildcardLabel = transferChipSummaryLabel(currentGameweek, false);
-  const freeHitLabel = transferChipSummaryLabel(currentGameweek, false);
+  const wildcardLabel = transferChipDisplayLabel('WC', { gameweek: currentGameweek, chipState });
+  const freeHitLabel = transferChipDisplayLabel('FH', { gameweek: currentGameweek, chipState });
+  const wildcardActive = chipState?.wildcardActive === true;
+  const freeHitActive = chipState?.freeHitActive === true;
 
   const formatDeadline = (dt) => {
     if (!dt) return '—';
@@ -164,31 +322,51 @@ export default function FantasyTransfers({ user, onBack, onGoToPickTeam }) {
     return `${day} ${date} ${month}, ${hours}:${mins}`;
   };
 
-  const validateTeamLimit = (newSquad, playerToAdd) => {
-    const playerTeamId = playerToAdd.team?._id || playerToAdd.teamId;
-    const allPlayers = Object.values(newSquad).flat().filter(Boolean);
-    const teamPlayerCount = allPlayers.filter(p => (p.team?._id || p.teamId) === playerTeamId).length;
-    
-    if (teamPlayerCount >= 3) {
-      return { valid: false, message: `You already have 3 players from ${playerToAdd.team?.name || 'this team'}. Maximum allowed is 3.` };
+  const validateBudget = (newSquad) => {
+    const totalSpent = Object.values(newSquad)
+      .flat()
+      .filter(Boolean)
+      .reduce((sum, p) => sum + (p.fantasyPrice || 0), 0);
+
+    if (totalSpent > totalBudget) {
+      return {
+        valid: false,
+        message: `Budget exceeded. Your squad would cost ${totalSpent.toFixed(1)}m but your budget is ${totalBudget.toFixed(1)}m.`,
+      };
     }
     return { valid: true };
   };
 
-  const validateBudget = (newSquad, playerToAdd, playerToRemove) => {
-    const currentSpent = Object.values(newSquad)
-      .flat()
-      .filter(Boolean)
-      .reduce((sum, p) => sum + (p.fantasyPrice || 0), 0);
-    
-    const addPrice = playerToAdd.fantasyPrice || 0;
-    const removePrice = playerToRemove?.fantasyPrice || 0;
-    const newTotal = currentSpent + addPrice - removePrice;
-    
-    if (newTotal > totalBudget) {
-      return { valid: false, message: `Budget exceeded. This transfer costs ${addPrice.toFixed(1)}m and would exceed your budget. You have ${(totalBudget - currentSpent + removePrice).toFixed(1)}m remaining.` };
+  const assignPlayer = (player) => {
+    if (!pickerLock) return;
+
+    const newSquad = {
+      GK: [...squad.GK],
+      DF: [...squad.DF],
+      MF: [...squad.MF],
+      ATT: [...squad.ATT],
+    };
+    const arr = [...newSquad[pickerLock.position]];
+
+    // Apply replacement first, then validate the final squad state.
+    arr[pickerLock.index] = player;
+    newSquad[pickerLock.position] = arr;
+
+    const teamLimitCheck = validateSquadClubLimits(newSquad);
+    if (!teamLimitCheck.valid) {
+      setValidationError({ title: 'Team Limit Exceeded', message: teamLimitCheck.message, type: 'error' });
+      return;
     }
-    return { valid: true };
+
+    const budgetCheck = validateBudget(newSquad);
+    if (!budgetCheck.valid) {
+      setValidationError({ title: 'Budget Exceeded', message: budgetCheck.message, type: 'error' });
+      return;
+    }
+
+    setSquad(newSquad);
+    setPickerOpen(false);
+    setPickerLock(null);
   };
 
   const displaySquad = useMemo(
@@ -213,40 +391,6 @@ export default function FantasyTransfers({ user, onBack, onGoToPickTeam }) {
   const openPicker = (position, index) => {
     setPickerLock({ position, index });
     setPickerOpen(true);
-  };
-
-  const assignPlayer = (player) => {
-    if (!pickerLock) return;
-    
-    const newSquad = {
-      GK: [...squad.GK],
-      DF: [...squad.DF],
-      MF: [...squad.MF],
-      ATT: [...squad.ATT]
-    };
-    const arr = [...newSquad[pickerLock.position]];
-    const playerToRemove = arr[pickerLock.index];
-    
-    // Validate team limit
-    const teamLimitCheck = validateTeamLimit(newSquad, player);
-    if (!teamLimitCheck.valid) {
-      setValidationError({ title: 'Team Limit Exceeded', message: teamLimitCheck.message, type: 'error' });
-      return;
-    }
-    
-    // Validate budget
-    const budgetCheck = validateBudget(newSquad, player, playerToRemove);
-    if (!budgetCheck.valid) {
-      setValidationError({ title: 'Budget Exceeded', message: budgetCheck.message, type: 'error' });
-      return;
-    }
-    
-    // All validations passed, assign player
-    arr[pickerLock.index] = player;
-    newSquad[pickerLock.position] = arr;
-    setSquad(newSquad);
-    setPickerOpen(false);
-    setPickerLock(null);
   };
 
   const openPlayerDetails = (player, position, index) => {
@@ -279,46 +423,72 @@ export default function FantasyTransfers({ user, onBack, onGoToPickTeam }) {
     return Object.values(squad).flat().filter(Boolean).length === 13;
   }, [squad]);
 
-  const handleSubmitTeam = async () => {
-    if (deadlinePassed) {
-      setValidationError({
-        title: 'Deadline passed',
-        message: 'The gameweek deadline has passed. Transfers are locked until the next gameweek.',
-        type: 'warning',
-      });
-      return;
-    }
-    if (!isSquadComplete) {
-      setValidationError({ 
-        title: 'Incomplete Squad', 
-        message: 'You must select all 13 players (2 GK, 4 DF, 4 MF, 3 ATT) before saving.',
-        type: 'warning' 
-      });
-      return;
-    }
-    try {
-      if (userId) {
-        await api.put('/fantasy/my-squad', { squad });
-        saveSquadToLocalStorage(userId, squad);
+  const squadSelectedCount = Object.values(squad).flat().filter(Boolean).length;
+
+  const commitStagedSquad = useCallback(
+    async ({ showFeedback = false, quiet = false } = {}) => {
+      if (deadlinePassed) {
+        if (!quiet) {
+          setValidationError({
+            title: 'Deadline passed',
+            message: 'The gameweek deadline has passed. Transfers are locked until the next gameweek.',
+            type: 'warning',
+          });
+        }
+        return false;
       }
-      setValidationError({ 
-        title: 'Squad saved', 
-        message: `Your 13-player squad is saved for Gameweek ${upcomingInfo.week}. Head to Pick team to set your starting XI.`,
-        type: 'success' 
+      if (!isSquadComplete) {
+        if (!quiet) {
+          setValidationError({
+            title: 'Incomplete Squad',
+            message: 'You must select all 13 players (2 GK, 4 DF, 4 MF, 3 ATT) before saving.',
+            type: 'warning',
+          });
+        }
+        return false;
+      }
+      if (!userId) {
+        if (!quiet) {
+          setValidationError({
+            title: 'Save Failed',
+            message: 'You must be signed in to save your squad.',
+            type: 'error',
+          });
+        }
+        return false;
+      }
+      const result = await persistSquad(squad, userId, {
+        showFeedback: showFeedback && !quiet,
+        gameweek: currentGameweek,
       });
-    } catch (err) {
-      setValidationError({
-        title: 'Save Failed',
-        message: err.response?.data?.message || 'Could not save your squad. Please try again.',
-        type: 'error',
-      });
-    }
+      return result.ok;
+    },
+    [deadlinePassed, isSquadComplete, userId, squad, persistSquad, currentGameweek]
+  );
+
+  const handleGoToPickTeam = () => {
+    if (!onGoToPickTeam) return;
+    attemptNavigation(onGoToPickTeam);
+  };
+
+  const handleSubmitTeam = async () => {
+    await commitStagedSquad({ showFeedback: true });
+  };
+
+  const handleSaveFromUnsavedModal = async () => {
+    const ok = await commitStagedSquad({ quiet: true });
+    if (!ok) return;
+    setUnsavedModalOpen(false);
+    const navigateFn = pendingNavigation;
+    setPendingNavigation(null);
+    skipHistoryCleanupRef.current = Boolean(navigateFn);
+    navigateFn?.();
   };
 
   return (
     <div className="transfers-container">
       <div className="transfers-header">
-        <button className="back-link" onClick={onBack} aria-label="Back to fantasy">
+        <button className="back-link" onClick={() => attemptNavigation(onBack)} aria-label="Back to fantasy">
           <ArrowLeft size={18} />
           <span className="back-text">Back to Fantasy</span>
         </button>
@@ -331,12 +501,38 @@ export default function FantasyTransfers({ user, onBack, onGoToPickTeam }) {
         </div>
       </div>
 
+      {unlimitedTransfers ? (
+        <div className="transfers-chip-banner" role="status">
+          {wildcardActive ? (
+            <>
+              <strong>Wildcard active</strong> — unlimited transfers. Squad changes are{' '}
+              <strong>permanent</strong> after this gameweek.
+            </>
+          ) : null}
+          {freeHitActive ? (
+            <>
+              <strong>Free Hit active</strong> — unlimited transfers this gameweek only. Your
+              squad reverts next gameweek.
+            </>
+          ) : null}
+        </div>
+      ) : null}
+
       <div className="summary-bar">
-        <div className="summary-item"><div className="label">Free Transfers</div><div className="value">{freeTransfersAvailable === 999 ? '∞' : freeTransfersAvailable}</div></div>
-        <div className="summary-item"><div className="label">Cost</div><div className="value">{cost}</div></div>
+        <div className={`summary-item${unlimitedTransfers ? ' summary-item--active' : ''}`}>
+          <div className="label">Free Transfers</div>
+          <div className="value">{freeTransfersLabel}</div>
+        </div>
+        <div className="summary-item"><div className="label">Cost</div><div className="value">{cost > 0 ? `-${cost}` : 0}</div></div>
         <div className="summary-item"><div className="label">Budget</div><div className="value">{budget.toFixed(1)}m</div></div>
-        <div className="summary-item"><div className="label">Wildcard</div><div className="value">{wildcardLabel}</div></div>
-        <div className="summary-item"><div className="label">Free Hit</div><div className="value">{freeHitLabel}</div></div>
+        <div className={`summary-item${wildcardActive ? ' summary-item--chip-active' : ''}`}>
+          <div className="label">Wildcard</div>
+          <div className="value">{wildcardLabel}</div>
+        </div>
+        <div className={`summary-item${freeHitActive ? ' summary-item--chip-active' : ''}`}>
+          <div className="label">Free Hit</div>
+          <div className="value">{freeHitLabel}</div>
+        </div>
       </div>
 
       <div className="toggle-bar toggle-bar--fpl">
@@ -346,10 +542,35 @@ export default function FantasyTransfers({ user, onBack, onGoToPickTeam }) {
 
       <div className="squad-progress">
         <div className="progress-bar">
-          <div className="progress-fill" style={{ width: `${(Object.values(squad).flat().filter(Boolean).length / 13) * 100}%` }}></div>
+          <div className="progress-fill" style={{ width: `${(squadSelectedCount / 13) * 100}%` }}></div>
         </div>
-        <div className="progress-text">{Object.values(squad).flat().filter(Boolean).length} / 13 Players Selected</div>
+        <div className="progress-text">{squadSelectedCount} / 13 Players Selected</div>
       </div>
+
+      {!squadLoading && unlimitedTransfers && squadSelectedCount < 13 ? (
+        <div className="transfers-chip-banner transfers-chip-banner--hint" role="status">
+          Free Hit is active — pick all <strong>13 players</strong>, then tap{' '}
+          <strong>Save squad</strong> before opening Pick team.
+        </div>
+      ) : null}
+
+      {!squadLoading && saveStatus === 'saving' ? (
+        <div className="transfers-save-status transfers-save-status--saving" role="status">
+          Saving squad…
+        </div>
+      ) : null}
+
+      {!squadLoading && saveStatus === 'saved' && isSquadComplete ? (
+        <div className="transfers-save-status transfers-save-status--saved" role="status">
+          Squad saved — you can open Pick team now.
+        </div>
+      ) : null}
+
+      {!squadLoading && saveStatus === 'error' && saveError ? (
+        <div className="transfers-save-status transfers-save-status--error" role="alert">
+          Save failed: {saveError}
+        </div>
+      ) : null}
 
       {squadLoading ? (
         <p className="transfers-loading" style={{ textAlign: 'center', color: '#64748b', padding: '24px 0' }}>
@@ -489,12 +710,24 @@ export default function FantasyTransfers({ user, onBack, onGoToPickTeam }) {
         <button 
           className={`submit-btn ${isSquadComplete ? 'active' : 'disabled'}`}
           onClick={handleSubmitTeam}
-          disabled={!isSquadComplete || squadLoading || deadlinePassed}
+          disabled={!isSquadComplete || squadLoading || deadlinePassed || saveStatus === 'saving'}
         >
           {deadlinePassed
             ? 'Deadline passed — squad locked'
-            : `Save squad for Gameweek ${upcomingInfo.week || '—'}`}
+            : saveStatus === 'saving'
+              ? 'Saving…'
+              : `Save squad for Gameweek ${upcomingInfo.week || '—'}`}
         </button>
+        {isSquadComplete && !deadlinePassed && onGoToPickTeam ? (
+          <button
+            type="button"
+            className="submit-btn submit-btn--secondary active"
+            onClick={handleGoToPickTeam}
+            disabled={squadLoading || saveStatus === 'saving'}
+          >
+            Go to Pick team
+          </button>
+        ) : null}
       </div>
 
       {pickerOpen && (
@@ -525,13 +758,32 @@ export default function FantasyTransfers({ user, onBack, onGoToPickTeam }) {
                   label: 'Pick Team',
                   onClick: () => {
                     setValidationError(null);
-                    onGoToPickTeam();
+                    attemptNavigation(onGoToPickTeam);
                   },
                 }
               : undefined
           }
         />
       )}
+
+      {unsavedModalOpen ? (
+        <ValidationModal
+          title="Unsaved Transfers"
+          message="You have unsaved changes to your team. If you leave now, your transfers will be lost."
+          type="warning"
+          actionText="Stay and Continue"
+          onClose={closeUnsavedModal}
+          secondaryAction={{
+            label: 'Leave Without Saving',
+            onClick: leaveWithoutSaving,
+          }}
+          saveAction={{
+            label: saveStatus === 'saving' ? 'Saving…' : 'Save',
+            onClick: handleSaveFromUnsavedModal,
+            disabled: saveStatus === 'saving' || deadlinePassed || !isSquadComplete,
+          }}
+        />
+      ) : null}
     </div>
   );
 }

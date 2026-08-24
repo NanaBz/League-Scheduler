@@ -1,9 +1,32 @@
 const FantasyUser = require('../models/FantasyUser');
 const FantasySquad = require('../models/FantasySquad');
 const Match = require('../models/Match');
-const { FANTASY_MATCH_COMPETITION } = require('./fantasyLeagueScope');
+const { FANTASY_MATCH_COMPETITION, FANTASY_MAX_MATCHWEEK } = require('./fantasyLeagueScope');
 const { deriveCurrentGameweekFromMatches, leagueHasFinishedMatches } = require('./fantasyGameweek');
 const { latestCompletedMatchweek } = require('./fantasyMatchweek');
+
+function formatSeasonResult(entry) {
+  if (!entry) return null;
+  return {
+    fantasyUserId: entry.fantasyUserId,
+    teamName: entry.team,
+    managerName: entry.user,
+    totalPoints: entry.total,
+    rank: entry.pos,
+  };
+}
+
+function deriveSeasonResults(entries, seasonComplete) {
+  if (!seasonComplete || !entries.length) {
+    return { champion: null, runnerUp: null };
+  }
+  const champion = entries.find((e) => e.pos === 1) || null;
+  const runnerUp = entries.find((e) => e.pos === 2) || null;
+  return {
+    champion: formatSeasonResult(champion),
+    runnerUp: formatSeasonResult(runnerUp),
+  };
+}
 
 /** Overall Acity League — one row per registered fantasy manager (no placeholders). */
 async function buildOverallLeagueEntries() {
@@ -11,13 +34,15 @@ async function buildOverallLeagueEntries() {
     competition: FANTASY_MATCH_COMPETITION,
     isPublished: true,
   })
-    .select('matchweek isPlayed matchState isVoided competition')
+    .select('matchweek isPlayed matchState isVoided competition isPublished')
     .lean();
 
   const currentGameweek = deriveCurrentGameweekFromMatches(matches);
-  const latestCompleted = latestCompletedMatchweek(matches);
-  const gwForColumn = latestCompleted || currentGameweek;
+  const latestCompletedGameweek = latestCompletedMatchweek(matches);
+  const gwForColumn = latestCompletedGameweek || currentGameweek;
   const preseason = !leagueHasFinishedMatches(matches);
+  const seasonComplete =
+    !preseason && latestCompletedGameweek >= FANTASY_MAX_MATCHWEEK;
 
   // Every fantasy account (verified or pending) — registration adds them to the league
   const users = await FantasyUser.find({})
@@ -26,7 +51,16 @@ async function buildOverallLeagueEntries() {
     .lean();
 
   if (!users.length) {
-    return { currentGameweek, preseason, entries: [] };
+    return {
+      currentGameweek,
+      latestCompletedGameweek,
+      preseason,
+      seasonComplete: false,
+      maxMatchweek: FANTASY_MAX_MATCHWEEK,
+      champion: null,
+      runnerUp: null,
+      entries: [],
+    };
   }
 
   const userIds = users.map((u) => u._id);
@@ -67,7 +101,18 @@ async function buildOverallLeagueEntries() {
     }));
   }
 
-  return { currentGameweek, preseason, entries };
+  const { champion, runnerUp } = deriveSeasonResults(entries, seasonComplete);
+
+  return {
+    currentGameweek,
+    latestCompletedGameweek,
+    preseason,
+    seasonComplete,
+    maxMatchweek: FANTASY_MAX_MATCHWEEK,
+    champion,
+    runnerUp,
+    entries,
+  };
 }
 
 module.exports = { buildOverallLeagueEntries };

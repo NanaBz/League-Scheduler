@@ -203,3 +203,39 @@
     min-width: 100%;
   }
 }
+
+.ol-row--champion {
+  background: rgba(220, 38, 38, 0.12);
+}
+
+.ol-row--runner-up {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.ol-season-badge {
+  margin-left: 8px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.ol-season-badge--champion {
+  background: rgba(220, 38, 38, 0.25);
+  color: #fff;
+}
+
+.ol-season-badge--runner-up {
+  background: rgba(255, 255, 255, 0.12);
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.ol-team-line {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px;
+}

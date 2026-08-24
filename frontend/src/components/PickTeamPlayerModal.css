@@ -75,10 +75,16 @@
 }
 
 .ptpm-meta,
-.ptpm-fixture {
+.ptpm-fixture,
+.ptpm-stats {
   font-size: 0.85rem;
   color: #64748b;
   font-weight: 600;
+}
+
+.ptpm-stats {
+  display: block;
+  margin-top: 4px;
 }
 
 .ptpm-hint {

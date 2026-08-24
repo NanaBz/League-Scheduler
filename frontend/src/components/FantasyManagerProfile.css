@@ -1,0 +1,226 @@
+.fmp-panel {
+  margin-bottom: 16px;
+}
+
+.fmp-head {
+  margin-bottom: 12px;
+}
+
+.fmp-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: none;
+  background: transparent;
+  color: #334155;
+  font-weight: 700;
+  font-size: 0.9rem;
+  cursor: pointer;
+  padding: 0;
+  margin-bottom: 8px;
+}
+
+.fmp-back:hover {
+  color: #0f172a;
+}
+
+.fmp-title {
+  margin: 0 0 8px;
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.fmp-user-team {
+  font-size: 1rem;
+  font-weight: 800;
+  color: #334155;
+}
+
+.fmp-user-manager {
+  font-size: 0.88rem;
+  color: #64748b;
+}
+
+.fmp-toggle {
+  margin-bottom: 14px;
+}
+
+.fmp-current {
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  padding: 14px 16px;
+  background: #fff;
+}
+
+.fmp-current__season {
+  margin: 0 0 12px;
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.fmp-current-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.fmp-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px;
+  border-radius: 10px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+}
+
+.fmp-stat__label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #64748b;
+}
+
+.fmp-stat__value {
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.fmp-message {
+  margin: 0;
+  font-size: 0.88rem;
+  line-height: 1.5;
+}
+
+.fmp-message--muted {
+  color: #64748b;
+}
+
+.fmp-message--error {
+  color: #b91c1c;
+}
+
+.fmp-message--info {
+  margin-top: 12px;
+  color: #475569;
+}
+
+.fmp-history-table-wrap {
+  display: block;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: linear-gradient(
+    165deg,
+    #050505 0%,
+    #111111 18%,
+    #2a0a0a 42%,
+    var(--primary-red-dark, #b91c1c) 70%,
+    var(--primary-red, #dc2626) 100%
+  );
+}
+
+.fmp-history-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 420px;
+}
+
+.fmp-history-table th,
+.fmp-history-table td {
+  padding: 10px 12px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.2);
+  font-size: 0.9rem;
+  color: #fff;
+}
+
+.fmp-history-table th {
+  text-align: left;
+  font-weight: 700;
+  font-size: 0.78rem;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.fmp-history-table__season {
+  font-weight: 700;
+}
+
+.fmp-history-table__num {
+  text-align: center;
+  font-weight: 700;
+  width: 88px;
+}
+
+.fmp-history-cards {
+  display: none;
+  gap: 10px;
+}
+
+.fmp-history-card {
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 12px 14px;
+  background: #fff;
+}
+
+.fmp-history-card__season {
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: #0f172a;
+  margin-bottom: 10px;
+}
+
+.fmp-history-card__stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0;
+}
+
+.fmp-history-card__stats div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.fmp-history-card__stats dt {
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #64748b;
+}
+
+.fmp-history-card__stats dd {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 800;
+  color: #334155;
+}
+
+@media (max-width: 640px) {
+  .fmp-current-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .fmp-history-table-wrap {
+    display: none;
+  }
+
+  .fmp-history-cards {
+    display: grid;
+  }
+}
+
+@media (min-width: 641px) {
+  .fmp-history-cards {
+    display: none;
+  }
+}

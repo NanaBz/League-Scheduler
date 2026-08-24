@@ -1,4 +1,5 @@
 import React from 'react';
+import { displaySelectionPercentage, displayTotalPoints } from '../utils/fantasyPlayerStatsDisplay';
 import './PlayerDetailsModal.css';
 
 export default function PlayerDetailsModal({ player, onReplace, onRemove, onClose }) {
@@ -25,11 +26,11 @@ export default function PlayerDetailsModal({ player, onReplace, onRemove, onClos
           <div className="pdm-stats">
             <div className="pdm-stat-item">
               <div className="pdm-stat-label">Total Points</div>
-              <div className="pdm-stat-value">{player.totalPoints || 0}</div>
+              <div className="pdm-stat-value">{displayTotalPoints(player.totalPoints)}</div>
             </div>
             <div className="pdm-stat-item">
               <div className="pdm-stat-label">Selection</div>
-              <div className="pdm-stat-value">{(player.selectionPercentage || 0).toFixed(1)}%</div>
+              <div className="pdm-stat-value">{displaySelectionPercentage(player.selectionPercentage)}%</div>
             </div>
           </div>
 

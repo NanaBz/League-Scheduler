@@ -3,7 +3,6 @@ const router = express.Router();
 const mongoose = require('mongoose');
 const Player = require('../models/Player');
 const Match = require('../models/Match');
-const PlayerStats = require('../models/PlayerStats');
 const Team = require('../models/Team');
 const FantasyDraftSquad = require('../models/FantasyDraftSquad');
 const FantasySquad = require('../models/FantasySquad');
@@ -18,8 +17,12 @@ const {
 } = require('../utils/fantasyGameweek');
 const FantasyMatchweek = require('../models/FantasyMatchweek');
 const { buildOverallLeagueEntries } = require('../utils/fantasyOverallLeague');
+const { buildCupResponse } = require('../utils/fantasyAcityCup');
 const { buildDashboardSummary } = require('../utils/fantasyDashboardSummary');
+const { buildManagerProfilePayload } = require('../utils/fantasyManagerProfile');
 const { nextFixturesForTeam } = require('../utils/fantasyPlayerFixtures');
+const { loadPlayerStatsMaps, attachPlayerStats, statsForPlayer } = require('../utils/fantasyPlayerStats');
+const { validateMaxPlayersPerClubFromPlayers } = require('../utils/fantasySquadValidation');
 const { validateLineupPayload, resolveDefaultCaptainRoles } = require('../utils/fantasyLineup');
 const { lineupWithResolvedCaptains } = require('../utils/fantasyCaptainRoles');
 const {
@@ -28,6 +31,10 @@ const {
   syncChipFromLineupSave,
   loadChipHistory,
 } = require('../utils/fantasyChipState');
+const {
+  getTransferStateForUser,
+  getTransferCostForGameweek,
+} = require('../utils/fantasyFreeTransfers');
 const { recordGameweekTransfers, mergeTransferInOrder } = require('../utils/fantasyTransferTracking');
 const { latestCompletedMatchweek, isMatchweekComplete } = require('../utils/fantasyMatchweek');
 const { upsertGameweekSnapshot } = require('../utils/fantasyGameweekSnapshot');
@@ -101,6 +108,7 @@ async function hydrateSquadSlots(slots) {
   const currentGameweek = deriveCurrentGameweekFromMatches(leagueMatches);
 
   const byId = new Map(players.map((p) => [p._id.toString(), p]));
+  const statsMaps = await loadPlayerStatsMaps();
   const hydrated = {};
   for (const [pos, arr] of Object.entries(slots)) {
     hydrated[pos] = arr.map((id) => {
@@ -108,13 +116,16 @@ async function hydrateSquadSlots(slots) {
       const player = byId.get(String(id));
       if (!player) return null;
       const teamId = player.team?._id || player.team;
-      return {
-        ...player,
-        nextThree: nextFixturesForTeam(leagueMatches, teamId, {
-          fromMatchweek: currentGameweek,
-          limit: 3,
-        }),
-      };
+      return attachPlayerStats(
+        {
+          ...player,
+          nextThree: nextFixturesForTeam(leagueMatches, teamId, {
+            fromMatchweek: currentGameweek,
+            limit: 3,
+          }),
+        },
+        statsMaps
+      );
     });
   }
   return hydrated;
@@ -132,7 +143,10 @@ async function validateSlotPlayers(slots) {
     objectIds.push(new mongoose.Types.ObjectId(id));
   }
 
-  const players = await Player.find({ _id: { $in: objectIds } }).select('_id position').lean();
+  const players = await Player.find({ _id: { $in: objectIds } })
+    .select('_id position team')
+    .populate('team', 'name')
+    .lean();
   const byId = new Map(players.map((p) => [p._id.toString(), p]));
 
   for (const [pos, arr] of Object.entries(slots)) {
@@ -147,6 +161,12 @@ async function validateSlotPlayers(slots) {
       }
     }
   }
+
+  const clubCheck = validateMaxPlayersPerClubFromPlayers(byId, ids);
+  if (!clubCheck.ok) {
+    return clubCheck;
+  }
+
   return { ok: true };
 }
 
@@ -243,18 +263,25 @@ router.get('/season', async (req, res) => {
   }
 });
 
+// GET /fantasy/cup — Acity Cup bracket (auto-init after MW5, resolves ties as GWs complete)
+router.get('/cup', async (req, res) => {
+  try {
+    const seasonNumber = (await getActiveSeasonNumber()) ?? 1;
+    const matches = await loadLeagueMatchesForFantasy();
+    const cup = await buildCupResponse(seasonNumber, matches);
+    return res.json({ success: true, seasonNumber, ...cup });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+});
+
 // GET /fantasy/overall-league — registered managers only (no mock teams)
 router.get('/overall-league', async (req, res) => {
   try {
-    const { currentGameweek, preseason, entries } = await buildOverallLeagueEntries();
-    const matches = await loadLeagueMatchesForFantasy();
-    const latestCompletedGameweek = latestCompletedMatchweek(matches);
+    const result = await buildOverallLeagueEntries();
     return res.json({
       success: true,
-      currentGameweek,
-      latestCompletedGameweek,
-      preseason,
-      entries,
+      ...result,
     });
   } catch (error) {
     return res.status(500).json({ success: false, message: error.message });
@@ -271,12 +298,15 @@ router.get('/dashboard-summary', authenticateFantasyUser, async (req, res) => {
   }
 });
 
-function computeTotalPoints(stats) {
-  if (!stats) return 0;
-  const { goals = 0, assists = 0, cleanSheets = 0, yellowCards = 0, redCards = 0, ownGoals = 0 } = stats;
-  // Simple FPL-like heuristic; adjust later if needed
-  return (goals * 4) + (assists * 3) + (cleanSheets * 4) - yellowCards - (redCards * 3) - (ownGoals * 2);
-}
+// GET /fantasy/manager-profile — current season summary + archived FPL season history
+router.get('/manager-profile', authenticateFantasyUser, async (req, res) => {
+  try {
+    const profile = await buildManagerProfilePayload(req.fantasyUser._id);
+    return res.json({ success: true, ...profile });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+});
 
 // Players listing with filters and next three matches
 // GET /fantasy/players?position=DF&minPrice=4.0&maxPrice=5.0&teams=ID1,ID2&search=name
@@ -307,53 +337,33 @@ router.get('/players', async (req, res) => {
 
     if (search) filter.name = { $regex: new RegExp(search, 'i') };
 
-    const seasonNumber = await getActiveSeasonNumber();
-    const players = await Player.find(filter)
-      .populate('team', 'name logo competition category')
-      .lean();
-
-    const leagueMatches = await Match.find({
-      competition: FANTASY_MATCH_COMPETITION,
-      isPublished: true,
-      isVoided: { $ne: true },
-    })
-      .populate('homeTeam', 'name')
-      .populate('awayTeam', 'name')
-      .lean();
+    const [players, leagueMatches, statsMaps] = await Promise.all([
+      Player.find(filter).populate('team', 'name logo competition category').lean(),
+      Match.find({
+        competition: FANTASY_MATCH_COMPETITION,
+        isPublished: true,
+        isVoided: { $ne: true },
+      })
+        .populate('homeTeam', 'name')
+        .populate('awayTeam', 'name')
+        .lean(),
+      loadPlayerStatsMaps(),
+    ]);
 
     const currentGameweek = deriveCurrentGameweekFromMatches(leagueMatches);
 
     const result = [];
     for (const p of players) {
-      // Skip players without valid team association (mock data)
       if (!p.team || !p.team._id) continue;
 
-      // Stats (aggregate across competitions for active season)
-      let statsAgg = null;
-      if (seasonNumber) {
-        const stats = await PlayerStats.find({
-          player: p._id,
-          seasonNumber,
-          competition: FANTASY_MATCH_COMPETITION,
-        }).lean();
-        statsAgg = stats.reduce((acc, s) => ({
-          goals: acc.goals + (s.goals || 0),
-          assists: acc.assists + (s.assists || 0),
-          cleanSheets: acc.cleanSheets + (s.cleanSheets || 0),
-          yellowCards: acc.yellowCards + (s.yellowCards || 0),
-          redCards: acc.redCards + (s.redCards || 0),
-          ownGoals: acc.ownGoals + (s.ownGoals || 0),
-        }), { goals: 0, assists: 0, cleanSheets: 0, yellowCards: 0, redCards: 0, ownGoals: 0 });
-      }
-
-      const totalPoints = computeTotalPoints(statsAgg);
       const upcoming = nextFixturesForTeam(leagueMatches, p.team._id, {
         fromMatchweek: currentGameweek,
         limit: 3,
       });
 
-      // Skip players without upcoming matches (filters out old mock data)
       if (upcoming.length === 0) continue;
+
+      const { totalPoints, selectionPercentage } = statsForPlayer(p._id, statsMaps);
 
       result.push({
         _id: p._id,
@@ -362,9 +372,9 @@ router.get('/players', async (req, res) => {
         position: p.position,
         team: p.team,
         fantasyPrice: p.fantasyPrice,
-        selectionPercentage: 0, // placeholder until fantasy ownership is tracked
+        selectionPercentage,
         totalPoints,
-        nextThree: upcoming
+        nextThree: upcoming,
       });
     }
 
@@ -406,20 +416,70 @@ function squadIdsFromSlots(slots) {
     .map(String);
 }
 
+async function resolveDraftSlots(fantasyUserId, doc, currentGameweek) {
+  let slots = normalizeSlotIds(doc?.slots || EMPTY_SLOTS);
+  let squadPlayerCount = squadIdsFromSlots(slots).length;
+
+  if (squadPlayerCount >= 13) {
+    return { slots, squadPlayerCount };
+  }
+
+  const { slotsFromGameweekSnapshot } = require('../utils/fantasySquadFromSnapshot');
+  const priorSnaps = await FantasySquad.find({
+    fantasyUser: fantasyUserId,
+    matchweek: { $lte: Number(currentGameweek) || 99 },
+    chipUsed: { $ne: 'FH' },
+  })
+    .sort({ matchweek: -1 })
+    .select('squadSlots lineup matchweek')
+    .lean();
+
+  for (const snap of priorSnaps) {
+    const fromSnap = await slotsFromGameweekSnapshot(snap);
+    if (fromSnap && squadIdsFromSlots(fromSnap).length === 13) {
+      slots = normalizeSlotIds(fromSnap);
+      squadPlayerCount = 13;
+      if (doc?._id) {
+        await FantasyDraftSquad.findOneAndUpdate({ _id: doc._id }, { $set: { slots } });
+      }
+      break;
+    }
+  }
+
+  return { slots, squadPlayerCount };
+}
+
 // GET /fantasy/my-squad — authenticated user's draft squad (13 slots)
 router.get('/my-squad', authenticateFantasyUser, async (req, res) => {
   try {
     const matches = await loadLeagueMatchesForFantasy();
     const currentGameweek = deriveCurrentGameweekFromMatches(matches);
 
+    const chipState = await getFantasyChipState(req.fantasyUser._id, currentGameweek, matches);
     const doc = await FantasyDraftSquad.findOne({ fantasyUser: req.fantasyUser._id }).lean();
-    const slots = normalizeSlotIds(doc?.slots || EMPTY_SLOTS);
+    const { slots, squadPlayerCount } = await resolveDraftSlots(
+      req.fantasyUser._id,
+      doc,
+      currentGameweek
+    );
     const squad = await hydrateSquadSlots(slots);
     const lineup = hydrateLineupFromSquad(doc?.lineup, squad);
     const transferInOrder = (doc?.transferInOrder || []).map(String);
-    const chipState = await getFantasyChipState(req.fantasyUser._id, currentGameweek);
+    const transferState = await getTransferStateForUser(
+      req.fantasyUser._id,
+      currentGameweek,
+      chipState
+    );
 
-    return res.json({ success: true, squad, lineup, transferInOrder, chipState });
+    return res.json({
+      success: true,
+      squad,
+      lineup,
+      transferInOrder,
+      chipState,
+      squadPlayerCount,
+      transferState,
+    });
   } catch (error) {
     return res.status(500).json({ success: false, message: error.message });
   }
@@ -437,6 +497,24 @@ router.put('/my-squad', authenticateFantasyUser, async (req, res) => {
     }
 
     const existing = await FantasyDraftSquad.findOne({ fantasyUser: req.fantasyUser._id }).lean();
+    const incomingCount = squadIdsFromSlots(slots).length;
+    const existingCount = squadIdsFromSlots(normalizeSlotIds(existing?.slots || EMPTY_SLOTS)).length;
+    const matches = await loadLeagueMatchesForFantasy();
+    const currentGameweek = deriveCurrentGameweekFromMatches(matches);
+
+    if (incomingCount === 0 && existingCount >= 13) {
+      return res.status(400).json({
+        success: false,
+        message: 'Cannot save an empty squad over your existing 13-player squad.',
+      });
+    }
+    if (currentGameweek > 1 && incomingCount > 0 && incomingCount < 13) {
+      return res.status(400).json({
+        success: false,
+        message: 'Save all 13 players before updating your squad.',
+      });
+    }
+
     const squadChanged = !existing?.slots || !slotsEqual(existing.slots, slots);
 
     const oldIds = new Set(squadIdsFromSlots(normalizeSlotIds(existing?.slots || EMPTY_SLOTS)));
@@ -445,9 +523,6 @@ router.put('/my-squad', authenticateFantasyUser, async (req, res) => {
     const transfersIn = newIds.filter((id) => !oldIds.has(id));
     const transfersOut = [...oldIds].filter((id) => !newIdSet.has(id));
     const transferInOrder = mergeTransferInOrder(existing?.transferInOrder, transfersIn);
-
-    const matches = await loadLeagueMatchesForFantasy();
-    const currentGameweek = deriveCurrentGameweekFromMatches(matches);
 
     const update = { fantasyUser: req.fantasyUser._id, slots, transferInOrder };
     if (squadChanged) {
@@ -466,13 +541,21 @@ router.put('/my-squad', authenticateFantasyUser, async (req, res) => {
 
     const squad = await hydrateSquadSlots(normalizeSlotIds(doc.slots));
     const lineup = squadChanged ? null : hydrateLineupFromSquad(doc.lineup, squad);
-    const chipState = await getFantasyChipState(req.fantasyUser._id, currentGameweek);
+    const chipState = await getFantasyChipState(req.fantasyUser._id, currentGameweek, matches);
+    const squadPlayerCount = squadIdsFromSlots(normalizeSlotIds(doc.slots)).length;
+    const transferState = await getTransferStateForUser(
+      req.fantasyUser._id,
+      currentGameweek,
+      chipState
+    );
     return res.json({
       success: true,
       squad,
       lineup,
       transferInOrder: (doc.transferInOrder || []).map(String),
       chipState,
+      squadPlayerCount,
+      transferState,
     });
   } catch (error) {
     return res.status(500).json({ success: false, message: error.message });
@@ -512,12 +595,17 @@ router.put('/my-lineup', authenticateFantasyUser, async (req, res) => {
 
     const matches = await loadLeagueMatchesForFantasy();
     const currentGameweek = deriveCurrentGameweekFromMatches(matches);
-    const chipUsed = req.body?.lineup?.chipUsed || req.body?.chipUsed || null;
+    let chipUsed = req.body?.lineup?.chipUsed ?? req.body?.chipUsed ?? null;
+    if (!chipUsed && doc?.activeChip && doc.activeChipGameweek === currentGameweek) {
+      chipUsed = doc.activeChip;
+    }
+
+    const lineupWithChip = { ...normalizedLineup, chipUsed: chipUsed || null };
 
     const updated = await FantasyDraftSquad.findOneAndUpdate(
       { fantasyUser: req.fantasyUser._id },
       {
-        lineup: normalizedLineup,
+        lineup: lineupWithChip,
         ...(!doc.transferInOrder?.length ? { transferInOrder: squadIds } : {}),
       },
       { new: true }
@@ -529,7 +617,7 @@ router.put('/my-lineup', authenticateFantasyUser, async (req, res) => {
 
     const snapshot = await upsertGameweekSnapshot(req.fantasyUser._id, currentGameweek, {
       slots,
-      lineupPayload: { ...normalizedLineup, chipUsed },
+      lineupPayload: lineupWithChip,
       chipUsed,
     });
     if (!snapshot.ok) {
@@ -538,7 +626,7 @@ router.put('/my-lineup', authenticateFantasyUser, async (req, res) => {
 
     const squad = await hydrateSquadSlots(slots);
     const lineup = hydrateLineupFromSquad(updated.lineup, squad);
-    const chipState = await getFantasyChipState(req.fantasyUser._id, currentGameweek);
+    const chipState = await getFantasyChipState(req.fantasyUser._id, currentGameweek, matches);
     return res.json({ success: true, lineup, gameweek: currentGameweek, chipState });
   } catch (error) {
     return res.status(500).json({ success: false, message: error.message });
@@ -554,7 +642,7 @@ router.put('/my-chip', authenticateFantasyUser, async (req, res) => {
     const matches = await loadLeagueMatchesForFantasy();
     const currentGameweek = deriveCurrentGameweekFromMatches(matches);
 
-    const result = await setActiveChip(req.fantasyUser._id, chip, currentGameweek);
+    const result = await setActiveChip(req.fantasyUser._id, chip, currentGameweek, matches);
     if (!result.ok) {
       return res.status(400).json({ success: false, message: result.message });
     }
@@ -571,7 +659,7 @@ router.get('/my-chips', authenticateFantasyUser, async (req, res) => {
     const matches = await loadLeagueMatchesForFantasy();
     const currentGameweek = deriveCurrentGameweekFromMatches(matches);
     const chipHistory = await loadChipHistory(req.fantasyUser._id);
-    const chipState = await getFantasyChipState(req.fantasyUser._id, currentGameweek);
+    const chipState = await getFantasyChipState(req.fantasyUser._id, currentGameweek, matches);
 
     return res.json({
       success: true,
@@ -649,8 +737,13 @@ router.get('/managers/:fantasyUserId/team-view', authenticateFantasyUser, async 
       chipUsed: gwDoc.chipUsed,
     });
 
+    const transferHitPoints =
+      gwDoc.transferHitPoints ?? (await getTransferCostForGameweek(targetId, viewGameweek));
+    const rawPoints = scored.total;
+    const netPoints = Math.max(0, rawPoints - transferHitPoints);
+
     const benchPoints = (scored.display.bench || []).reduce((s, p) => s + (p.points || 0), 0);
-    const starterPoints = scored.total - benchPoints;
+    const starterPoints = rawPoints - benchPoints;
 
     return res.json({
       success: true,
@@ -658,7 +751,9 @@ router.get('/managers/:fantasyUserId/team-view', authenticateFantasyUser, async 
       gameweek: viewGameweek,
       currentGameweek,
       latestCompletedGameweek: latestCompleted,
-      points: scored.total,
+      points: netPoints,
+      rawPoints,
+      transferHitPoints,
       starterPoints,
       benchPoints,
       chipUsed: gwDoc.chipUsed || null,

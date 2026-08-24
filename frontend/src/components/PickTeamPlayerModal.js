@@ -2,6 +2,7 @@ import React from 'react';
 import JerseyIcon from './JerseyIcon';
 import { getTeamCode, kitColors } from '../utils/fantasyKitColors';
 import { formatPitchFixture } from '../utils/fantasyPlayerFixtures';
+import { displaySelectionPercentage, displayTotalPoints } from '../utils/fantasyPlayerStatsDisplay';
 import { allStarters, playerId } from '../utils/fantasyLineup';
 import './PickTeamPlayerModal.css';
 
@@ -111,6 +112,10 @@ export default function PickTeamPlayerModal({
             </span>
             <span className="ptpm-fixture">
               {formatPitchFixture(player, matches, currentGameweek)}
+            </span>
+            <span className="ptpm-stats">
+              Total Points: {displayTotalPoints(player.totalPoints)} · Selection:{' '}
+              {displaySelectionPercentage(player.selectionPercentage)}%
             </span>
           </div>
         </div>

@@ -93,6 +93,7 @@
 .ppm-next-pill { background:#f1f5f9; border:1px solid #e2e8f0; border-radius:999px; padding:3px 6px; font-size:0.75rem; }
 .ppm-loading { padding: 20px; text-align: center; color: #666; font-weight: 600; }
 .ppm-empty { padding: 20px; text-align: center; color: #666; font-weight: 600; }
+.ppm-empty--error { color: #b91c1c; }
 
 @media (max-width: 768px) {
   .ppm-filters { flex-direction: row; gap: 4px; }

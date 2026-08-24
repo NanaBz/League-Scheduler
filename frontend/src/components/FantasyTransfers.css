@@ -75,6 +75,63 @@
 .summary-item .label { font-size: 0.68rem; opacity: 0.9; line-height: 1.2; }
 .summary-item .value { font-weight: 800; font-size: 0.95rem; margin-top: 2px; }
 
+.summary-item--active {
+  background: linear-gradient(135deg, #0f766e 0%, #115e59 100%);
+  border-color: rgba(255, 255, 255, 0.35);
+  box-shadow: 0 0 0 2px rgba(45, 212, 191, 0.35);
+}
+
+.summary-item--chip-active {
+  background: linear-gradient(135deg, #7c3aed 0%, #5b21b6 100%);
+  border-color: rgba(255, 255, 255, 0.35);
+}
+
+.transfers-chip-banner {
+  margin-bottom: 10px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #2d1b4e 0%, #1a0f2e 100%);
+  color: rgba(255, 255, 255, 0.92);
+  font-size: 0.82rem;
+  line-height: 1.45;
+  border: 1.5px solid rgba(0, 217, 255, 0.35);
+}
+
+.transfers-chip-banner strong {
+  color: #67e8f9;
+}
+
+.transfers-chip-banner--hint {
+  background: linear-gradient(135deg, #451a03 0%, #292524 100%);
+  border-color: rgba(251, 191, 36, 0.45);
+}
+
+.transfers-save-status {
+  margin-bottom: 10px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  font-size: 0.85rem;
+  line-height: 1.4;
+}
+
+.transfers-save-status--saving {
+  background: #eff6ff;
+  color: #1d4ed8;
+  border: 1px solid #bfdbfe;
+}
+
+.transfers-save-status--saved {
+  background: #ecfdf5;
+  color: #047857;
+  border: 1px solid #a7f3d0;
+}
+
+.transfers-save-status--error {
+  background: #fef2f2;
+  color: #b91c1c;
+  border: 1px solid #fecaca;
+}
+
 /* Squad Progress */
 .squad-progress {
   margin-bottom: 14px;
@@ -562,8 +619,21 @@
   opacity: 0.6;
 }
 
+.submit-btn--secondary {
+  background: #fff;
+  color: var(--primary-red);
+  border: 2px solid var(--primary-red);
+  box-shadow: none;
+}
+
+.submit-btn--secondary.active:hover {
+  background: #fef2f2;
+  transform: translateY(-2px);
+}
+
 @media (max-width: 768px) {
   .submit-section {
+    flex-direction: column;
     padding: 10px 0;
     margin-top: 10px;
   }
