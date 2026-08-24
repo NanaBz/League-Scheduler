@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ListChecks, BarChart3, Users, Trophy, SidebarOpen, SidebarClose } from 'lucide-react';
+import { ListChecks, BarChart3, Users, Trophy, Archive, SidebarOpen, SidebarClose } from 'lucide-react';
 
 export default function Sidebar({ activeSection, onSelect }) {
   const [collapsed, setCollapsed] = useState(false);
@@ -33,6 +33,7 @@ export default function Sidebar({ activeSection, onSelect }) {
       <Item id="stats" icon={<BarChart3 size={18} />} label="Stats" />
       <Item id="teams" icon={<Users size={18} />} label="Teams" />
       <Item id="fantasy" icon={<Trophy size={18} />} label="Fantasy" />
+      <Item id="archived" icon={<Archive size={18} />} label="Archived" />
     </aside>
   );
 }

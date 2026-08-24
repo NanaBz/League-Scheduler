@@ -1,0 +1,158 @@
+.season-reset-modal {
+  max-width: 520px;
+  width: calc(100% - 2rem);
+}
+
+.season-reset-title {
+  margin: 0 0 1rem;
+  font-size: 1.35rem;
+  color: var(--primary-red, #dc2626);
+}
+
+.season-reset-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.season-reset-warning {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 0.85rem 1rem;
+  border-radius: 10px;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #991b1b;
+}
+
+.season-reset-warning p {
+  margin: 0;
+  font-weight: 600;
+}
+
+.season-reset-copy {
+  margin: 0;
+  color: #334155;
+  line-height: 1.5;
+}
+
+.season-reset-type-grid {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.season-reset-type-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.35rem;
+  text-align: left;
+  padding: 0.9rem 1rem;
+  border: 2px solid #e2e8f0;
+  border-radius: 12px;
+  background: #fff;
+  cursor: pointer;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.season-reset-type-card strong {
+  color: #0f172a;
+}
+
+.season-reset-type-card span {
+  font-size: 0.9rem;
+  color: #64748b;
+}
+
+.season-reset-type-card.selected {
+  border-color: var(--primary-red, #dc2626);
+  box-shadow: 0 0 0 1px rgba(220, 38, 38, 0.15);
+}
+
+.season-reset-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  font-weight: 600;
+  color: #334155;
+}
+
+.season-reset-field select {
+  padding: 0.55rem 0.65rem;
+  border-radius: 8px;
+  border: 1px solid #cbd5e1;
+  font-size: 1rem;
+}
+
+.season-reset-summary {
+  margin: 0;
+  padding: 0.85rem 1rem;
+  border-radius: 10px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+}
+
+.season-reset-summary div {
+  display: grid;
+  grid-template-columns: 8.5rem 1fr;
+  gap: 0.35rem 0.75rem;
+  padding: 0.25rem 0;
+}
+
+.season-reset-summary dt {
+  margin: 0;
+  font-weight: 600;
+  color: #64748b;
+}
+
+.season-reset-summary dd {
+  margin: 0;
+  color: #0f172a;
+}
+
+.season-reset-hint {
+  margin: 0;
+  font-size: 0.9rem;
+  color: #64748b;
+}
+
+.season-reset-error {
+  margin: 0;
+  color: #b91c1c;
+  font-weight: 600;
+}
+
+.season-reset-result {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 0.35rem;
+  padding: 1rem;
+  border-radius: 12px;
+}
+
+.season-reset-result.success {
+  background: #ecfdf5;
+  color: #065f46;
+}
+
+.season-reset-result.error {
+  background: #fef2f2;
+  color: #991b1b;
+}
+
+.season-reset-result h3 {
+  margin: 0.25rem 0 0;
+}
+
+.season-reset-result p {
+  margin: 0;
+}
+
+.season-reset-detail,
+.season-reset-code {
+  font-size: 0.9rem;
+  opacity: 0.9;
+}

@@ -10,6 +10,7 @@ import TeamSelection from './TeamSelection';
 import PlayerPriceEditor from './PlayerPriceEditor';
 import { userFixturePhase, desktopFixtureBadgeClass, desktopFixtureBadgeLabel } from '../utils/matchDisplayState';
 import { clearFantasyClientSeasonKeys } from '../utils/fantasyGameweek';
+import SeasonResetWorkflow from './SeasonResetWorkflow';
 
 function buildServerFormSnapshot(match, homeScore, awayScore) {
   const h = parseInt(homeScore, 10) || 0;
@@ -48,6 +49,7 @@ const AdminPanel = ({ onDataChange, isAdmin }) => {
   const [acwplMwFilter, setAcwplMwFilter] = useState('1');
   const [girlsSuperCupMwFilter, setGirlsSuperCupMwFilter] = useState('1');
   const [loading, setLoading] = useState(false);
+  const [showSeasonResetWorkflow, setShowSeasonResetWorkflow] = useState(false);
   const [cupTeams, setCupTeams] = useState([]);
   const [leagueWinnerId, setLeagueWinnerId] = useState('');
   const [cupWinnerId, setCupWinnerId] = useState('');
@@ -390,20 +392,10 @@ const AdminPanel = ({ onDataChange, isAdmin }) => {
     });
   };
 
-  const resetSeason = async () => {
-    if (window.confirm('🏆 Archive current season and start fresh?\n\nThis will:\n✅ Save current season to archives\n✅ Reset all teams to 0 points\n✅ Clear all fixtures\n✅ Start Season ' + (new Date().getFullYear() - 2023) + '\n\nContinue?')) {
-      setLoading(true);
-      try {
-        const response = await api.post('/seasons/reset');
-        await fetchTeams();
-        await fetchMatches();
-        onDataChange();
-        alert(`🎉 Season archived successfully!\n\n📊 Previous season saved as: Season ${response.data.archivedSeason}\n🆕 New season started: Season ${response.data.newSeason}\n\nView archived seasons in User View!`);
-      } catch (error) {
-        alert('Error resetting season: ' + error.message);
-      }
-      setLoading(false);
-    }
+  const handleSeasonResetComplete = async () => {
+    await fetchTeams();
+    await fetchMatches();
+    onDataChange();
   };
 
   const buildMatchEventsFromGoalscorerForm = (matchId) => {
@@ -1004,7 +996,7 @@ const AdminPanel = ({ onDataChange, isAdmin }) => {
           </button>
           <button 
             className="btn btn-danger" 
-            onClick={resetSeason}
+            onClick={() => setShowSeasonResetWorkflow(true)}
             disabled={loading}
           >
             Reset Season
@@ -1797,6 +1789,14 @@ const AdminPanel = ({ onDataChange, isAdmin }) => {
           </div>
         </div>
       )}
+
+      <SeasonResetWorkflow
+        open={showSeasonResetWorkflow}
+        onClose={() => setShowSeasonResetWorkflow(false)}
+        onComplete={handleSeasonResetComplete}
+        busy={loading}
+        setBusy={setLoading}
+      />
     </div>
   </>
   );

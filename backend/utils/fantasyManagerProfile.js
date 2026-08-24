@@ -1,19 +1,19 @@
 const Season = require('../models/Season');
 const FantasyManagerSeasonResult = require('../models/FantasyManagerSeasonResult');
 const { buildOverallLeagueEntries } = require('./fantasyOverallLeague');
-const { getPrimaryActiveSeasonNumber } = require('./seasonContext');
+const { getLiveSeasonStatsNumber } = require('./seasonContext');
 const { mapHistoryRow } = require('./fantasyManagerHistory');
 
 async function resolveCurrentSeasonMeta() {
-  const seasonNumber = await getPrimaryActiveSeasonNumber();
+  const seasonNumber = await getLiveSeasonStatsNumber();
   if (seasonNumber == null) {
     return { seasonNumber: null, seasonName: 'Current Season' };
   }
 
-  const season = await Season.findOne({ seasonNumber }).select('seasonNumber name').lean();
+  const season = await Season.findOne({ seasonNumber }).select('seasonNumber name displayName').lean();
   return {
     seasonNumber,
-    seasonName: season?.name || `Season ${seasonNumber}`,
+    seasonName: season?.displayName || season?.name || `Season ${seasonNumber}`,
   };
 }
 

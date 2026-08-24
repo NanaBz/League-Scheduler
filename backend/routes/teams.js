@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const Team = require('../models/Team');
+const Player = require('../models/Player');
 const { authenticateAdmin } = require('../middleware/auth');
 
 // Get all teams
@@ -68,11 +69,20 @@ router.delete('/:id', authenticateAdmin, async (req, res) => {
   }
 });
 
-// Initialize default teams
+// Initialize default teams (empty database only — rosters are preserved across season resets)
 router.post('/initialize', authenticateAdmin, async (req, res) => {
   try {
-    // Clear existing teams first to avoid duplicates
-    await Team.deleteMany({});
+    const [teamCount, playerCount] = await Promise.all([
+      Team.countDocuments(),
+      Player.countDocuments(),
+    ]);
+    if (teamCount > 0 || playerCount > 0) {
+      return res.status(409).json({
+        message:
+          'Teams or players already exist. Initialize is only for an empty database. After a season reset, adjust rosters in Player Management instead.',
+        code: 'teams_already_exist',
+      });
+    }
     
     const teamsData = [
       { name: 'Vikings', logo: '/logos/vikings-logo.png' },

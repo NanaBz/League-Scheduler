@@ -1,504 +1,3 @@
-/* Penalties display: distinct font color for archived fixture cards */
-.archived-season-view .penalties-display {
-  color: #2563eb !important;
-  font-weight: 700;
-}
-@media (min-width: 992px) {
-  .archived-header-left .back-to-live-btn {
-    position: relative;
-    z-index: 2;
-    margin-right: 2.5rem;
-  }
-  .archived-header-center h1 {
-    margin-left: 0.5rem;
-    position: relative;
-    z-index: 1;
-  }
-}
-@media (min-width: 992px) {
-  .archived-header-flex {
-    display: flex;
-    flex-direction: row;
-    align-items: center;
-    justify-content: flex-start;
-    gap: 2.5rem;
-    padding: 2rem 2.5rem 1.2rem 2.5rem;
-    background: none;
-    min-height: 110px;
-  }
-  .archived-header-left {
-    flex: 0 0 auto;
-    display: flex;
-    align-items: center;
-    margin-right: 2.5rem;
-  }
-  .archived-header-center {
-    flex: 1 1 0;
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    justify-content: center;
-    text-align: left;
-    gap: 0.5rem;
-  }
-  .archived-header-center h1 {
-    margin: 0;
-    font-size: 2.6rem;
-    color: #dc2626;
-    font-weight: 800;
-    line-height: 1.1;
-  }
-  .archived-header-center .season-info {
-    font-size: 1.25rem;
-    color: #64748b;
-    margin: 0;
-  }
-  .archived-header-right {
-    flex: 0 0 auto;
-    display: flex;
-    flex-direction: column;
-    align-items: flex-end;
-    gap: 0.3rem;
-    min-width: 220px;
-  }
-}
-/* Remove card/border/shadow/background around team logos in league table (archived seasons) */
-.archived-season-view .league-table .team-info img {
-  background: none !important;
-  border: none !important;
-  box-shadow: none !important;
-  padding: 0 !important;
-}
-/* --- FIX: Properly allow full team names in fixture cards, flexbox best practice --- */
-.archived-season-view .mobile-fixture-card .team .team-name,
-.archived-season-view .mobile-fixture-card .team-info .team-name {
-  flex: 1 1 0 !important;
-  min-width: 0 !important;
-  white-space: nowrap !important;
-  overflow: visible !important;
-  text-overflow: unset !important;
-  max-width: none !important;
-  display: block;
-}
-
-@media (max-width: 768px) {
-  .archived-season-view .mobile-fixture-card .team .team-name,
-  .archived-season-view .mobile-fixture-card .team-info .team-name {
-    white-space: normal !important;
-    text-align: left !important;
-  }
-}
-/* Ensure full team names always show in archived fixture cards (no truncation) */
-.archived-season-view .mobile-fixture-card .team .team-name,
-.archived-season-view .mobile-fixture-card .team-info .team-name {
-  max-width: none !important;
-  overflow: visible !important;
-  text-overflow: unset !important;
-  white-space: normal !important;
-  display: inline;
-}
-/* Remove card/border/shadow around team logos in archived fixture cards */
-.archived-season-view .mobile-fixture-card .team img,
-.archived-season-view .mobile-fixture-card .team-info img {
-  background: none !important;
-  border: none !important;
-  box-shadow: none !important;
-  padding: 0 !important;
-}
-@media (min-width: 601px) {
-  .archived-season-view .mobile-fixture-card .team.home-team,
-  .archived-season-view .mobile-fixture-card .team.away-team {
-    flex-direction: row !important;
-    align-items: center !important;
-    gap: 4px !important;
-    max-width: 260px;
-    overflow: visible;
-  }
-  .archived-season-view .mobile-fixture-card .team .team-name {
-    font-size: 1em !important;
-    max-width: none !important;
-    overflow: visible !important;
-    text-overflow: unset !important;
-    white-space: normal !important;
-    font-weight: 700;
-    order: 2;
-    margin-left: 6px;
-  }
-  .archived-season-view .mobile-fixture-card .team img {
-    order: 1;
-    margin-left: 0;
-    margin-right: 0;
-  }
-}
-
-@media (max-width: 600px) {
-  .archived-season-view .mobile-fixture-card .team.home-team,
-  .archived-season-view .mobile-fixture-card .team.away-team {
-    flex-direction: row !important;
-    align-items: center !important;
-    gap: 4px !important;
-    max-width: 98vw;
-    overflow: visible;
-  }
-  .archived-season-view .mobile-fixture-card .team .team-name {
-    font-size: 0.92em !important;
-    max-width: none !important;
-    overflow: visible !important;
-    text-overflow: unset !important;
-    white-space: normal !important;
-    font-weight: 700;
-    order: 2;
-    margin-left: 6px;
-  }
-  .archived-season-view .mobile-fixture-card .team img {
-    order: 1;
-    margin-left: 0;
-    margin-right: 0;
-  }
-}
-@media (min-width: 601px) {
-  .archived-season-view .mobile-fixture-card {
-    grid-template-columns: 160px 1.1fr 0.6fr 1.1fr 60px;
-  }
-  .archived-season-view .mobile-fixture-card .team.home-team,
-  .archived-season-view .mobile-fixture-card .team.away-team {
-    flex-direction: row !important;
-    align-items: center !important;
-    gap: 4px !important;
-    max-width: 220px;
-    overflow: visible;
-  }
-  .archived-season-view .mobile-fixture-card .team .team-name {
-    font-size: 1em !important;
-    max-width: none !important;
-    overflow: visible !important;
-    text-overflow: unset !important;
-    white-space: normal !important;
-    font-weight: 700;
-  }
-}
-
-@media (max-width: 600px) {
-  .archived-season-view .mobile-fixture-card .team.home-team,
-  .archived-season-view .mobile-fixture-card .team.away-team {
-    flex-direction: row !important;
-    align-items: center !important;
-    gap: 4px !important;
-    max-width: 98vw;
-    overflow: visible;
-  }
-  .archived-season-view .mobile-fixture-card .team .team-name {
-    font-size: 0.92em !important;
-    max-width: none !important;
-    overflow: visible !important;
-    text-overflow: unset !important;
-    white-space: normal !important;
-    font-weight: 700;
-  }
-}
-@media (min-width: 601px) {
-  .archived-season-view .matches-list {
-    display: flex;
-    flex-direction: column;
-    gap: 1.2rem;
-    align-items: stretch;
-  }
-  .archived-season-view .mobile-fixture-card {
-    display: grid !important;
-    grid-template-columns: 180px 1.5fr 0.7fr 1.5fr 80px;
-    align-items: center !important;
-    justify-items: center;
-    width: 100%;
-    min-width: 600px;
-    max-width: 900px;
-    margin: 0.5rem auto !important;
-    padding: 0.7rem 0.5rem !important;
-    box-sizing: border-box !important;
-    background: none;
-    border: none;
-    box-shadow: none;
-  }
-  .archived-season-view .mobile-fixture-card .fixture-info {
-    grid-column: 1;
-    justify-self: start;
-    min-width: 120px;
-    text-align: left;
-    margin: 0;
-    font-size: 1.08em;
-  }
-  .archived-season-view .mobile-fixture-card .fixture-teams {
-    grid-column: 2 / span 3;
-    display: contents !important;
-  }
-  .archived-season-view .mobile-fixture-card .team.home-team {
-    grid-column: 2;
-    justify-self: end;
-    display: flex !important;
-    flex-direction: row !important;
-    align-items: center !important;
-    gap: 8px !important;
-    min-width: 0;
-    font-size: 1em !important;
-    max-width: 180px;
-    overflow: hidden;
-  }
-  .archived-season-view .mobile-fixture-card .fixture-score {
-    grid-column: 3;
-    justify-self: center;
-    min-width: 48px !important;
-    max-width: 80px !important;
-    font-size: 1.15rem !important;
-    padding: 0.18rem 1.2rem !important;
-    margin: 0 0.5rem !important;
-    text-align: center !important;
-  }
-  .archived-season-view .mobile-fixture-card .team.away-team {
-    grid-column: 4;
-    justify-self: start;
-    display: flex !important;
-    flex-direction: row !important;
-    align-items: center !important;
-    gap: 8px !important;
-    min-width: 0;
-    font-size: 1em !important;
-    max-width: 180px;
-    overflow: hidden;
-  }
-  .archived-season-view .mobile-fixture-card .team .team-name {
-    font-size: 1em !important;
-    max-width: 80px !important;
-    overflow: hidden !important;
-    text-overflow: ellipsis !important;
-    white-space: nowrap !important;
-  }
-}
-/* --- Desktop: Align archived match cards in a single centered row --- */
-@media (min-width: 601px) {
-  .archived-season-view .matches-list {
-    display: flex;
-    flex-direction: column;
-    gap: 1.2rem;
-    align-items: center;
-  }
-  .archived-season-view .mobile-fixture-card {
-    display: flex !important;
-    flex-direction: row !important;
-    align-items: center !important;
-    justify-content: center !important;
-    width: 540px;
-    min-width: 340px;
-    max-width: 98vw;
-    margin: 0.5rem 0 !important;
-    padding: 0.7rem 1.2rem !important;
-    box-sizing: border-box !important;
-  }
-  .archived-season-view .mobile-fixture-card .fixture-info {
-    min-width: 120px;
-    text-align: left;
-    margin-right: 18px;
-  }
-  .archived-season-view .mobile-fixture-card .fixture-teams {
-    flex: 1 1 0;
-    display: flex !important;
-    flex-direction: row !important;
-    align-items: center !important;
-    justify-content: center !important;
-    gap: 1.2rem !important;
-    width: auto;
-    margin: 0 !important;
-  }
-  .archived-season-view .mobile-fixture-card .team {
-    min-width: 0;
-    font-size: 1em !important;
-    gap: 8px !important;
-  }
-  .archived-season-view .mobile-fixture-card .team .team-name {
-    font-size: 1em !important;
-    max-width: 80px !important;
-  }
-  .archived-season-view .mobile-fixture-card .fixture-score {
-    min-width: 48px !important;
-    max-width: 80px !important;
-    font-size: 1.15rem !important;
-    padding: 0.18rem 1.2rem !important;
-    margin: 0 0.5rem !important;
-  }
-}
-/* --- Falcons logo: grey background in archived seasons (all views) --- */
-.archived-season-view .team-info img[alt="Falcons"],
-.archived-season-view .team img[alt="Falcons"] {
-  background: #e5e7eb !important;
-  border: 1.5px solid #cbd5e1 !important;
-  box-shadow: 0 1px 4px #cbd5e1;
-}
-@media (max-width: 600px) {
-  .archived-season-view .mobile-fixture-card .team-name {
-    font-size: 0.85em !important;
-    max-width: 48px !important;
-    overflow: hidden !important;
-    text-overflow: ellipsis !important;
-    white-space: nowrap !important;
-  }
-}
-/* --- Archived Fixture Card: Home left, score center, away right, compact --- */
-.archived-season-view .mobile-fixture-card .fixture-teams {
-  display: flex !important;
-  flex-direction: row !important;
-  align-items: center !important;
-  justify-content: space-between !important;
-  gap: 0.2rem !important;
-  width: 100%;
-  margin: 0.5rem 0 0.7rem 0 !important;
-}
-.archived-season-view .mobile-fixture-card .team {
-  display: flex !important;
-  flex-direction: row !important;
-  align-items: center !important;
-  gap: 6px !important;
-  min-width: 0;
-  font-size: 0.95em !important;
-  white-space: nowrap;
-}
-.archived-season-view .mobile-fixture-card .team .team-name {
-  font-size: 0.97em !important;
-  max-width: 60px !important;
-  overflow: hidden !important;
-  text-overflow: ellipsis !important;
-  white-space: nowrap !important;
-}
-.archived-season-view .mobile-fixture-card .team img {
-  width: 22px !important;
-  height: 22px !important;
-  border-radius: 5px !important;
-}
-.archived-season-view .mobile-fixture-card .fixture-score {
-  display: flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-  min-width: 38px !important;
-  max-width: 60px !important;
-  font-size: 1.05rem !important;
-  font-weight: 700 !important;
-  color: #dc2626 !important;
-  background: #fff6f6 !important;
-  border-radius: 8px !important;
-  padding: 0.12rem 0.7rem !important;
-  margin: 0 0.1rem !important;
-  text-align: center !important;
-  box-shadow: 0 1px 4px rgba(220,38,38,0.07);
-}
-/* --- Fix: Align teams horizontally with score in archived fixture cards --- */
-.archived-season-view .mobile-fixture-card .fixture-teams {
-  display: flex !important;
-  flex-direction: row !important;
-  align-items: center !important;
-  justify-content: space-between !important;
-  gap: 0.5rem !important;
-  width: 100%;
-  margin: 0.7rem 0 1.2rem 0 !important;
-}
-.archived-season-view .mobile-fixture-card .team {
-  display: flex !important;
-  flex-direction: row !important;
-  align-items: center !important;
-  gap: 8px !important;
-  min-width: 0;
-  font-size: 1.05em;
-  white-space: nowrap;
-}
-.archived-season-view .mobile-fixture-card .team img {
-  width: 28px !important;
-  height: 28px !important;
-  border-radius: 6px !important;
-}
-.archived-season-view .mobile-fixture-card .fixture-score {
-  display: flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-  min-width: 60px !important;
-  font-size: 1.15rem !important;
-  font-weight: 700 !important;
-  color: #dc2626 !important;
-  background: #fff6f6 !important;
-  border-radius: 10px !important;
-  padding: 0.2rem 1.1rem !important;
-  margin: 0 0.2rem !important;
-  text-align: center !important;
-  box-shadow: 0 1px 4px rgba(220,38,38,0.07);
-}
-/* --- Archived Season View: Force Left Alignment and Prevent Overflow --- */
-.archived-season-view, .archived-season-view * {
-  text-align: left !important;
-  box-sizing: border-box;
-}
-
-.archived-season-view .table-container,
-.archived-season-view .responsive-table,
-.archived-season-view .table-wrapper,
-.archived-season-view .league-table {
-  margin-left: 0 !important;
-  margin-right: 0 !important;
-  padding-left: 0 !important;
-  padding-right: 0 !important;
-  width: 100% !important;
-  max-width: 100vw !important;
-  overflow-x: auto !important;
-}
-
-.archived-season-view .mobile-league-card,
-.archived-season-view .mobile-fixture-card {
-  margin-left: 0 !important;
-  margin-right: 0 !important;
-  width: 100% !important;
-  max-width: 100vw !important;
-  box-sizing: border-box !important;
-}
-
-.archived-season-view .team-info,
-.archived-season-view .fixture-teams {
-  justify-content: flex-start !important;
-  gap: 0.3rem !important;
-}
-
-.archived-season-view .team-name {
-  text-align: left !important;
-  margin-left: 0 !important;
-}
-
-.archived-season-view .points-badge,
-.archived-season-view .position-badge {
-  margin-left: 0 !important;
-}
-
-@media (max-width: 600px) {
-  .archived-season-view .mobile-league-card,
-  .archived-season-view .mobile-fixture-card {
-    padding-left: 0.1rem !important;
-    padding-right: 0.1rem !important;
-    min-width: 0 !important;
-    max-width: 100vw !important;
-    overflow-x: auto !important;
-  }
-  .archived-season-view .league-table th,
-  .archived-season-view .league-table td {
-    padding-left: 0.2rem !important;
-    padding-right: 0.2rem !important;
-    min-width: 32px !important;
-    max-width: 120px !important;
-    word-break: break-word !important;
-  }
-  .archived-season-view .team-info,
-  .archived-season-view .fixture-teams {
-    flex-wrap: wrap !important;
-    gap: 0.2rem !important;
-  }
-  .archived-season-view .team-name {
-    max-width: 60vw !important;
-    overflow: hidden !important;
-    text-overflow: ellipsis !important;
-    white-space: nowrap !important;
-  }
-}
 @media (max-width: 600px) {
   .mobile-league-card {
     padding: 0.28rem 0.08rem !important;
@@ -614,13 +113,7 @@
   }
 }
 @media (max-width: 600px) {
-  .mobile-fixture-card, .archived-badge, .league-table {
-    padding: 0.7rem 0.5rem !important;
-    border-radius: 10px !important;
-    margin-bottom: 0.7rem !important;
-    font-size: 0.97em !important;
-    box-shadow: 0 1px 6px rgba(0,0,0,0.04);
-  }
+  
   .mobile-fixture-card .fixture-teams {
     margin: 0.3rem 0 0.7rem 0 !important;
     gap: 0.3rem !important;
@@ -816,7 +309,7 @@
   border: 1.5px solid #cbd5e1 !important;
   box-shadow: 0 1px 4px #cbd5e1;
 }
-/* Archived Season League Table Redesign */
+
 .league-table {
   width: 100%;
   border-collapse: separate;
@@ -1330,42 +823,15 @@ code {
 }
 
 /* Admin Player Management team picker — same visual language as user Teams page */
-.admin-panel-root .admin-player-team-picker.team-cards {
-  margin-top: 4px;
-}
 
-.admin-panel-root .admin-player-team-picker .team-card {
-  font-family: inherit;
-  color: #0f172a;
-  border: 1px solid #e5e7eb;
-  text-align: center;
-}
 
-.admin-panel-root .admin-player-team-picker .team-card img {
-  width: 80px;
-  height: 80px;
-  max-width: min(26vw, 104px);
-  max-height: min(26vw, 104px);
-  object-fit: contain;
-  flex-shrink: 0;
-}
 
-.admin-panel-root .admin-player-team-picker .admin-player-team-name {
-  display: block;
-  margin-top: 4px;
-  font-weight: 600;
-  color: #0f172a;
-  font-size: 0.95rem;
-  line-height: 1.2;
-}
 
-.admin-panel-root .admin-player-team-picker .admin-player-team-meta {
-  display: block;
-  font-size: 0.72rem;
-  color: #64748b;
-  font-weight: 500;
-  line-height: 1.25;
-}
+
+
+
+
+
 
 /* Admin Player Management — roster & coaches (selected team) */
 .admin-player-back-row {
@@ -1428,291 +894,35 @@ code {
 }
 
 /* Player roster table: scroll body, sticky header, horizontal scroll on narrow screens */
-.admin-panel-root .admin-player-table-wrap {
-  overflow: auto;
-  max-height: min(52vh, 480px);
-  -webkit-overflow-scrolling: touch;
-  border: 1px solid #e5e7eb;
-  border-radius: 8px;
-  margin-bottom: 6px;
-  background: #fff;
-}
 
-.admin-panel-root .admin-player-table {
-  min-width: 780px;
-  width: 100%;
-  border-collapse: separate;
-  border-spacing: 0;
-}
 
-.admin-panel-root .admin-player-table thead th {
-  position: sticky;
-  top: 0;
-  z-index: 6;
-  box-shadow: 0 2px 0 rgba(15, 23, 42, 0.12);
-  padding: 0.38rem 0.45rem !important;
-  font-size: 0.72rem !important;
-  letter-spacing: 0.04em;
-}
 
-.admin-panel-root .admin-player-table th,
-.admin-panel-root .admin-player-table td {
-  padding: 0.4rem 0.45rem !important;
-  vertical-align: middle;
-}
 
-.admin-panel-root .admin-player-table .input,
-.admin-panel-root .admin-player-table select.input {
-  min-height: 30px !important;
-  padding: 0.28rem 0.4rem !important;
-  font-size: 0.8rem !important;
-  margin: 0 !important;
-}
 
-.admin-panel-root .admin-player-table thead th.admin-player-th-index,
-.admin-panel-root .admin-player-table .admin-player-index-cell {
-  width: 2.5rem;
-  min-width: 2.5rem;
-  max-width: 2.75rem;
-  text-align: center;
-  font-weight: 700;
-  color: #475569;
-  font-size: 0.8rem;
-  vertical-align: middle;
-}
 
-.admin-panel-root .admin-player-table thead th.admin-player-th-index {
-  background: var(--red-gradient);
-}
 
-.admin-panel-root .admin-player-table .admin-player-index-cell {
-  background: #f1f5f9;
-  border-right: 1px solid #e2e8f0;
-  user-select: none;
-}
 
-.admin-panel-root .admin-player-table tbody tr:nth-child(even) .admin-player-index-cell {
-  background: #e8edf4;
-}
 
-.admin-panel-root .admin-player-table tbody tr.admin-player-row:hover {
-  transform: none;
-}
 
-.admin-panel-root .admin-player-actions-cell {
-  vertical-align: middle;
-  width: 1%;
-  white-space: nowrap;
-}
 
-.admin-panel-root .admin-player-action-btns {
-  display: inline-flex;
-  flex-direction: row;
-  flex-wrap: nowrap;
-  gap: 4px;
-  align-items: center;
-}
 
-.admin-panel-root .admin-player-action-btns .btn-small {
-  min-height: 26px !important;
-  min-width: 0 !important;
-  padding: 0.12rem 0.38rem !important;
-  font-size: 0.65rem !important;
-  font-weight: 600 !important;
-  margin: 0 !important;
-  line-height: 1.15 !important;
-  border-radius: 4px !important;
-  text-transform: none !important;
-  letter-spacing: 0.02em !important;
-  box-shadow: none !important;
-  white-space: nowrap;
-}
 
-.admin-panel-root .admin-player-action-btns .btn-small:hover {
-  transform: none !important;
-  box-shadow: none !important;
-}
 
-@media screen and (max-width: 768px) {
-  .admin-panel-root .card.admin-player-roster-card,
-  .admin-panel-root .card.admin-player-coaches-card {
-    padding: 10px 12px 12px;
-  }
 
-  .admin-panel-root .admin-player-back-btn {
-    width: 100%;
-    min-height: 34px !important;
-    padding: 0.3rem 0.5rem !important;
-    font-size: 0.8rem !important;
-    margin: 0 !important;
-    text-transform: none !important;
-    box-shadow: none !important;
-  }
 
-  .admin-panel-root .admin-player-roster-title {
-    font-size: 0.92rem;
-    padding: 6px 8px;
-    margin-bottom: 8px;
-  }
 
-  .admin-panel-root .admin-player-coaches-title {
-    font-size: 0.88rem;
-    margin-bottom: 5px;
-  }
 
-  .admin-panel-root .admin-player-coach-empty {
-    font-size: 0.78rem;
-    margin-bottom: 2px;
-  }
 
-  .admin-panel-root .admin-player-table-wrap {
-    max-height: min(40vh, 340px);
-    margin: 0;
-  }
 
-  .admin-panel-root .admin-player-table {
-    min-width: 720px;
-  }
 
-  .admin-panel-root .admin-player-table thead th {
-    padding: 0.32rem 0.38rem !important;
-    font-size: 0.66rem !important;
-  }
 
-  .admin-panel-root .admin-player-table th,
-  .admin-panel-root .admin-player-table td {
-    padding: 0.32rem 0.38rem !important;
-  }
 
-  .admin-panel-root .admin-player-table .input,
-  .admin-panel-root .admin-player-table select.input {
-    min-height: 28px !important;
-    padding: 0.22rem 0.35rem !important;
-    font-size: 0.76rem !important;
-  }
 
-  .admin-panel-root .admin-player-action-btns .btn-small {
-    min-height: 24px !important;
-    padding: 0.1rem 0.3rem !important;
-    font-size: 0.62rem !important;
-  }
 
-  .admin-panel-root .admin-player-add-form {
-    display: grid;
-    grid-template-columns: 1fr minmax(64px, 76px);
-    gap: 5px 8px;
-    margin-top: 6px;
-    padding-top: 6px;
-    align-items: stretch;
-  }
 
-  .admin-panel-root .admin-player-add-form > *:nth-child(1) {
-    grid-column: 1;
-  }
 
-  .admin-panel-root .admin-player-add-form > *:nth-child(2) {
-    grid-column: 2;
-  }
 
-  .admin-panel-root .admin-player-add-form > *:nth-child(3) {
-    grid-column: 1 / -1;
-  }
 
-  .admin-panel-root .admin-player-add-form > *:nth-child(4) {
-    grid-column: 1 / -1;
-  }
-
-  .admin-panel-root .admin-player-add-form .input,
-  .admin-panel-root .admin-player-add-form select {
-    width: 100% !important;
-    max-width: none !important;
-    min-width: 0 !important;
-    min-height: 30px !important;
-    padding: 0.26rem 0.4rem !important;
-    font-size: 0.78rem !important;
-    margin: 0 !important;
-    box-sizing: border-box;
-  }
-
-  .admin-panel-root .admin-player-add-player-btn {
-    width: 100%;
-    min-height: 30px !important;
-    padding: 0.28rem 0.45rem !important;
-    font-size: 0.76rem !important;
-    margin: 0 !important;
-    text-transform: none !important;
-    box-shadow: none !important;
-    border-radius: 6px !important;
-  }
-
-  .admin-panel-root .admin-player-coach-line {
-    flex-direction: row;
-    align-items: flex-start;
-    justify-content: space-between;
-    gap: 8px;
-    padding: 6px 0;
-    border-bottom: 1px dashed #e5e7eb;
-  }
-
-  .admin-panel-root .admin-player-coach-line:last-of-type {
-    border-bottom: none;
-  }
-
-  .admin-panel-root .admin-player-coach-role {
-    min-width: 0;
-    flex: 0 0 auto;
-    font-size: 0.82rem;
-  }
-
-  .admin-panel-root .admin-player-coach-name {
-    flex: 1 1 auto;
-    min-width: 0;
-    font-size: 0.88rem;
-  }
-
-  .admin-panel-root .admin-player-coach-line .btn-small {
-    flex: 0 0 auto;
-    min-height: 30px !important;
-    padding: 0.22rem 0.4rem !important;
-    font-size: 0.72rem !important;
-    margin: 0 !important;
-    text-transform: none !important;
-    box-shadow: none !important;
-  }
-
-  .admin-panel-root .admin-coach-add-form {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 5px 8px;
-    margin-top: 6px;
-    align-items: stretch;
-  }
-
-  .admin-panel-root .admin-coach-add-form > .admin-coach-add-btn {
-    grid-column: 1 / -1;
-  }
-
-  .admin-panel-root .admin-coach-add-form .input,
-  .admin-panel-root .admin-coach-add-form select {
-    width: 100% !important;
-    min-height: 30px !important;
-    padding: 0.26rem 0.4rem !important;
-    font-size: 0.78rem !important;
-    margin: 0 !important;
-    box-sizing: border-box;
-  }
-
-  .admin-panel-root .admin-coach-add-btn {
-    width: 100%;
-    min-height: 30px !important;
-    padding: 0.28rem 0.45rem !important;
-    font-size: 0.76rem !important;
-    margin: 0 !important;
-    text-transform: none !important;
-    box-shadow: none !important;
-    border-radius: 6px !important;
-  }
-}
 
 .team-detail { background:#fff; border:1px solid #eee; border-radius:12px; padding:12px; }
 .squad-groups { display:grid; grid-template-columns: repeat(auto-fill,minmax(220px,1fr)); gap:12px; }
@@ -3363,330 +2573,83 @@ code {
   font-size: 0.9em;
 }
 
-/* Season Selector Styles */
-.season-selector {
-  position: relative;
-  margin-bottom: 20px;
-  z-index: 50; /* Lower than navigation (100) but higher than regular content */
-}
 
-.season-button {
-  background: var(--red-gradient);
-  color: white;
-  border: none;
-  padding: 15px 25px;
-  border-radius: 12px;
-  cursor: pointer;
-  font-size: 16px;
-  font-weight: 600;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  transition: all 0.3s ease;
-  box-shadow: 0 4px 15px rgba(220, 38, 38, 0.3);
-  border: 2px solid transparent;
-}
 
-.season-button:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 8px 25px rgba(220, 38, 38, 0.4);
-  background: var(--red-gradient-light);
-}
 
-.season-dropdown {
-  position: absolute;
-  top: 100%;
-  left: 0;
-  right: 0;
-  background: var(--white);
-  border: 2px solid var(--primary-red-lightest);
-  border-radius: 15px;
-  box-shadow: 0 8px 30px rgba(220, 38, 38, 0.2);
-  z-index: 51; /* Just above the season button but still below navigation */
-  max-height: 400px;
-  overflow-y: auto;
-  margin-top: 8px;
-  animation: dropdownSlide 0.3s ease;
-}
 
-@keyframes dropdownSlide {
-  from {
-    opacity: 0;
-    transform: translateY(-10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
 
-.season-option {
-  padding: 15px 20px;
-  cursor: pointer;
-  border-bottom: 1px solid var(--primary-red-lightest);
-  transition: all 0.3s ease;
-  position: relative;
-}
 
-.season-option:last-child {
-  border-bottom: none;
-}
 
-.season-option:hover {
-  background: var(--primary-red-lightest);
-  transform: translateX(4px);
-}
 
-.season-option.current {
-  background: linear-gradient(135deg, var(--accent-green), #059669);
-  color: white;
-  font-weight: 700;
-  border-radius: 10px;
-  margin: 4px;
-  box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3);
-}
 
-.season-option.current:hover {
-  background: linear-gradient(135deg, #10b981, var(--accent-green));
-  transform: translateX(0) translateY(-2px);
-  box-shadow: 0 6px 20px rgba(16, 185, 129, 0.4);
-}
 
-.season-option.archived {
-  color: var(--dark-gray);
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
 
-.season-info {
-  flex: 1;
-  cursor: pointer;
-}
 
-.season-option.archived small {
-  display: block;
-  color: var(--primary-red);
-  font-size: 13px;
-  margin-top: 4px;
-  font-weight: 500;
-}
 
-.season-actions {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
 
-.delete-season {
-  background: none;
-  border: none;
-  cursor: pointer;
-  padding: 8px 12px;
-  border-radius: 8px;
-  font-size: 16px;
-  transition: all 0.3s ease;
-  color: var(--primary-red);
-}
 
-.delete-season:hover {
-  background: var(--primary-red-lightest);
-  transform: scale(1.1);
-}
 
-.delete-confirm {
-  display: flex;
-  gap: 6px;
-}
 
-.confirm-delete, .cancel-delete {
-  background: none;
-  border: 2px solid;
-  cursor: pointer;
-  padding: 4px 8px;
-  border-radius: 6px;
-  font-size: 14px;
-  font-weight: bold;
-  transition: all 0.3s ease;
-}
 
-.confirm-delete {
-  color: var(--primary-red);
-  border-color: var(--primary-red);
-}
 
-.confirm-delete:hover {
-  background: var(--primary-red);
-  color: white;
-  transform: scale(1.05);
-}
 
-.cancel-delete {
-  color: var(--dark-gray);
-  border-color: var(--dark-gray);
-}
 
-.cancel-delete:hover {
-  background: var(--dark-gray);
-  color: white;
-  transform: scale(1.05);
-}
 
-.season-option.admin {
-  background: var(--red-gradient);
-  color: white;
-  font-weight: 700;
-  border-radius: 10px;
-  margin: 4px;
-  box-shadow: 0 4px 15px rgba(220, 38, 38, 0.3);
-}
 
-.season-option.admin:hover {
-  background: var(--red-gradient-light);
-  transform: translateX(0) translateY(-2px);
-  box-shadow: 0 6px 20px rgba(220, 38, 38, 0.4);
-}
 
-.admin-panel {
-  background: var(--primary-red-lightest);
-  padding: 15px 20px;
-  border-top: 2px solid var(--primary-red);
-  border-bottom: 2px solid var(--primary-red);
-  margin: 4px;
-  border-radius: 10px;
-}
 
-.admin-action {
-  background: var(--red-gradient);
-  color: white;
-  border: none;
-  padding: 12px 20px;
-  border-radius: 8px;
-  cursor: pointer;
-  font-size: 14px;
-  font-weight: 600;
-  transition: all 0.3s ease;
-  width: 100%;
-  margin-bottom: 10px;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
 
-.admin-action:hover {
-  background: var(--red-gradient-light);
-  transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(220, 38, 38, 0.4);
-}
 
-.admin-warning {
-  display: block;
-  color: var(--primary-red-dark);
-  font-size: 12px;
-  text-align: center;
-  font-style: italic;
-  font-weight: 500;
-}
 
-.season-option.disabled {
-  color: var(--dark-gray);
-  cursor: not-allowed;
-  font-style: italic;
-  opacity: 0.6;
-}
 
-.season-divider {
-  padding: 12px 20px;
-  background: var(--red-gradient);
-  color: white;
-  font-size: 13px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 1px;
-  border-bottom: 1px solid var(--primary-red-lightest);
-  text-align: center;
-}
 
-.archived-badge {
-  background: var(--accent-gold);
-  color: white;
-  padding: 4px 12px;
-  border-radius: 15px;
-  font-size: 12px;
-  font-weight: 600;
-  margin-left: 10px;
-  box-shadow: 0 2px 8px rgba(245, 158, 11, 0.3);
-}
 
-/* Archived Season View Styles */
-.archived-season-view {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 20px;
-}
 
-.season-header {
-  text-align: center;
-  margin-bottom: 30px;
-  padding: 30px;
-  background: var(--white);
-  border-radius: 20px;
-  border: 2px solid var(--primary-red-lightest);
-  box-shadow: 0 8px 30px rgba(220, 38, 38, 0.15);
-  position: relative;
-  overflow: hidden;
-}
 
-.season-header::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 6px;
-  background: var(--red-gradient);
-}
 
-.back-to-live-btn {
-  position: absolute;
-  top: 25px;
-  left: 25px;
-  background: linear-gradient(135deg, var(--accent-green), #059669);
-  color: white;
-  border: none;
-  padding: 12px 20px;
-  border-radius: 10px;
-  font-size: 14px;
-  font-weight: 700;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3);
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
 
-.back-to-live-btn:hover {
-  background: linear-gradient(135deg, #10b981, var(--accent-green));
-  transform: translateY(-3px);
-  box-shadow: 0 8px 25px rgba(16, 185, 129, 0.4);
-}
 
-.season-header h1 {
-  margin: 0 0 15px 0;
-  color: var(--primary-red);
-  font-size: 2.5rem;
-  font-weight: 700;
-  position: relative;
-  z-index: 1;
-}
 
-.season-info {
-  color: var(--dark-gray);
-  font-size: 18px;
-  margin-bottom: 20px;
-  font-weight: 500;
-  position: relative;
-  z-index: 1;
-}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 /* ========================================
    UNIFIED TOP NAVIGATION - Like Screenshot
@@ -3986,115 +2949,40 @@ code {
     margin-bottom: 0.2rem;
   }
   
-  /* Mobile Season Selector */
-  .season-selector {
-    margin-bottom: 1.5rem;
-  }
   
-  .season-button {
-    width: 100%;
-    padding: 1rem;
-    font-size: 0.9rem;
-    justify-content: center;
-  }
   
-  .season-dropdown {
-    max-height: 300px;
-    border-radius: 12px;
-  }
   
-  .season-option {
-    padding: 1rem;
-    font-size: 0.9rem;
-  }
   
-  .season-option.archived {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 0.5rem;
-  }
   
-  .season-option.archived .season-info {
-    margin-bottom: 0.25rem;
-  }
   
-  .season-option.archived small {
-    font-size: 0.75rem;
-    line-height: 1.3;
-  }
   
-  .season-actions {
-    align-self: flex-end;
-    margin-top: 0.5rem;
-  }
   
-  .delete-confirm {
-    display: flex;
-    gap: 0.5rem;
-  }
   
-  .confirm-delete,
-  .cancel-delete {
-    padding: 0.25rem 0.5rem;
-    border-radius: 6px;
-    font-size: 0.75rem;
-    border: none;
-    cursor: pointer;
-    transition: all 0.3s ease;
-  }
   
-  .confirm-delete {
-    background: var(--primary-red);
-    color: white;
-  }
   
-  .cancel-delete {
-    background: var(--medium-gray);
-    color: white;
-  }
   
-  .delete-season {
-    background: var(--primary-red);
-    color: white;
-    border: none;
-    padding: 0.25rem 0.5rem;
-    border-radius: 6px;
-    font-size: 0.75rem;
-    cursor: pointer;
-    transition: all 0.3s ease;
-  }
   
-  .admin-panel {
-    padding: 1rem;
-    background: var(--primary-red-lightest);
-    border-radius: 8px;
-    margin-top: 0.5rem;
-  }
   
-  .admin-action {
-    width: 100%;
-    padding: 0.75rem;
-    margin-bottom: 0.5rem;
-    border: none;
-    border-radius: 8px;
-    font-size: 0.85rem;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.3s ease;
-  }
   
-  .admin-action.delete-all {
-    background: var(--primary-red);
-    color: white;
-  }
   
-  .admin-warning {
-    display: block;
-    color: var(--medium-gray);
-    font-size: 0.7rem;
-    text-align: center;
-    margin-top: 0.5rem;
-  }
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
   
   /* Mobile League Cards */
   .league-cards {
@@ -4610,25 +3498,13 @@ code {
 
 /* Mobile responsiveness */
 @media (max-width: 768px) {
-  .archived-season-view {
-    padding: 15px;
-  }
   
-  .season-header {
-    padding: 20px 15px;
-  }
   
-  .back-to-live-btn {
-    position: static;
-    margin-bottom: 15px;
-    width: 100%;
-    text-align: center;
-  }
   
-  .season-header h1 {
-    font-size: 1.8rem;
-    margin-top: 10px;
-  }
+  
+  
+  
+  
   
   .responsive-table {
     margin: 0 -15px;
@@ -4658,9 +3534,9 @@ code {
     font-size: 0.65rem;
   }
 
-  /* Mobile Archived Seasons - Enhanced Mobile-First Design */
   
-  /* Mobile League Cards for Archived Seasons */
+  
+  
   .mobile-league-cards {
     display: flex;
     flex-direction: column;
@@ -4811,22 +3687,10 @@ code {
     font-weight: 600;
   }
   
-  /* Mobile Fixture Cards for Archived Seasons */
-  .mobile-fixture-card.archived {
-    background: var(--white);
-    border-radius: 12px;
-    padding: 1rem;
-    margin-bottom: 1rem;
-    box-shadow: 0 2px 8px rgba(220, 38, 38, 0.1);
-    border: 2px solid var(--primary-red-lightest);
-    transition: all 0.3s ease;
-  }
   
-  .mobile-fixture-card.archived.super-cup-responsive {
-    background: linear-gradient(135deg, #6b46c1 0%, #9333ea 50%, #7c3aed 100%);
-    border: 2px solid #8b5cf6;
-    color: white;
-  }
+  
+  
+  
   
   .fixture-card-header {
     display: flex;
@@ -4881,9 +3745,7 @@ code {
     color: var(--dark-gray);
   }
   
-  .mobile-fixture-card.archived.super-cup-responsive .team-name {
-    color: white;
-  }
+  
   
   .fixture-score {
     display: flex;
@@ -4900,9 +3762,7 @@ code {
     text-align: center;
   }
   
-  .mobile-fixture-card.archived.super-cup-responsive .score-display {
-    color: white;
-  }
+  
   
   .vs-display {
     font-size: 1.2rem;
@@ -4911,9 +3771,7 @@ code {
     text-align: center;
   }
   
-  .mobile-fixture-card.archived.super-cup-responsive .vs-display {
-    color: rgba(255, 255, 255, 0.8);
-  }
+  
   
   .penalties-display {
     font-size: 0.8rem;
@@ -4921,96 +3779,35 @@ code {
     margin-top: 0.25rem;
   }
   
-  .mobile-fixture-card.archived.super-cup-responsive .penalties-display {
-    color: rgba(255, 255, 255, 0.8);
-  }
   
-  /* Mobile Season Header Improvements */
-  .archived-season-view .season-header {
-    position: relative;
-    padding: 1.5rem 1rem;
-    margin-bottom: 2rem;
-  }
   
-  .archived-season-view .back-to-live-btn {
-    position: static;
-    width: 100%;
-    margin-bottom: 1rem;
-    padding: 0.75rem;
-    font-size: 0.9rem;
-  }
   
-  .archived-season-view .season-header h1 {
-    font-size: 1.4rem;
-    margin: 0.5rem 0 1rem 0;
-    text-align: center;
-  }
   
-  .archived-season-view .season-info {
-    font-size: 0.9rem;
-    margin-bottom: 1rem;
-    text-align: center;
-  }
   
-  .winners-summary {
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
-  }
   
-  .winner-badge {
-    padding: 0.5rem 1rem;
-    border-radius: 20px;
-    font-size: 0.85rem;
-    font-weight: 600;
-    text-align: center;
-  }
   
-  .winner-badge.league-winner {
-    background: linear-gradient(135deg, #fef3c7, #f59e0b);
-    color: #92400e;
-  }
   
-  .winner-badge.cup-winner {
-    background: linear-gradient(135deg, #dbeafe, #3b82f6);
-    color: #1e40af;
-  }
   
-  .winner-badge.supercup-winner {
-    background: linear-gradient(135deg, #fff3cd, #ffe8a1);
-    color: #856404;
-  }
   
-  .archived-season-view .archived-competition-filter-wrap {
-    padding: 0 0.75rem;
-  }
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
 
   /* Mobile Matchweek Sections */
-  .archived-season-view .matchweek-section {
-    margin-bottom: 2rem;
-  }
   
-  .archived-season-view .matchweek-section h3 {
-    background: var(--primary-red-lightest);
-    color: var(--primary-red);
-    padding: 0.75rem 1rem;
-    margin: 0 0 1rem 0;
-    border-radius: 10px;
-    font-size: 1rem;
-    font-weight: 700;
-    text-align: center;
-  }
   
-  .archived-season-view .cup-stage h3 {
-    background: linear-gradient(135deg, #fbbf24, #f59e0b);
-    color: white;
-    padding: 0.75rem 1rem;
-    margin: 0 0 1rem 0;
-    border-radius: 10px;
-    font-size: 1rem;
-    font-weight: 700;
-    text-align: center;
-  }
+  
+  
+  
   
   /* Hide desktop table on mobile */
   .table-wrapper {
@@ -5029,343 +3826,102 @@ code {
   }
 }
 
-.winners-summary {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 12px;
-  margin-top: 20px;
-}
 
-.winner-badge {
-  padding: 10px 18px;
-  border-radius: 25px;
-  font-size: 14px;
-  font-weight: 600;
-  text-align: center;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  transition: transform 0.2s ease;
-}
 
-.winner-badge:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-}
 
-.league-winner {
-  background: linear-gradient(135deg, #d4edda, #c3e6cb);
-  color: #155724;
-  border: 1px solid #b8dabc;
-}
 
-.cup-winner {
-  background: linear-gradient(135deg, #cce5ff, #b3d9ff);
-  color: #004085;
-  border: 1px solid #99d3ff;
-}
 
-.supercup-winner {
-  background: linear-gradient(135deg, #fff3cd, #ffe8a1);
-  color: #856404;
-  border: 1px solid #ffd700;
-}
 
-.match-item.archived {
-  opacity: 0.95;
-  border-left: 4px solid #6c757d;
-  background: linear-gradient(135deg, #ffffff, #f8f9fa);
-  transition: all 0.3s ease;
-}
 
-.match-item.archived:hover {
-  opacity: 1;
-  transform: translateX(3px);
-  border-left-color: #495057;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-}
 
-.archived-season-view .table-container {
-  position: relative;
-  background: white;
-  border-radius: 12px;
-  overflow: hidden;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-  border: 1px solid #dee2e6;
-}
 
-.archived-season-view .archived-badge {
-  background: linear-gradient(135deg, #6c757d, #495057);
-  color: white;
-  padding: 8px 16px;
-  border-radius: 20px;
-  font-size: 12px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
-}
 
-.archived-season-view .archived-league-table-head {
-  display: flex;
-  justify-content: flex-end;
-  align-items: center;
-  padding: 10px 12px 0 12px;
-}
 
-.archived-season-view .archived-badge-inline {
-  position: static;
-}
 
-.archived-season-view .archived-league-table-wrap {
-  padding-top: 4px;
-}
 
-.archived-season-view .archived-competition-filter-wrap {
-  max-width: 440px;
-  margin: 0 auto 1.25rem auto;
-  padding: 0 0.5rem;
-}
 
-.archived-season-view .archived-round-filter {
-  margin-bottom: 1rem;
-}
 
-.archived-team-avatar-wrap {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
 
-.archived-team-avatar-wrap .team-logo {
-  width: 32px;
-  height: 32px;
-  border-radius: 8px;
-  object-fit: contain;
-}
 
-.archived-team-avatar-fallback {
-  width: 32px;
-  height: 32px;
-  border-radius: 8px;
-  background: linear-gradient(135deg, #fecaca, #fca5a5);
-  color: #7f1d1d;
-  font-weight: 800;
-  font-size: 0.85rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
 
-/* Archived Season Enhanced Styles */
-.archived-season-view .league-table {
-  box-shadow: none; /* Remove double shadow */
-  border-radius: 0;
-  overflow: hidden;
-}
 
-.archived-season-view .league-table th {
-  background: linear-gradient(135deg, #495057, #6c757d);
-  color: white;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  font-size: 0.85rem;
-}
 
-.archived-season-view .match-item {
-  background: white;
-  border-radius: 10px;
-  padding: 1.2rem;
-  margin-bottom: 0.8rem;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-  border: 1px solid #e9ecef;
-}
 
-.archived-season-view .matchweek-section {
-  margin-bottom: 2.5rem;
-}
 
-.archived-season-view .matchweek-section h3 {
-  background: var(--red-gradient);
-  color: white;
-  padding: 1rem 1.8rem;
-  border-radius: 10px;
-  margin-bottom: 1.5rem;
-  text-align: center;
-  font-size: 1.1rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 1px;
-  box-shadow: 0 4px 15px rgba(220, 38, 38, 0.3);
-}
 
-.archived-season-view .cup-stage h3 {
-  background: var(--red-gradient);
-  color: white;
-  padding: 1rem 1.8rem;
-  border-radius: 10px;
-  margin-bottom: 1.5rem;
-  text-align: center;
-  font-size: 1.1rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  box-shadow: 0 4px 15px rgba(220, 38, 38, 0.28);
-}
 
-.archived-season-view .archived-competition-nav {
-  margin-bottom: 0.5rem;
-}
 
-/* Enhanced match display for archived seasons */
-.archived-season-view .match-teams {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 0.8rem;
-}
 
-.archived-season-view .team {
-  display: flex;
-  align-items: center;
-  gap: 0.8rem;
-  flex: 1;
-}
 
-.archived-season-view .team.away-team {
-  flex-direction: row-reverse;
-  text-align: right;
-}
 
-.archived-season-view .match-score {
-  flex: 0 0 auto;
-  text-align: center;
-  font-weight: bold;
-  font-size: 1.1rem;
-  padding: 0 1rem;
-}
 
-.archived-season-view .match-info {
-  text-align: center;
-  color: #6c757d;
-  font-size: 0.9rem;
-  padding-top: 0.8rem;
-  border-top: 1px solid #e9ecef;
-}
 
-.archived-season-view .penalties {
-  font-size: 0.85rem;
-  color: #856404;
-  margin-top: 0.3rem;
-  font-style: italic;
-}
 
-/* Archived season refresh: stats, fixture cards (all breakpoints) */
-.archived-season-view .archived-competition-content {
-  max-width: 960px;
-  margin: 0 auto;
-}
 
-.archived-season-view .archived-section-title {
-  display: flex;
-  align-items: center;
-  font-size: 1.15rem;
-  color: #1e293b;
-  margin: 1.75rem 0 0.75rem 0;
-  font-weight: 700;
-}
 
-.archived-season-view .archived-stats-block {
-  margin-bottom: 0.5rem;
-}
 
-.archived-season-view .archived-stats-hint {
-  font-size: 0.9rem;
-  color: #64748b;
-  margin: 0 0 12px 0;
-}
 
-.archived-season-view .archived-stats-empty,
-.archived-season-view .archived-stats-error {
-  font-size: 0.95rem;
-  color: #64748b;
-  padding: 12px;
-  background: #f8fafc;
-  border-radius: 10px;
-  border: 1px solid #e2e8f0;
-}
 
-.archived-season-view .archived-stats-error {
-  color: #b91c1c;
-  border-color: #fecaca;
-  background: #fef2f2;
-}
 
-.archived-season-view .fixtures-archive .fixture-card.archived {
-  background: var(--white);
-  border-radius: 12px;
-  padding: 1rem;
-  box-shadow: 0 2px 8px rgba(220, 38, 38, 0.1);
-  border: 2px solid var(--primary-red-lightest);
-  width: 100%;
-  max-width: 100%;
-  box-sizing: border-box;
-}
 
-.archived-season-view .fixtures-archive .fixture-card.archived.played {
-  border-color: #28a745;
-  background: linear-gradient(135deg, rgba(40, 167, 69, 0.03) 0%, var(--white) 100%);
-}
 
-.archived-season-view .fixtures-archive .fixture-card.archived.scheduled {
-  border-color: var(--primary-red-light);
-  background: linear-gradient(135deg, rgba(220, 38, 38, 0.03) 0%, var(--white) 100%);
-}
 
-.archived-season-view .fixtures-archive .fixture-card.archived.cup-archive.super-cup {
-  border-color: var(--primary-red);
-  background: linear-gradient(135deg, rgba(220, 38, 38, 0.06) 0%, var(--white) 100%);
-}
 
-.archived-season-view .super-cup-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 0.65rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  color: #991b1b;
-  background: #fee2e2;
-  padding: 4px 8px;
-  border-radius: 999px;
-}
 
-.archived-season-view .archived-fixtures-mobile .fixture-card.archived .fixture-teams {
-  align-items: center;
-}
 
-.archived-season-view .archived-fixtures-mobile .team-section.home,
-.archived-season-view .archived-fixtures-mobile .team-section.away {
-  justify-content: center;
-}
 
-.archived-season-view .cup-stage-header h3 {
-  text-transform: none;
-}
 
-.winner-badge.acwpl-winner {
-  background: linear-gradient(135deg, #fee2e2, #fecaca);
-  color: #7f1d1d;
-  border: 1px solid #fca5a5;
-}
 
-.winner-badge.gsc-winner {
-  background: linear-gradient(135deg, #fee2e2, #fecdd3);
-  color: #7f1d1d;
-  border: 1px solid #fda4af;
-}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 /* ========================================
    FOOTER & INFO SECTION STYLES
@@ -5417,17 +3973,9 @@ code {
    ENHANCED BANNER STYLES
    ======================================== */
 
-.banner.league-winner {
-  background: var(--red-gradient);
-  color: white;
-  border: none;
-}
 
-.banner.cup-winner {
-  background: linear-gradient(135deg, var(--accent-blue), #1d4ed8);
-  color: white;
-  border: none;
-}
+
+
 
 .banner.super-cup-winner {
   background: linear-gradient(135deg, var(--accent-gold), #d97706);
@@ -5494,10 +4042,7 @@ code {
     border-radius: 15px;
   }
   
-  .season-button {
-    padding: 12px 18px;
-    font-size: 14px;
-  }
+  
   
   .table th,
   .table td {
@@ -5582,12 +4127,7 @@ code {
 }
 
 
-.btn:focus,
-.input:focus,
-.season-button:focus {
-  outline: 3px solid rgba(220, 38, 38, 0.3);
-  outline-offset: 2px;
-}
+
 
 .nav-tab:focus {
   outline: 3px solid rgba(220, 38, 38, 0.3);
@@ -5615,44 +4155,8 @@ code {
   }
 }
 
-/* Responsive design for archived seasons */
-@media (max-width: 768px) {
-  .archived-season-view {
-    padding: 15px;
-  }
-  
-  .season-header {
-    padding: 20px;
-  }
-  
-  .season-header h1 {
-    font-size: 1.8rem;
-  }
-  
-  .winners-summary {
-    flex-direction: column;
-    align-items: center;
-  }
-  
-  .winner-badge {
-    width: 100%;
-    max-width: 300px;
-  }
-  
-  .archived-season-view .archived-competition-nav {
-    padding: 0 0.5rem;
-  }
-  
-  .archived-season-view .match-teams {
-    flex-direction: column;
-    gap: 0.8rem;
-  }
-  
-  .archived-season-view .team.away-team {
-    flex-direction: row;
-    text-align: left;
-  }
-}
+
+
 
 /* ===== FOOTER STYLES ===== */
 .app-footer {
@@ -7354,12 +5858,7 @@ code {
   }
 }
 
-.admin-panel-root {
-  max-width: 100%;
-  overflow-x: hidden;
-  box-sizing: border-box;
-  padding-bottom: 0.75rem;
-}
+
 
 .admin-guide-card .admin-guide-steps {
   margin: 0;
@@ -8305,12 +6804,7 @@ code {
   color: #721c24;
 }
 
-@media screen and (max-width: 768px) {
-  .admin-panel-root .card {
-    padding-left: 14px;
-    padding-right: 14px;
-  }
-}
+
 
 .admin-team-tabs {
   display: flex;
@@ -8491,3 +6985,4 @@ code {
 .fixture-filter-sheet-option--spread input[type='radio'] {
   flex-shrink: 0;
 }
+

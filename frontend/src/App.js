@@ -1,5 +1,6 @@
-import React, { useState, useEffect, useLayoutEffect } from 'react';
-import { Trophy, Award, Star, Users, Zap, Cog, LogOut } from 'lucide-react';
+import React, { useState, useEffect, useLayoutEffect, useRef } from 'react';
+import { Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
+import { Trophy, Award, Star, Users, Zap, Cog, LogOut, Archive } from 'lucide-react';
 
 import UserView from './components/UserView';
 import AdminPanel from './components/AdminPanel';
@@ -13,13 +14,81 @@ import TeamsPage from './components/TeamsPage';
 import GirlsTeamsPage from './components/GirlsTeamsPage';
 import FantasyManagement from './components/FantasyManagement';
 import FantasyAuth from './components/FantasyAuth';
+import ArchivedSeasonsPage from './pages/ArchivedSeasonsPage';
+import ArchivedCompetitionPage from './pages/ArchivedCompetitionPage';
+import ArchivedTeamsPage from './pages/ArchivedTeamsPage';
+import ArchivedTeamDetailPage from './pages/ArchivedTeamDetailPage';
 import axios from 'axios';
+import {
+  pathToSection,
+  SECTION_TO_PATH,
+  savedSectionPath,
+} from './utils/userRoutes';
 import './index.css';
 
-const USER_SECTIONS = ['fixtures', 'stats', 'teams', 'fantasy'];
 const COMPETITION_IDS = ['league', 'cup', 'super-cup', 'acwpl', 'girls-super-cup'];
 
+function HomeRedirect() {
+  return <Navigate to={savedSectionPath()} replace />;
+}
+
+function TeamsSection({ girlsTeamsActive, setGirlsTeamsActive, dataRefreshKey }) {
+  return (
+    <>
+      <div className="toggle-bar" style={{ display: 'inline-flex', gap: 0, background: '#f3f4f6', borderRadius: 999, margin: '0 auto 18px', justifyContent: 'center', alignItems: 'center', boxShadow: '0 1px 4px rgba(0,0,0,0.04)' }}>
+        <button
+          className="toggle-btn"
+          aria-current={!girlsTeamsActive ? 'page' : undefined}
+          style={{
+            fontWeight: 600,
+            padding: '8px 18px',
+            borderRadius: 999,
+            background: !girlsTeamsActive ? '#fff' : 'transparent',
+            color: '#1e293b',
+            border: 'none',
+            boxShadow: !girlsTeamsActive ? '0 0 0 2px #e5e7eb' : 'none',
+            cursor: !girlsTeamsActive ? 'default' : 'pointer',
+            transition: 'background 0.2s, color 0.2s',
+          }}
+          onClick={() => setGirlsTeamsActive(false)}
+          disabled={!girlsTeamsActive}
+        >
+          Boys Teams
+        </button>
+        <button
+          className="toggle-btn"
+          aria-current={girlsTeamsActive ? 'page' : undefined}
+          style={{
+            fontWeight: 600,
+            padding: '8px 18px',
+            borderRadius: 999,
+            background: girlsTeamsActive ? '#fff' : 'transparent',
+            color: '#1e293b',
+            border: 'none',
+            boxShadow: girlsTeamsActive ? '0 0 0 2px #e5e7eb' : 'none',
+            cursor: girlsTeamsActive ? 'default' : 'pointer',
+            transition: 'background 0.2s, color 0.2s',
+          }}
+          onClick={() => setGirlsTeamsActive(true)}
+          disabled={girlsTeamsActive}
+        >
+          Girls Teams
+        </button>
+      </div>
+      {girlsTeamsActive ? (
+        <GirlsTeamsPage />
+      ) : (
+        <TeamsPage refreshKey={dataRefreshKey} onNavigateToGirlsTeams={() => setGirlsTeamsActive(true)} />
+      )}
+    </>
+  );
+}
+
 function App() {
+  const location = useLocation();
+  const navigate = useNavigate();
+  const activeSection = pathToSection(location.pathname) || 'fixtures';
+
   // Restore from localStorage if available
   const getInitial = (key, fallback) => {
     try {
@@ -35,10 +104,6 @@ function App() {
     const t = getInitial('activeTab', 'user');
     return t === 'admin' || t === 'user' ? t : 'user';
   });
-  const [activeSection, setActiveSection] = useState(() => {
-    const s = getInitial('activeSection', 'fixtures');
-    return USER_SECTIONS.includes(s) ? s : 'fixtures';
-  });
   const [selectedCompetition, setSelectedCompetition] = useState(() => {
     const c = getInitial('selectedCompetition', 'league');
     return COMPETITION_IDS.includes(c) ? c : 'league';
@@ -47,12 +112,16 @@ function App() {
   React.useEffect(() => {
     window.setSelectedCompetition = (comp, section) => {
       setActiveTab('user');
-      // If section is provided, use it, else default to 'fixtures'
-      setActiveSection(section || 'fixtures');
+      navigate(SECTION_TO_PATH[section || 'fixtures'] || '/fixtures');
       setSelectedCompetition(comp);
     };
     return () => { delete window.setSelectedCompetition; };
-  }, []);
+  }, [navigate]);
+
+  const goToSection = (id) => {
+    setActiveTab('user');
+    navigate(SECTION_TO_PATH[id] || '/fixtures');
+  };
   const [isAdmin, setIsAdmin] = useState(false);
   const [adminToken, setAdminToken] = useState(null);
   // eslint-disable-next-line no-unused-vars
@@ -132,6 +201,7 @@ function App() {
       setAdminData(null);
       setAdminToken(null);
       setActiveTab('user');
+      navigate('/fixtures');
     }
   };
 
@@ -141,13 +211,27 @@ function App() {
   };
 
   const [girlsTeamsActive, setGirlsTeamsActive] = useState(() => getInitial('girlsTeamsActive', false));
-  /** While viewing an archived season inside UserView, hide the live competition banner. */
-  const [fixturesArchiveOpen, setFixturesArchiveOpen] = useState(false);
   // Persist navigation state to localStorage
   React.useEffect(() => { localStorage.setItem('activeTab', activeTab); }, [activeTab]);
-  React.useEffect(() => { localStorage.setItem('activeSection', activeSection); }, [activeSection]);
+  React.useEffect(() => {
+    const section = pathToSection(location.pathname);
+    if (section) localStorage.setItem('activeSection', section);
+  }, [location.pathname]);
   React.useEffect(() => { localStorage.setItem('selectedCompetition', selectedCompetition); }, [selectedCompetition]);
   React.useEffect(() => { localStorage.setItem('girlsTeamsActive', girlsTeamsActive); }, [girlsTeamsActive]);
+
+  // Direct URL / browser navigation to a user section shows the user shell
+  const prevPathRef = useRef(null);
+  useEffect(() => {
+    if (isLoading) return;
+    const section = pathToSection(location.pathname);
+    const isInitial = prevPathRef.current === null;
+    const pathChanged = prevPathRef.current !== location.pathname;
+    prevPathRef.current = location.pathname;
+    if (section && (isInitial || pathChanged)) {
+      setActiveTab('user');
+    }
+  }, [location.pathname, isLoading]);
 
   /**
    * Stale localStorage (e.g. activeTab=admin after logout) makes the main branch render null
@@ -158,13 +242,10 @@ function App() {
     if (activeTab === 'admin' && !isAdmin) {
       setActiveTab('user');
     }
-    if (!USER_SECTIONS.includes(activeSection)) {
-      setActiveSection('fixtures');
-    }
     if (!COMPETITION_IDS.includes(selectedCompetition)) {
       setSelectedCompetition('league');
     }
-  }, [isLoading, activeTab, isAdmin, activeSection, selectedCompetition]);
+  }, [isLoading, activeTab, isAdmin, selectedCompetition]);
 
   if (isLoading) {
     return (
@@ -240,11 +321,7 @@ function App() {
             {activeTab === 'user' ? (
               <Sidebar
                 activeSection={activeSection}
-                onSelect={(id) => {
-                  setActiveTab('user');
-                  if (id === 'acwpl') { setActiveSection('fixtures'); setSelectedCompetition('acwpl'); }
-                  else setActiveSection(id);
-                }}
+                onSelect={goToSection}
               />
             ) : isAdmin ? (
               <AdminSidebar
@@ -266,31 +343,38 @@ function App() {
             <>
               <button
                 className={`mobile-nav-item ${activeSection === 'fixtures' ? 'active' : ''}`}
-                onClick={() => setActiveSection('fixtures')}
+                onClick={() => goToSection('fixtures')}
               >
                 <div className="mobile-nav-icon"><Trophy size={20} /></div>
                 <div>Fixtures</div>
               </button>
               <button
                 className={`mobile-nav-item ${activeSection === 'stats' ? 'active' : ''}`}
-                onClick={() => setActiveSection('stats')}
+                onClick={() => goToSection('stats')}
               >
                 <div className="mobile-nav-icon"><Zap size={20} /></div>
                 <div>Stats</div>
               </button>
               <button
                 className={`mobile-nav-item ${activeSection === 'teams' ? 'active' : ''}`}
-                onClick={() => setActiveSection('teams')}
+                onClick={() => goToSection('teams')}
               >
                 <div className="mobile-nav-icon"><Users size={20} /></div>
                 <div>Teams</div>
               </button>
               <button
                 className={`mobile-nav-item ${activeSection === 'fantasy' ? 'active' : ''}`}
-                onClick={() => setActiveSection('fantasy')}
+                onClick={() => goToSection('fantasy')}
               >
                 <div className="mobile-nav-icon"><Star size={20} /></div>
                 <div>Fantasy</div>
+              </button>
+              <button
+                className={`mobile-nav-item ${activeSection === 'archived' ? 'active' : ''}`}
+                onClick={() => goToSection('archived')}
+              >
+                <div className="mobile-nav-icon"><Archive size={20} /></div>
+                <div>Archived</div>
               </button>
             </>
           )}
@@ -300,7 +384,10 @@ function App() {
             <>
               <button
                 className="mobile-nav-item"
-                onClick={() => setActiveTab('user')}
+                onClick={() => {
+                  setActiveTab('user');
+                  navigate(savedSectionPath());
+                }}
               >
                 <Trophy size={18} />
                 <div>League</div>
@@ -331,7 +418,7 @@ function App() {
         )}
 
         {/* Competition Info Banner (only fixtures) */}
-        {activeTab === 'user' && activeSection === 'fixtures' && !fixturesArchiveOpen && (
+        {activeTab === 'user' && activeSection === 'fixtures' && (
         <div className="competition-info">
           <h3>{competitions[selectedCompetition]?.name}</h3>
           <p>
@@ -351,69 +438,37 @@ function App() {
 
         {/* Main Content */}
         {activeTab === 'user' ? (
-          activeSection === 'fixtures' ? (
-            <UserView 
-              competitions={competitions}
-              selectedCompetition={selectedCompetition}
-              onCompetitionChange={setSelectedCompetition}
-              refreshKey={dataRefreshKey}
-              isAdmin={isAdmin}
-              onArchiveViewChange={setFixturesArchiveOpen}
-            />
-          ) : activeSection === 'stats' ? (
-            <StatsPage />
-          ) : activeSection === 'teams' ? (
-            <>
-              {/* Toggle navigation for teams (always visible on teams page) */}
-              <div className="toggle-bar" style={{ display: 'inline-flex', gap: 0, background: '#f3f4f6', borderRadius: 999, margin: '0 auto 18px', justifyContent: 'center', alignItems: 'center', boxShadow: '0 1px 4px rgba(0,0,0,0.04)' }}>
-                <button
-                  className="toggle-btn"
-                  aria-current={!girlsTeamsActive ? 'page' : undefined}
-                  style={{
-                    fontWeight: 600,
-                    padding: '8px 18px',
-                    borderRadius: 999,
-                    background: !girlsTeamsActive ? '#fff' : 'transparent',
-                    color: '#1e293b',
-                    border: 'none',
-                    boxShadow: !girlsTeamsActive ? '0 0 0 2px #e5e7eb' : 'none',
-                    cursor: !girlsTeamsActive ? 'default' : 'pointer',
-                    transition: 'background 0.2s, color 0.2s',
-                  }}
-                  onClick={() => setGirlsTeamsActive(false)}
-                  disabled={!girlsTeamsActive}
-                >
-                  Boys Teams
-                </button>
-                <button
-                  className="toggle-btn"
-                  aria-current={girlsTeamsActive ? 'page' : undefined}
-                  style={{
-                    fontWeight: 600,
-                    padding: '8px 18px',
-                    borderRadius: 999,
-                    background: girlsTeamsActive ? '#fff' : 'transparent',
-                    color: '#1e293b',
-                    border: 'none',
-                    boxShadow: girlsTeamsActive ? '0 0 0 2px #e5e7eb' : 'none',
-                    cursor: girlsTeamsActive ? 'default' : 'pointer',
-                    transition: 'background 0.2s, color 0.2s',
-                  }}
-                  onClick={() => setGirlsTeamsActive(true)}
-                  disabled={girlsTeamsActive}
-                >
-                  Girls Teams
-                </button>
-              </div>
-              {girlsTeamsActive ? (
-                <GirlsTeamsPage />
-              ) : (
-                <TeamsPage refreshKey={dataRefreshKey} onNavigateToGirlsTeams={() => setGirlsTeamsActive(true)} />
+          <Routes>
+            <Route path="/" element={<HomeRedirect />} />
+            <Route
+              path="/fixtures"
+              element={(
+                <UserView
+                  competitions={competitions}
+                  selectedCompetition={selectedCompetition}
+                  onCompetitionChange={setSelectedCompetition}
+                  refreshKey={dataRefreshKey}
+                />
               )}
-            </>
-          ) : activeSection === 'fantasy' ? (
-            <FantasyAuth />
-          ) : null
+            />
+            <Route path="/stats" element={<StatsPage />} />
+            <Route
+              path="/teams"
+              element={(
+                <TeamsSection
+                  girlsTeamsActive={girlsTeamsActive}
+                  setGirlsTeamsActive={setGirlsTeamsActive}
+                  dataRefreshKey={dataRefreshKey}
+                />
+              )}
+            />
+            <Route path="/fantasy" element={<FantasyAuth />} />
+            <Route path="/archived" element={<ArchivedSeasonsPage isAdmin={isAdmin} />} />
+            <Route path="/archived/:seasonNumber/teams" element={<ArchivedTeamsPage />} />
+            <Route path="/archived/:seasonNumber/teams/:teamId" element={<ArchivedTeamDetailPage />} />
+            <Route path="/archived/:seasonNumber/:competitionSlug" element={<ArchivedCompetitionPage />} />
+            <Route path="*" element={<Navigate to="/fixtures" replace />} />
+          </Routes>
         ) : isAdmin ? (
           <>
             <nav className="admin-mobile-nav" aria-label="Admin sections">
@@ -460,7 +515,10 @@ function App() {
           onLoginClick={() => setShowLogin(true)}
           onAdminClick={() => setActiveTab('admin')}
           onLogoutClick={handleLogout}
-          onBackToLeagueClick={() => setActiveTab('user')}
+          onBackToLeagueClick={() => {
+            setActiveTab('user');
+            navigate(savedSectionPath());
+          }}
           activeTab={activeTab}
         />
       </div>

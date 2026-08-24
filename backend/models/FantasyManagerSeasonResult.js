@@ -12,6 +12,8 @@ const FantasyManagerSeasonResultSchema = new mongoose.Schema(
     managerName: { type: String, required: true, trim: true },
     seasonNumber: { type: Number, required: true, index: true },
     seasonName: { type: String, required: true, trim: true },
+    academicYear: { type: String, trim: true },
+    semester: { type: String, enum: ['first', 'second', 'full'] },
     finalPoints: { type: Number, default: 0 },
     finalRank: { type: Number, required: true, min: 1 },
     totalManagers: { type: Number, required: true, min: 1 },

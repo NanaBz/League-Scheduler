@@ -1,0 +1,128 @@
+.archived-teams-page {
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 0 0 2rem;
+}
+
+.archived-teams-page--detail {
+  max-width: 960px;
+}
+
+.archived-teams-header {
+  display: flex;
+  gap: 1rem;
+  align-items: flex-start;
+  margin-bottom: 1.25rem;
+  padding: 1.25rem;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+  color: #fff;
+}
+
+.archived-teams-header h1 {
+  margin: 0 0 0.25rem;
+  font-size: 1.5rem;
+}
+
+.archived-teams-header p {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.75);
+  font-size: 0.92rem;
+}
+
+.archive-team-card-link {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  background: #fff;
+  transition: box-shadow 0.15s, border-color 0.15s;
+}
+
+.archive-team-card-link:hover {
+  border-color: #cbd5e1;
+  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.08);
+}
+
+.archive-team-season-badge {
+  display: inline-block;
+  margin-bottom: 1rem;
+  padding: 0.35rem 0.75rem;
+  border-radius: 999px;
+  background: #fef2f2;
+  color: #b91c1c;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.archive-team-performance {
+  margin-bottom: 1.25rem;
+  padding: 1rem;
+  border-radius: 10px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+}
+
+.archive-team-performance h4 {
+  margin: 0 0 0.65rem;
+  font-size: 0.95rem;
+  color: #334155;
+}
+
+.archive-team-performance ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 0.45rem;
+}
+
+.archive-team-performance li {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  font-size: 0.92rem;
+}
+
+.archive-team-performance strong {
+  color: #1e293b;
+}
+
+.archive-team-performance span {
+  color: #64748b;
+  text-align: right;
+}
+
+.archived-seasons-teams-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 1.25rem;
+  padding: 0.75rem 1rem;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  background: #fff;
+  color: #1e293b;
+  font-weight: 600;
+  text-decoration: none;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.05);
+}
+
+.archived-seasons-teams-link:hover {
+  border-color: var(--primary-red, #dc2626);
+  color: var(--primary-red, #dc2626);
+}
+
+.archive-standings-team-link {
+  color: inherit;
+  text-decoration: none;
+  font-weight: inherit;
+}
+
+.archive-standings-team-link:hover {
+  color: var(--primary-red, #dc2626);
+  text-decoration: underline;
+}

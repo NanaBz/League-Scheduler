@@ -2,12 +2,25 @@ const Season = require('../models/Season');
 const PlayerStats = require('../models/PlayerStats');
 
 /**
- * Current season for stats, fantasy, and new fixtures: the **highest seasonNumber** among
- * `Season` documents. `isActive` flags are kept in sync via syncSeasonActiveFlagsToLatest().
+ * Highest archived season number (Season collection). Used for archive UI flags only —
+ * not for live fixtures or PlayerStats buckets.
  */
 async function getPrimaryActiveSeasonNumber() {
   const latest = await Season.findOne().sort({ seasonNumber: -1 }).select('seasonNumber').lean();
   return latest?.seasonNumber ?? null;
+}
+
+/**
+ * Live PlayerStats / fixture season bucket. After an archive exists, live play uses
+ * archive.seasonNumber + 1 so new stats do not collide with archived snapshots.
+ */
+async function getLiveSeasonStatsNumber() {
+  const latestArchive = await Season.findOne().sort({ seasonNumber: -1 }).select('seasonNumber').lean();
+  if (latestArchive) {
+    return latestArchive.seasonNumber + 1;
+  }
+  const latestStats = await PlayerStats.findOne().sort({ seasonNumber: -1 }).select('seasonNumber').lean();
+  return latestStats?.seasonNumber ?? 1;
 }
 
 /** Set isActive=true only on the latest Season (by seasonNumber); all others false. */
@@ -24,21 +37,7 @@ async function syncSeasonActiveFlagsToLatest() {
  * already has PlayerStats rows (covers databases where `isActive` was never set).
  */
 async function resolveStatsSeasonNumber({ competition, team } = {}) {
-  const activeNumber = await getPrimaryActiveSeasonNumber();
-  if (activeNumber != null) return activeNumber;
-
-  const statsFilter = {};
-  if (competition) statsFilter.competition = competition;
-  if (team) statsFilter.team = team;
-
-  const latestStats = await PlayerStats.findOne(statsFilter)
-    .sort({ seasonNumber: -1 })
-    .select('seasonNumber')
-    .lean();
-  if (latestStats) return latestStats.seasonNumber;
-
-  const latestSeason = await Season.findOne().sort({ seasonNumber: -1 }).lean();
-  return latestSeason ? latestSeason.seasonNumber : null;
+  return getLiveSeasonStatsNumber();
 }
 
 /**
@@ -54,14 +53,12 @@ async function resolveSeasonNumberForMatch(match) {
 
 /** Season number to stamp on newly generated fixtures */
 async function seasonNumberForNewFixtures() {
-  const sn = await getPrimaryActiveSeasonNumber();
-  if (sn != null) return sn;
-  const latest = await Season.findOne().sort({ seasonNumber: -1 }).lean();
-  return latest?.seasonNumber ?? 1;
+  return getLiveSeasonStatsNumber();
 }
 
 module.exports = {
   getPrimaryActiveSeasonNumber,
+  getLiveSeasonStatsNumber,
   syncSeasonActiveFlagsToLatest,
   resolveStatsSeasonNumber,
   resolveSeasonNumberForMatch,

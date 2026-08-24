@@ -10,14 +10,6 @@ export function userFixturePhase(match) {
   return 'scheduled';
 }
 
-/** Archived seasons: never show LIVE (historical). */
-export function archiveFixturePhase(match) {
-  if (!match || match.isVoided) return 'void';
-  if (match.matchState === 'live') return 'scheduled';
-  if (match.isPlayed || match.matchState === 'ft') return 'ft';
-  return 'scheduled';
-}
-
 export function statusBadgeClass(phase) {
   if (phase === 'void') return 'status-badge state-void';
   if (phase === 'live') return 'status-badge state-live';

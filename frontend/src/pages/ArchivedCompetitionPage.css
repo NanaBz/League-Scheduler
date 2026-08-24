@@ -1,0 +1,263 @@
+.archived-competition-page {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 0 0 2rem;
+}
+
+.archived-competition-page--wide {
+  max-width: 1180px;
+}
+
+.archived-competition-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-bottom: 1.25rem;
+  color: #64748b;
+  font-weight: 600;
+  font-size: 0.9rem;
+  text-decoration: none;
+}
+
+.archived-competition-back:hover {
+  color: var(--primary-red, #dc2626);
+}
+
+.archived-competition-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 3rem 1.5rem;
+  text-align: center;
+  color: #64748b;
+  background: #f8fafc;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+}
+
+.archived-competition-error p {
+  margin: 0;
+  color: var(--primary-red-dark, #b91c1c);
+}
+
+.archived-competition-header {
+  display: flex;
+  gap: 1rem;
+  align-items: flex-start;
+  padding: 1.5rem;
+  border-radius: 16px;
+  background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+  color: #fff;
+}
+
+.archived-competition-header-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.12);
+  flex-shrink: 0;
+}
+
+.archived-competition-eyebrow {
+  margin: 0 0 0.25rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.72);
+}
+
+.archived-competition-header h2 {
+  margin: 0 0 0.5rem;
+  font-size: 1.75rem;
+}
+
+.archived-competition-sub {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.78);
+  line-height: 1.5;
+  max-width: 520px;
+}
+
+.archived-competition-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.archive-section.card {
+  margin-bottom: 0;
+}
+
+.archive-empty-inline {
+  margin: 0;
+  color: #64748b;
+  font-style: italic;
+}
+
+.archive-detail-empty {
+  padding: 2rem;
+  text-align: center;
+  color: #64748b;
+}
+
+.archive-champion-banner {
+  margin-bottom: 0.25rem;
+}
+
+.stats-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.75rem;
+}
+
+.stats-section-header h2 {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.stats-rank {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 999px;
+  background: #f1f5f9;
+  color: #475569;
+  font-size: 0.75rem;
+  font-weight: 700;
+  margin-right: 0.35rem;
+}
+
+.archive-assists-block {
+  margin-top: 1.25rem;
+  padding-top: 1rem;
+  border-top: 1px solid #e2e8f0;
+}
+
+.archive-assists-block h3 {
+  margin: 0 0 0.75rem;
+  font-size: 1rem;
+  color: #334155;
+}
+
+.archive-super-cup-note {
+  color: #fecaca;
+  font-weight: 600;
+  margin-top: 0.5rem;
+  font-size: 0.9rem;
+}
+
+.archive-series-format {
+  margin: 0 0 1rem;
+  color: #64748b;
+  font-size: 0.9rem;
+}
+
+.archive-series-banner {
+  margin-bottom: 1rem;
+}
+
+.archive-series-wins h3 {
+  margin: 0 0 0.65rem;
+  font-size: 0.95rem;
+  color: #334155;
+}
+
+.archive-series-wins-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+  margin-bottom: 1rem;
+}
+
+.archive-series-win-chip {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  padding: 0.65rem 0.85rem;
+  border-radius: 10px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  min-width: 120px;
+}
+
+.archive-series-win-chip span {
+  font-size: 0.85rem;
+  color: #64748b;
+}
+
+.archive-series-rounds {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.archive-series-round-card {
+  padding: 1rem;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  background: #fff;
+}
+
+.archive-series-round-label {
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--primary-red-dark, #b91c1c);
+  margin-bottom: 0.65rem;
+}
+
+.archive-series-match {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.archive-series-side {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.35rem;
+  text-align: center;
+}
+
+.archive-series-side img {
+  width: 40px;
+  height: 40px;
+  object-fit: contain;
+}
+
+.archive-series-vs {
+  font-weight: 700;
+  color: #94a3b8;
+}
+
+.archive-series-meta {
+  margin-top: 0.65rem;
+  text-align: center;
+  font-size: 0.82rem;
+  color: #64748b;
+}
+
+@media (max-width: 640px) {
+  .archive-series-match {
+    grid-template-columns: 1fr;
+    gap: 0.5rem;
+  }
+
+  .archive-series-vs {
+    display: none;
+  }
+}

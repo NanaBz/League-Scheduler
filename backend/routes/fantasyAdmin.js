@@ -20,7 +20,7 @@ const { FANTASY_MATCH_COMPETITION, assertFantasyLeagueMatch } = require('../util
 const { resetFantasySeasonData } = require('../utils/resetFantasySeason');
 const { deriveCurrentGameweekFromMatches } = require('../utils/fantasyGameweek');
 const FantasyMatchweek = require('../models/FantasyMatchweek');
-const { getPrimaryActiveSeasonNumber } = require('../utils/seasonContext');
+const { getLiveSeasonStatsNumber } = require('../utils/seasonContext');
 const { isMatchweekComplete, latestCompletedMatchweek } = require('../utils/fantasyMatchweek');
 const { lineupWithResolvedCaptains } = require('../utils/fantasyCaptainRoles');
 
@@ -218,7 +218,7 @@ router.get('/matchweeks', authenticateAdmin, async (req, res) => {
 // GET /api/fantasy/admin/matchweeks/deadlines - List admin-configured fantasy matchweek deadlines
 router.get('/matchweeks/deadlines', authenticateAdmin, async (req, res) => {
   try {
-    const seasonNumber = await getPrimaryActiveSeasonNumber();
+    const seasonNumber = await getLiveSeasonStatsNumber();
     const docs = await FantasyMatchweek.find({ seasonNumber }).sort({ matchweek: 1 }).lean();
     return res.json({ success: true, data: docs });
   } catch (err) {
@@ -233,7 +233,7 @@ router.put('/matchweeks/:mw/deadline', authenticateAdmin, async (req, res) => {
     if (!Number.isFinite(mw) || mw < 1) return res.status(400).json({ success: false, message: 'Invalid matchweek number.' });
 
     const { deadline, status, startDate } = req.body;
-    const seasonNumber = await getPrimaryActiveSeasonNumber();
+    const seasonNumber = await getLiveSeasonStatsNumber();
 
     const update = {};
     if (deadline) update.deadline = new Date(deadline);

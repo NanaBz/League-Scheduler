@@ -2,8 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { Trophy, Star, BarChart3, Calendar, ChevronsDown, ChevronDown } from 'lucide-react';
 import api from '../utils/api';
 import { getTeamColors } from '../utils/teamBrandColors';
-import SeasonSelector from './SeasonSelector';
-import ArchivedSeasonView from './ArchivedSeasonView';
 import FixtureFilterControl from './FixtureFilterControl';
 import CompetitionFilterControl from './CompetitionFilterControl';
 import {
@@ -44,7 +42,7 @@ const renderForm = (form) => {
   );
 };
 
-const UserView = ({ competitions, selectedCompetition, refreshKey, isAdmin, onCompetitionChange, onArchiveViewChange }) => {
+const UserView = ({ competitions, selectedCompetition, refreshKey, onCompetitionChange }) => {
 
   // Mobile competition tabs (mirrors StatsPage)
   const COMP_TABS = [
@@ -63,7 +61,6 @@ const UserView = ({ competitions, selectedCompetition, refreshKey, isAdmin, onCo
   const [acwplMwFilter, setAcwplMwFilter] = useState('1');
   const [girlsSuperCupMwFilter, setGirlsSuperCupMwFilter] = useState('1');
   const [winners, setWinners] = useState({});
-  const [selectedSeason, setSelectedSeason] = useState(null); // null = current season
   const [loading, setLoading] = useState(true);
   const [expandedMatches, setExpandedMatches] = useState(new Set()); // Track expanded matches for goalscorer details
 
@@ -161,31 +158,6 @@ const UserView = ({ competitions, selectedCompetition, refreshKey, isAdmin, onCo
   if ((gscWins.Orion || 0) >= 2) girlsSuperCupWinner = 'Orion';
   else if ((gscWins.Firestorm || 0) >= 2) girlsSuperCupWinner = 'Firestorm';
 
-  const handleSeasonSelect = async (season) => {
-    if (!season) {
-      setSelectedSeason(null);
-      return;
-    }
-    try {
-      const { data } = await api.get(`/seasons/${season.seasonNumber}`);
-      setSelectedSeason(data);
-    } catch (e) {
-      console.error('Failed to load full season archive', e);
-      window.alert(e.response?.data?.message || e.message || 'Could not load that season. Please try again.');
-    }
-  };
-
-  const handleBackToLive = () => {
-    setSelectedSeason(null);
-  };
-
-  useEffect(() => {
-    if (onArchiveViewChange) onArchiveViewChange(Boolean(selectedSeason));
-    return () => {
-      if (onArchiveViewChange) onArchiveViewChange(false);
-    };
-  }, [selectedSeason, onArchiveViewChange]);
-
   const fetchTeams = async () => {
     try {
       setLoading(true);
@@ -256,7 +228,6 @@ const UserView = ({ competitions, selectedCompetition, refreshKey, isAdmin, onCo
   }, [selectedCompetition, refreshKey]);
 
   useEffect(() => {
-    if (selectedSeason) return undefined;
     const hasLive = matches.some((m) => m && m.matchState === 'live' && !m.isVoided);
     if (!hasLive) return undefined;
     const id = setInterval(() => {
@@ -265,7 +236,7 @@ const UserView = ({ competitions, selectedCompetition, refreshKey, isAdmin, onCo
     }, 12000);
     return () => clearInterval(id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [matches, selectedSeason, selectedCompetition, refreshKey]);
+  }, [matches, selectedCompetition, refreshKey]);
 
   useEffect(() => {
     if (selectedCompetition === 'league') setLeagueMwFilter('1');
@@ -315,13 +286,6 @@ const UserView = ({ competitions, selectedCompetition, refreshKey, isAdmin, onCo
       return prev;
     });
   }, [selectedCompetition, matches]);
-
-  // If a season is selected, show the archived view (MUST be after all hooks)
-  if (selectedSeason) {
-    return (
-      <ArchivedSeasonView season={selectedSeason} onBackToLive={handleBackToLive} liveTeams={teams} />
-    );
-  }
 
   const getMatchweeks = () => {
     return [...new Set(matches.map((match) => match.matchweek).filter((w) => w != null && w !== ''))]
@@ -429,14 +393,6 @@ const UserView = ({ competitions, selectedCompetition, refreshKey, isAdmin, onCo
         />
       </div>
 
-      {/* Season Selector */}
-      <SeasonSelector 
-        onSeasonSelect={handleSeasonSelect} 
-        currentSeason={selectedSeason}
-        showArchived={true}
-        isAdmin={isAdmin}
-      />
-      
   {/* Winner Banners - Only show for current competition */}
       {selectedCompetition === 'acwpl' && acwplWinner && (
         <div

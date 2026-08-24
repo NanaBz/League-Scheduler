@@ -8,7 +8,7 @@ const FantasyDraftSquad = require('../models/FantasyDraftSquad');
 const FantasySquad = require('../models/FantasySquad');
 const FantasyUser = require('../models/FantasyUser');
 const { authenticateFantasyUser } = require('../middleware/fantasyAuth');
-const { getPrimaryActiveSeasonNumber } = require('../utils/seasonContext');
+const { getLiveSeasonStatsNumber } = require('../utils/seasonContext');
 const { FANTASY_MATCH_COMPETITION } = require('../utils/fantasyLeagueScope');
 const {
   deriveCurrentGameweekFromMatches,
@@ -217,7 +217,7 @@ async function deadlineGuard(res) {
 }
 
 async function getActiveSeasonNumber() {
-  return getPrimaryActiveSeasonNumber();
+  return getLiveSeasonStatsNumber();
 }
 
 // GET /fantasy/season — current gameweek derived from published league fixtures

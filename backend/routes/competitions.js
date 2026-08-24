@@ -3,6 +3,7 @@ const router = express.Router();
 const Competition = require('../models/Competition');
 const Match = require('../models/Match');
 const Team = require('../models/Team');
+const { authenticateAdmin } = require('../middleware/auth');
 
 // Get all competitions
 router.get('/', async (req, res) => {
@@ -26,31 +27,14 @@ router.post('/', async (req, res) => {
   }
 });
 
-// Reset season (clear all data)
-router.post('/reset-season', async (req, res) => {
+// Legacy reset — deprecated; use POST /seasons/archive-and-reset instead.
+router.post('/reset-season', authenticateAdmin, async (req, res) => {
   try {
-    // Reset all team stats
-    await Team.updateMany({}, {
-      played: 0,
-      won: 0,
-      drawn: 0,
-      lost: 0,
-      goalsFor: 0,
-      goalsAgainst: 0,
-      goalDifference: 0,
-      points: 0
+    return res.status(410).json({
+      message:
+        'This endpoint is deprecated. Use Admin → Reset Season → Archive Season & Start New Season instead.',
+      code: 'deprecated_reset_route',
     });
-
-    // Delete all matches
-    await Match.deleteMany({});
-
-    // Reset competitions
-    await Competition.updateMany({}, {
-      winner: null,
-      isCompleted: false
-    });
-
-    res.json({ message: 'Season reset successfully' });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
