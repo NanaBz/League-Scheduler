@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Trophy, Award, RefreshCcw, Edit3, Save, FileDown, FileBarChart2 } from 'lucide-react';
+import { Trophy, Award, RefreshCcw, Edit3, Save, FileDown, FileBarChart2, ClipboardList, Settings } from 'lucide-react';
 import PropTypes from 'prop-types';
 import api from '../utils/api';
 import './AdminPanel.css';
@@ -11,6 +11,14 @@ import PlayerPriceEditor from './PlayerPriceEditor';
 import { userFixturePhase, desktopFixtureBadgeClass, desktopFixtureBadgeLabel } from '../utils/matchDisplayState';
 import { clearFantasyClientSeasonKeys } from '../utils/fantasyGameweek';
 import SeasonResetWorkflow from './SeasonResetWorkflow';
+
+const ADMIN_GETTING_STARTED_STEPS = [
+  'Initialize Teams to create the six league teams.',
+  'Set League Fixtures to generate 10 matchweeks (home and away).',
+  'Open Fixture Management below and click "Save League Fixtures" to publish them to users.',
+  'Edit Matches to enter scores; add goals, assists, cards, and clean sheets under "Select Goalscorers & Events".',
+  'Use Refresh Fixtures to sync the admin and user views.',
+];
 
 function buildServerFormSnapshot(match, homeScore, awayScore) {
   const h = parseInt(homeScore, 10) || 0;
@@ -935,85 +943,92 @@ const AdminPanel = ({ onDataChange, isAdmin }) => {
     <>
     <div className="admin-panel-root">
       {/* Admin Getting Started Guide */}
-      <div className="card admin-guide-card" style={{ marginBottom: '12px' }}>
-        <h2>📘 Getting Started</h2>
+      <div className="card admin-guide-card">
+        <h2 className="admin-fixture-section-title">
+          <ClipboardList size={18} className="admin-fixture-section-icon" aria-hidden="true" />
+          Getting Started
+        </h2>
         <ol className="admin-guide-steps">
-          <li>Initialize Teams to create the six league teams.</li>
-          <li>Set League Fixtures to generate 10 matchweeks (home and away).
-          </li>
-          <li>Open Fixture Management below and click &quot;Save League Fixtures&quot; to publish them to users.</li>
-          <li>Edit Matches to enter scores; add goals, assists, cards, and clean sheets under &quot;Select Goalscorers &amp; Events&quot;.</li>
-          <li>Use Refresh Fixtures to sync the admin and user views.</li>
+          {ADMIN_GETTING_STARTED_STEPS.map((step, index) => (
+            <li key={step} className="admin-guide-step">
+              <span className="admin-guide-step-num" aria-hidden="true">{index + 1}</span>
+              <span className="admin-guide-step-text">{step}</span>
+            </li>
+          ))}
         </ol>
       </div>
       {/* Admin Controls */}
       <div className="card admin-controls-card">
-        <h2>⚙️ Admin Controls</h2>
+        <h2 className="admin-fixture-section-title">
+          <Settings size={18} className="admin-fixture-section-icon" aria-hidden="true" />
+          Admin Controls
+        </h2>
         <div className="admin-controls-stack">
           <button 
-            className="btn btn-primary" 
+            type="button"
+            className="btn btn-primary admin-controls-btn" 
             onClick={initializeTeams}
             disabled={loading}
           >
             Initialize Teams
           </button>
           <button 
-            className="btn btn-success" 
+            type="button"
+            className="btn btn-success admin-controls-btn" 
             onClick={generateLeagueFixtures}
             disabled={loading}
           >
             Set League Fixtures
           </button>
           <button 
-            className="btn btn-warning" 
+            type="button"
+            className="btn btn-warning admin-controls-btn" 
             onClick={() => setShowCupSelection(true)}
             disabled={loading}
           >
             Set Cup Fixtures
           </button>
           <button 
-            className="btn btn-info" 
+            type="button"
+            className="btn btn-info admin-controls-btn" 
             onClick={() => setShowSuperCupSelection(true)}
             disabled={loading}
           >
             Set Super Cup Fixtures
           </button>
           <button 
-            className="btn btn-acwpl" 
-            style={{ backgroundColor: '#222', color: '#fff', border: '1px solid #222' }}
+            type="button"
+            className="btn btn-acwpl admin-controls-btn admin-controls-btn--dark" 
             onClick={generateACWPLFixtures}
             disabled={loading}
           >
             Set ACWPL Fixtures
           </button>
           <button
-            className="btn btn-acwpl"
-            style={{ backgroundColor: '#7f1d1d', color: '#fff', border: '1px solid #450a0a' }}
+            type="button"
+            className="btn btn-acwpl admin-controls-btn admin-controls-btn--maroon"
             onClick={generateGirlsSuperCupFixtures}
             disabled={loading}
           >
             Set Girls Super Cup Fixtures
           </button>
           <button 
-            className="btn btn-danger" 
+            type="button"
+            className="btn btn-danger admin-controls-btn admin-controls-btn--wide" 
             onClick={() => setShowSeasonResetWorkflow(true)}
             disabled={loading}
           >
             Reset Season
           </button>
-          {/* Removed Player Prices button as requested */}
           <button 
-            className="btn" 
+            type="button"
+            className="btn admin-controls-btn admin-controls-btn--wide admin-controls-btn--refresh" 
             onClick={handleRefreshFixtures}
             disabled={loading}
-            style={{ 
-              backgroundColor: '#6c757d', 
-              color: 'white',
-              border: '1px solid #6c757d'
-            }}
             title="Refresh fixtures data without page reload"
           >
-            <RefreshCcw size={18} style={{ marginRight: 6, verticalAlign: 'middle' }} /> Refresh Fixtures
+            <RefreshCcw size={15} aria-hidden="true" />
+            Refresh Fixtures
           </button>
           
         </div>

@@ -1,0 +1,180 @@
+/* Admin inline navigation — desktop tabs + mobile scrollable tabs */
+
+.admin-nav {
+  margin: 0 0 1rem;
+  border-bottom: 1px solid #e2e8f0;
+  background: #f8fafc;
+}
+
+.admin-nav-bar {
+  display: flex;
+  align-items: stretch;
+  gap: 0.5rem;
+  min-height: 44px;
+}
+
+.admin-nav-context {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  padding: 0 0.65rem 0 0.15rem;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #64748b;
+}
+
+.admin-nav-tabs {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  align-items: stretch;
+  gap: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+
+.admin-nav-tabs::-webkit-scrollbar {
+  display: none;
+}
+
+.admin-nav-tab {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.55rem 0.85rem;
+  margin: 0;
+  border: none;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
+  background: transparent;
+  color: #475569;
+  font-family: inherit;
+  font-size: 0.875rem;
+  font-weight: 600;
+  line-height: 1.2;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: color 0.15s ease, background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.admin-nav-tab-icon {
+  flex-shrink: 0;
+  opacity: 0.85;
+}
+
+.admin-nav-tab-label--short {
+  display: none;
+}
+
+.admin-nav-tab:hover {
+  color: #0f172a;
+  background: #e2e8f0;
+}
+
+.admin-nav-tab:focus-visible {
+  outline: 2px solid var(--primary-red, #dc2626);
+  outline-offset: -2px;
+  z-index: 1;
+}
+
+.admin-nav-tab.active {
+  color: var(--primary-red-dark, #991b1b);
+  background: #fff;
+  border-bottom-color: var(--primary-red, #dc2626);
+}
+
+.admin-nav-tab.active .admin-nav-tab-icon {
+  opacity: 1;
+  color: var(--primary-red, #dc2626);
+}
+
+.admin-nav-user-link {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  align-self: center;
+  margin: 0 0.15rem 0 0.35rem;
+  padding: 0.35rem 0.65rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  background: #fff;
+  color: #334155;
+  font-family: inherit;
+  font-size: 0.78rem;
+  font-weight: 600;
+  line-height: 1.2;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+.admin-nav-user-link:hover {
+  background: #f1f5f9;
+  border-color: #94a3b8;
+  color: #0f172a;
+}
+
+.admin-nav-user-link:focus-visible {
+  outline: 2px solid var(--primary-red, #dc2626);
+  outline-offset: 2px;
+}
+
+/* Hidden on desktop — sidebar handles section nav at 992px+ */
+@media screen and (min-width: 992px) {
+  .admin-nav {
+    display: none;
+  }
+}
+
+/* Tablet + mobile: scrollable tabs, compact labels */
+@media screen and (max-width: 768px) {
+  .admin-nav {
+    margin-left: -0.25rem;
+    margin-right: -0.25rem;
+    border-bottom-color: #cbd5e1;
+  }
+
+  .admin-nav-context {
+    display: none;
+  }
+
+  .admin-nav-user-link {
+    display: none;
+  }
+
+  .admin-nav-tabs {
+    padding: 0 0.15rem;
+  }
+
+  .admin-nav-tab-label--full {
+    display: none;
+  }
+
+  .admin-nav-tab-label--short {
+    display: inline;
+  }
+
+  .admin-nav-tab {
+    font-size: 0.8125rem;
+    padding: 0.5rem 0.85rem;
+    min-height: 44px;
+  }
+}
+
+@media screen and (min-width: 769px) {
+  .admin-nav-tab {
+    padding: 0.6rem 1rem;
+  }
+}
+
+@media screen and (min-width: 1025px) {
+  .admin-nav-tab {
+    padding: 0.6rem 1.1rem;
+  }
+}

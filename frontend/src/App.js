@@ -9,6 +9,7 @@ import AdminAuth from './components/AdminAuth';
 import Footer from './components/Footer';
 import Sidebar from './components/Sidebar';
 import AdminSidebar from './components/AdminSidebar';
+import AdminNav from './components/AdminNav';
 import StatsPage from './components/StatsPage';
 import TeamsPage from './components/TeamsPage';
 import GirlsTeamsPage from './components/GirlsTeamsPage';
@@ -327,7 +328,10 @@ function App() {
               <AdminSidebar
                 activeSection={adminSection}
                 onSelect={(id) => setAdminSection(id)}
-                onSwitchToUser={() => setActiveTab('user')}
+                onSwitchToUser={() => {
+                  setActiveTab('user');
+                  navigate(savedSectionPath());
+                }}
                 isAdmin={isAdmin}
               />
             ) : null}
@@ -471,36 +475,27 @@ function App() {
           </Routes>
         ) : isAdmin ? (
           <>
-            <nav className="admin-mobile-nav" aria-label="Admin sections">
-              <button
-                type="button"
-                className={adminSection === 'fixtures-mgmt' ? 'active' : ''}
-                onClick={() => setAdminSection('fixtures-mgmt')}
-              >
-                Fixtures
-              </button>
-              <button
-                type="button"
-                className={adminSection === 'players-mgmt' ? 'active' : ''}
-                onClick={() => setAdminSection('players-mgmt')}
-              >
-                Players
-              </button>
-              <button
-                type="button"
-                className={adminSection === 'fantasy-mgmt' ? 'active' : ''}
-                onClick={() => setAdminSection('fantasy-mgmt')}
-              >
-                Fantasy
-              </button>
-            </nav>
-            {adminSection === 'fixtures-mgmt' ? (
-              <AdminPanel onDataChange={handleDataChange} isAdmin={isAdmin} />
-            ) : adminSection === 'players-mgmt' ? (
-              <PlayerManagement onDataChange={handleDataChange} isAdmin={isAdmin} />
-            ) : adminSection === 'fantasy-mgmt' ? (
-              <FantasyManagement isAdmin={isAdmin} />
-            ) : null}
+            <AdminNav
+              activeSection={adminSection}
+              onSelect={(id) => setAdminSection(id)}
+              onSwitchToUser={() => {
+                setActiveTab('user');
+                navigate(savedSectionPath());
+              }}
+            />
+            <div
+              role="tabpanel"
+              id={`admin-panel-${adminSection}`}
+              aria-labelledby={`admin-nav-tab-${adminSection}`}
+            >
+              {adminSection === 'fixtures-mgmt' ? (
+                <AdminPanel onDataChange={handleDataChange} isAdmin={isAdmin} />
+              ) : adminSection === 'players-mgmt' ? (
+                <PlayerManagement onDataChange={handleDataChange} isAdmin={isAdmin} />
+              ) : adminSection === 'fantasy-mgmt' ? (
+                <FantasyManagement isAdmin={isAdmin} />
+              ) : null}
+            </div>
           </>
         ) : null}
 

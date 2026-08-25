@@ -1,0 +1,661 @@
+/* Admin Player Management — team picker & category toggle */
+
+.admin-player-mgmt.card {
+  padding: 1rem 1.1rem;
+}
+
+.admin-player-mgmt-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 10px;
+  flex-wrap: wrap;
+}
+
+.admin-player-mgmt-title {
+  margin: 0;
+  font-size: 1.15rem;
+  line-height: 1.25;
+  color: var(--text-dark, #0f172a);
+}
+
+.admin-player-category-toggle {
+  display: inline-flex;
+  padding: 3px;
+  background: #f1f5f9;
+  border-radius: 999px;
+  border: 1px solid #e2e8f0;
+  flex-shrink: 0;
+}
+
+.admin-player-category-toggle button {
+  border: none;
+  background: transparent;
+  padding: 5px 14px;
+  border-radius: 999px;
+  font-family: inherit;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: #64748b;
+  cursor: pointer;
+  min-height: 32px;
+  line-height: 1.2;
+  transition: background-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.admin-player-category-toggle button:hover:not(.active) {
+  color: #334155;
+  background: #e2e8f0;
+}
+
+.admin-player-category-toggle button:focus-visible {
+  outline: 2px solid var(--primary-red, #dc2626);
+  outline-offset: 2px;
+}
+
+.admin-player-category-toggle button.active {
+  background: #fff;
+  color: #0f172a;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.1);
+}
+
+.admin-player-team-picker.team-cards {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.admin-player-team-picker .team-card {
+  padding: 8px 8px 10px;
+  gap: 4px;
+  border-radius: 10px;
+  border: 1px solid #e2e8f0;
+  background: #fff;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.admin-player-team-picker .team-card:hover {
+  border-color: #94a3b8;
+  box-shadow: 0 1px 4px rgba(15, 23, 42, 0.06);
+}
+
+.admin-player-team-picker .team-card.active {
+  border-color: var(--primary-red, #dc2626);
+  box-shadow: 0 0 0 1px rgba(220, 38, 38, 0.15);
+}
+
+.admin-player-team-picker .team-card img {
+  width: 52px;
+  height: 52px;
+  max-width: 20vw;
+  max-height: 20vw;
+  object-fit: contain;
+  border-radius: 8px;
+  box-sizing: border-box;
+}
+
+.admin-player-team-picker .team-card img.team-logo--falcons-bg {
+  background-color: #94a3b8;
+  padding: 3px;
+}
+
+.admin-player-team-name {
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: #0f172a;
+  line-height: 1.2;
+  text-align: center;
+}
+
+.admin-player-team-meta {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #64748b;
+  line-height: 1.2;
+}
+
+@media screen and (min-width: 480px) {
+  .admin-player-team-picker .team-card img {
+    width: 56px;
+    height: 56px;
+  }
+}
+
+@media screen and (min-width: 769px) {
+  .admin-player-team-picker.team-cards {
+    grid-template-columns: repeat(auto-fill, minmax(112px, 1fr));
+    gap: 10px;
+  }
+
+  .admin-player-team-picker .team-card img {
+    width: 48px;
+    height: 48px;
+    max-width: none;
+    max-height: none;
+  }
+}
+
+@media screen and (max-width: 768px) {
+  .admin-player-mgmt.card {
+    padding: 0.85rem 0.9rem;
+  }
+
+  .admin-player-mgmt-header {
+    margin-bottom: 8px;
+  }
+
+  .admin-player-mgmt-title {
+    font-size: 1.05rem;
+  }
+}
+
+/* ——— Roster view (team selected) ——— */
+
+.admin-player-roster-card.card {
+  padding: 1rem 1.1rem;
+  overflow: hidden;
+}
+
+.admin-player-back-row {
+  margin-bottom: 8px;
+}
+
+.admin-player-back-btn.btn-secondary:hover {
+  background: #f1f5f9;
+  color: #334155;
+  border-color: #94a3b8;
+}
+
+.admin-player-roster-title {
+  padding: 6px 10px;
+  border-radius: 8px;
+  background: #e2e8f0;
+  color: #0f172a;
+  font-size: 1.05rem;
+  margin: 0 0 12px;
+  line-height: 1.35;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}
+
+/* Player search */
+.admin-player-search {
+  position: relative;
+  margin: 0 0 12px;
+}
+
+.admin-player-search-label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.admin-player-search-input {
+  width: 100%;
+  box-sizing: border-box;
+  margin: 0 !important;
+  padding: 0.55rem 0.75rem !important;
+  border: 1px solid #cbd5e1 !important;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  background: #fff !important;
+  color: #0f172a !important;
+}
+
+.admin-player-search-input:focus {
+  border-color: var(--primary-red, #dc2626) !important;
+  box-shadow: 0 0 0 2px rgba(220, 38, 38, 0.12);
+  outline: none;
+}
+
+.admin-player-search-input::-webkit-search-cancel-button {
+  cursor: pointer;
+}
+
+.admin-player-search-results {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  z-index: 30;
+  margin: 0;
+  padding: 4px;
+  list-style: none;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.12);
+  max-height: 240px;
+  overflow-y: auto;
+}
+
+.admin-player-search-option {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  width: 100%;
+  padding: 8px 10px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  cursor: pointer;
+  font-family: inherit;
+  text-align: left;
+  min-height: 40px;
+}
+
+.admin-player-search-option:hover,
+.admin-player-search-option:focus-visible {
+  background: #fef2f2;
+  outline: none;
+}
+
+.admin-player-search-option-name {
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.admin-player-search-option-meta {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #64748b;
+}
+
+.admin-player-search-empty {
+  padding: 10px 12px;
+  font-size: 0.85rem;
+  color: #64748b;
+  text-align: center;
+}
+
+/* Navigate-to-player highlight */
+.admin-player-row.admin-player-highlight td {
+  background-color: #fef2f2;
+  transition: background-color 0.3s ease;
+}
+
+.admin-player-card.admin-player-highlight {
+  border-color: var(--primary-red, #dc2626);
+  box-shadow: 0 0 0 2px rgba(220, 38, 38, 0.2);
+  transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+/* Desktop table vs mobile cards */
+.admin-player-mobile-only {
+  display: none;
+}
+
+.admin-player-desktop-only {
+  display: block;
+}
+
+.admin-player-table-wrap {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.admin-player-action-btns {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+/* Shared field primitives (mobile cards + add form) */
+.admin-player-field-label {
+  display: block;
+  margin-bottom: 4px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #64748b;
+}
+
+.admin-player-field {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.admin-player-field-full {
+  width: 100%;
+}
+
+.admin-player-field-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.admin-player-input {
+  width: 100% !important;
+  min-width: 0 !important;
+  max-width: 100%;
+  box-sizing: border-box;
+  margin: 0 !important;
+  padding: 0.55rem 0.65rem !important;
+  border: 1px solid #cbd5e1 !important;
+  background: #fff !important;
+  color: #0f172a !important;
+}
+
+.admin-player-input:focus {
+  border-color: var(--primary-red, #dc2626) !important;
+  box-shadow: 0 0 0 2px rgba(220, 38, 38, 0.12);
+}
+
+/* Add player */
+.admin-player-add-section {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid #e2e8f0;
+}
+
+.admin-player-add-title {
+  margin: 0 0 10px;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #334155;
+}
+
+.admin-player-add-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: flex-end;
+}
+
+.admin-player-add-form .admin-player-field-full,
+.admin-player-add-form .admin-player-field-row {
+  flex: 1 1 100%;
+}
+
+.admin-player-add-form .admin-player-add-name {
+  flex: 1 1 180px;
+}
+
+.admin-player-add-form .admin-player-add-row {
+  flex: 0 1 auto;
+  display: flex;
+  gap: 8px;
+}
+
+.admin-player-add-form .admin-player-add-row .admin-player-field {
+  flex: 1;
+}
+
+.admin-player-add-player-btn {
+  flex-shrink: 0;
+  min-height: 38px;
+}
+
+/* Mobile player cards */
+@media screen and (max-width: 768px) {
+  .admin-player-roster-card.card {
+    padding: 0.85rem 0.9rem;
+  }
+
+  .admin-player-roster-title {
+    font-size: 0.95rem;
+    margin-bottom: 10px;
+  }
+
+  .admin-player-desktop-only {
+    display: none !important;
+  }
+
+  .admin-player-mobile-only {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .admin-player-empty {
+    padding: 12px;
+    text-align: center;
+    color: #64748b;
+    font-size: 0.9rem;
+    background: #f8fafc;
+    border: 1px dashed #cbd5e1;
+    border-radius: 8px;
+  }
+
+  .admin-player-card {
+    padding: 10px 12px;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    background: #fff;
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.05);
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    min-width: 0;
+  }
+
+  .admin-player-card-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid #f1f5f9;
+  }
+
+  .admin-player-card-index {
+    flex-shrink: 0;
+    font-size: 0.72rem;
+    font-weight: 800;
+    color: var(--primary-red-dark, #991b1b);
+    background: #fef2f2;
+    padding: 2px 8px;
+    border-radius: 999px;
+  }
+
+  .admin-player-card-name-preview {
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: #0f172a;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .admin-player-check-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+
+  .admin-player-check {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 40px;
+    padding: 6px 8px;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    background: #f8fafc;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: #334155;
+    cursor: pointer;
+  }
+
+  .admin-player-check input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    margin: 0;
+    flex-shrink: 0;
+    cursor: pointer;
+    accent-color: var(--primary-red, #dc2626);
+  }
+
+  .admin-player-card-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+    margin-top: 2px;
+  }
+
+  .admin-player-action-btn {
+    min-height: 38px;
+    padding: 0.4rem 0.5rem !important;
+    font-size: 0.78rem !important;
+    margin: 0 !important;
+    width: 100%;
+  }
+
+  .admin-player-action-btn--remove {
+    grid-column: 1 / -1;
+  }
+
+  .admin-player-action-btn.btn-secondary:hover,
+  .admin-player-back-btn.btn-secondary:hover {
+    background: #f1f5f9;
+    color: #334155;
+  }
+
+  /* Add player — stacked on mobile */
+  .admin-player-add-form {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .admin-player-add-form .admin-player-add-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .admin-player-add-player-btn {
+    width: 100%;
+    min-height: 40px;
+  }
+
+  /* Coaches — compact mobile */
+  .admin-player-coaches-card.card {
+    padding: 0.85rem 0.9rem;
+  }
+
+  .admin-player-coach-line {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 6px;
+    padding: 8px;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    background: #fff;
+  }
+
+  .admin-coach-add-form {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .admin-coach-add-form .input {
+    width: 100% !important;
+    min-width: 0 !important;
+    box-sizing: border-box;
+  }
+
+  .admin-coach-add-btn {
+    width: 100%;
+    min-height: 40px;
+  }
+}
+
+@media screen and (min-width: 769px) {
+  .admin-player-add-title {
+    display: none;
+  }
+
+  .admin-player-add-form .admin-player-field-label {
+    display: none;
+  }
+
+  .admin-player-add-form .admin-player-field-full,
+  .admin-player-add-form .admin-player-field-row {
+    flex: unset;
+  }
+
+  .admin-player-add-form .admin-player-add-name {
+    flex: 1 1 160px;
+    min-width: 120px;
+  }
+
+  .admin-player-add-form .admin-player-add-row {
+    display: contents;
+  }
+
+  .admin-player-add-form .admin-player-add-row .admin-player-field {
+    flex: 0 0 auto;
+  }
+
+  .admin-player-add-form .admin-player-add-row .admin-player-input {
+    width: 80px !important;
+  }
+
+  .admin-player-add-form .admin-player-add-row .admin-player-field:last-child .admin-player-input {
+    width: 72px !important;
+  }
+
+  /* Desktop table inputs — preserve original compact widths */
+  .admin-player-table .input {
+    min-width: 0;
+  }
+
+  .admin-player-table .admin-player-num-input {
+    width: 70px !important;
+  }
+}
+
+/* Coaches section (all breakpoints) */
+.admin-player-coaches-title {
+  margin: 0 0 10px;
+  font-size: 1.1rem;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}
+
+.admin-player-coach-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.admin-player-coach-line {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.admin-player-coach-role {
+  min-width: 90px;
+  font-weight: 600;
+}
+
+.admin-player-coach-name {
+  flex: 1;
+  min-width: 0;
+}
+
+.admin-player-coach-empty {
+  color: #666;
+  font-size: 0.9rem;
+}
+
+.admin-coach-add-form {
+  margin-top: 12px;
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+}

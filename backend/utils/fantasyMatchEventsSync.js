@@ -1,7 +1,6 @@
 const Match = require('../models/Match');
 const FantasyMatchPerformance = require('../models/FantasyMatchPerformance');
 const {
-  recalcPerformanceTotal,
   recalcPerformanceTotalsForMatch,
   rescoreGameweek,
 } = require('./fantasyScoring');
@@ -24,6 +23,7 @@ function cleansheetPointsForPosition(position) {
 function emptyEventStats() {
   return {
     goals: 0,
+    ownGoals: 0,
     assists: 0,
     yellowCards: 0,
     redCards: 0,
@@ -54,7 +54,8 @@ function buildEventStatsByPlayer(events) {
     const row = ensure(pid, pos);
 
     if (ev.type === 'GOAL') {
-      if (!ev.ownGoal) row.goals += 1;
+      if (ev.ownGoal) row.ownGoals += 1;
+      else row.goals += 1;
     } else if (ev.type === 'YELLOW_CARD') {
       row.yellowCards += 1;
     } else if (ev.type === 'RED_CARD') {
@@ -81,6 +82,7 @@ function buildEventStatsByPlayer(events) {
 function hasEventActivity(stats) {
   return (
     (stats.goals || 0) > 0 ||
+    (stats.ownGoals || 0) > 0 ||
     (stats.assists || 0) > 0 ||
     (stats.yellowCards || 0) > 0 ||
     (stats.redCards || 0) > 0 ||
@@ -120,6 +122,7 @@ async function syncFantasyPerformanceFromMatchEvents(matchId) {
     const payload = {
       matchweek: mw,
       goals: stats.goals,
+      ownGoals: stats.ownGoals,
       assists: stats.assists,
       yellowCards: stats.yellowCards,
       redCards: stats.redCards,
@@ -129,7 +132,6 @@ async function syncFantasyPerformanceFromMatchEvents(matchId) {
 
     if (row) {
       Object.assign(row, payload);
-      row.totalPoints = recalcPerformanceTotal(row);
       await row.save();
       updated += 1;
     } else if (hasEventActivity(stats)) {
@@ -143,11 +145,12 @@ async function syncFantasyPerformanceFromMatchEvents(matchId) {
         specialPointsReason: '',
         ...payload,
       });
-      doc.totalPoints = recalcPerformanceTotal(doc);
       await doc.save();
       updated += 1;
     }
   }
+
+  await recalcPerformanceTotalsForMatch(matchId);
 
   return { ok: true, playersUpdated: updated };
 }

@@ -1,5 +1,6 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import api from '../utils/api';
+import './PlayerManagement.css';
 
 const POSITIONS = ['GK', 'DF', 'MF', 'ATT'];
 
@@ -13,6 +14,10 @@ export default function PlayerManagement({ onDataChange = () => {} }) {
   const [newPlayer, setNewPlayer] = useState({ name: '', number: '', position: 'MF' });
   const [staffForm, setStaffForm] = useState({ role: 'Coach', name: '' });
   const [savingRow, setSavingRow] = useState(null);
+  const [playerSearchQuery, setPlayerSearchQuery] = useState('');
+  const [playerSearchOpen, setPlayerSearchOpen] = useState(false);
+  const [highlightedPlayerId, setHighlightedPlayerId] = useState(null);
+  const playerSearchRef = useRef(null);
 
   // Boys teams: not acwpl, Girls teams: Orion/Firestorm or acwpl
   const boysTeams = useMemo(() => teams.filter(t => t && t.competition !== 'acwpl' && t.name !== 'Orion' && t.name !== 'Firestorm'), [teams]);
@@ -51,6 +56,65 @@ export default function PlayerManagement({ onDataChange = () => {} }) {
 
   useEffect(() => { fetchTeams(); }, [fetchTeams]);
   useEffect(() => { if (selectedTeamId) fetchPlayers(selectedTeamId); }, [selectedTeamId]);
+
+  useEffect(() => {
+    setPlayerSearchQuery('');
+    setPlayerSearchOpen(false);
+    setHighlightedPlayerId(null);
+  }, [selectedTeamId]);
+
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (playerSearchRef.current && !playerSearchRef.current.contains(e.target)) {
+        setPlayerSearchOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const playerSearchResults = useMemo(() => {
+    const q = playerSearchQuery.trim().toLowerCase();
+    if (!q) return [];
+    return players.filter(p => {
+      const name = (p.name || '').toLowerCase();
+      const num = p.number != null && p.number !== '' ? String(p.number) : '';
+      const pos = (p.position || '').toLowerCase();
+      return name.includes(q) || num.includes(q) || pos.includes(q);
+    }).slice(0, 10);
+  }, [players, playerSearchQuery]);
+
+  const navigateToPlayer = useCallback((playerId) => {
+    setHighlightedPlayerId(playerId);
+    setPlayerSearchQuery('');
+    setPlayerSearchOpen(false);
+
+    requestAnimationFrame(() => {
+      const isMobile = window.matchMedia('(max-width: 768px)').matches;
+      const selector = isMobile
+        ? `.admin-player-mobile-only [data-player-id="${playerId}"]`
+        : `.admin-player-desktop-only [data-player-id="${playerId}"]`;
+      const el = document.querySelector(selector);
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        const nameInput = el.querySelector('input[type="text"], input:not([type])');
+        if (nameInput && typeof nameInput.focus === 'function') {
+          setTimeout(() => nameInput.focus({ preventScroll: true }), 400);
+        }
+      }
+    });
+
+    window.setTimeout(() => setHighlightedPlayerId(null), 2500);
+  }, []);
+
+  const handlePlayerSearchKeyDown = (e) => {
+    if (e.key === 'Enter' && playerSearchResults.length > 0) {
+      e.preventDefault();
+      navigateToPlayer(playerSearchResults[0]._id);
+    } else if (e.key === 'Escape') {
+      setPlayerSearchOpen(false);
+    }
+  };
 
   const updatePlayerField = (id, field, value) => {
     setPlayers(prev => prev.map(p => p._id === id ? { ...p, [field]: value } : p));
@@ -211,56 +275,56 @@ export default function PlayerManagement({ onDataChange = () => {} }) {
 
   return (
     <div className="admin-panel-root">
-      <div className="card">
-        <h2>Player Management</h2>
-        {error && <div className="error-inline" style={{ marginBottom: 10 }}>{error}</div>}
-        {/* Tabs for Boys/Girls Teams */}
-        {!selectedTeamId && (
-          <>
-            <div className="admin-team-tabs">
+      <div className="card admin-player-mgmt">
+        <div className="admin-player-mgmt-header">
+          <h2 className="admin-player-mgmt-title">Player Management</h2>
+          {!selectedTeamId && (
+            <div className="admin-player-category-toggle" role="tablist" aria-label="Team category">
               <button
-                className={`btn btn-tab${activeTab === 'boys' ? ' active' : ''}`}
+                type="button"
+                role="tab"
+                aria-selected={activeTab === 'boys'}
+                className={activeTab === 'boys' ? 'active' : ''}
                 onClick={() => setActiveTab('boys')}
-              >Boys Teams</button>
+              >
+                Boys
+              </button>
               <button
-                className={`btn btn-tab${activeTab === 'girls' ? ' active' : ''}`}
+                type="button"
+                role="tab"
+                aria-selected={activeTab === 'girls'}
+                className={activeTab === 'girls' ? 'active' : ''}
                 onClick={() => setActiveTab('girls')}
-              >Girls Teams</button>
+              >
+                Girls
+              </button>
             </div>
-            <div className="team-cards admin-player-team-picker">
-              {filteredTeams.map(team => (
-                <button
-                  type="button"
-                  key={team._id}
-                  className={`team-card ${selectedTeamId === team._id ? 'active' : ''}`}
-                  onClick={() => setSelectedTeamId(team._id)}
-                  style={{ padding: '10px 12px' }}
-                >
-                  {team.logo && (
-                    <img
-                      src={team.logo}
-                      alt={team.name}
-                      style={{
-                        width: 80,
-                        height: 80,
-                        maxWidth: '26vw',
-                        maxHeight: '26vw',
-                        objectFit: 'contain',
-                        backgroundColor: team.name === 'Falcons' ? '#94a3b8' : 'transparent',
-                        padding: team.name === 'Falcons' ? 4 : 0,
-                        borderRadius: 10,
-                        boxSizing: 'border-box'
-                      }}
-                    />
-                  )}
-                  <span className="admin-player-team-name">{team.name}</span>
-                  <span className="admin-player-team-meta">
-                    {team.competition === 'league' ? 'League' : 'ACWPL'}
-                  </span>
-                </button>
-              ))}
-            </div>
-          </>
+          )}
+        </div>
+        {error && <div className="error-inline" style={{ marginBottom: 10 }}>{error}</div>}
+        {!selectedTeamId && (
+          <div className="team-cards admin-player-team-picker">
+            {filteredTeams.map(team => (
+              <button
+                type="button"
+                key={team._id}
+                className={`team-card ${selectedTeamId === team._id ? 'active' : ''}`}
+                onClick={() => setSelectedTeamId(team._id)}
+              >
+                {team.logo && (
+                  <img
+                    src={team.logo}
+                    alt={team.name}
+                    className={team.name === 'Falcons' ? 'team-logo--falcons-bg' : undefined}
+                  />
+                )}
+                <span className="admin-player-team-name">{team.name}</span>
+                <span className="admin-player-team-meta">
+                  {team.competition === 'league' ? 'League' : 'ACWPL'}
+                </span>
+              </button>
+            ))}
+          </div>
         )}
       </div>
 
@@ -273,9 +337,56 @@ export default function PlayerManagement({ onDataChange = () => {} }) {
             <h3 className="admin-player-roster-title">
               Players — {selectedTeam.name}
             </h3>
+            {!loading && players.length > 0 && (
+              <div className="admin-player-search" ref={playerSearchRef}>
+                <label htmlFor="admin-player-search-input" className="admin-player-search-label">
+                  Search players
+                </label>
+                <input
+                  id="admin-player-search-input"
+                  type="search"
+                  className="input admin-player-search-input"
+                  placeholder="Search by name, shirt number, or position…"
+                  value={playerSearchQuery}
+                  onChange={e => {
+                    setPlayerSearchQuery(e.target.value);
+                    setPlayerSearchOpen(true);
+                  }}
+                  onFocus={() => setPlayerSearchOpen(true)}
+                  onKeyDown={handlePlayerSearchKeyDown}
+                  autoComplete="off"
+                  enterKeyHint="search"
+                />
+                {playerSearchOpen && playerSearchQuery.trim() && (
+                  <ul className="admin-player-search-results" aria-label="Player search results">
+                    {playerSearchResults.length === 0 ? (
+                      <li className="admin-player-search-empty">No players found</li>
+                    ) : (
+                      playerSearchResults.map(p => (
+                        <li key={p._id}>
+                          <button
+                            type="button"
+                            className="admin-player-search-option"
+                            onClick={() => navigateToPlayer(p._id)}
+                          >
+                            <span className="admin-player-search-option-name">{p.name || 'Unnamed player'}</span>
+                            <span className="admin-player-search-option-meta">
+                              {p.number != null && p.number !== '' ? `#${p.number}` : 'No #'}
+                              {' · '}
+                              {p.position || 'MF'}
+                            </span>
+                          </button>
+                        </li>
+                      ))
+                    )}
+                  </ul>
+                )}
+              </div>
+            )}
             {loading && <div>Loading players…</div>}
             {!loading && (
-              <div className="admin-player-table-wrap">
+              <>
+              <div className="admin-player-table-wrap admin-player-desktop-only">
               <table className="table admin-player-table">
                 <thead>
                   <tr>
@@ -291,7 +402,11 @@ export default function PlayerManagement({ onDataChange = () => {} }) {
                 </thead>
                 <tbody>
                   {players.map((p, idx) => (
-                    <tr key={p._id} className="admin-player-row">
+                    <tr
+                      key={p._id}
+                      data-player-id={p._id}
+                      className={`admin-player-row${highlightedPlayerId === p._id ? ' admin-player-highlight' : ''}`}
+                    >
                       <td className="admin-player-index-cell" title={`Player ${idx + 1} of ${players.length}`}>
                         {idx + 1}
                       </td>
@@ -383,34 +498,156 @@ export default function PlayerManagement({ onDataChange = () => {} }) {
                 </tbody>
               </table>
               </div>
+
+              <div className="admin-player-cards admin-player-mobile-only">
+                {players.length === 0 ? (
+                  <div className="admin-player-empty">No players yet.</div>
+                ) : (
+                  players.map((p, idx) => (
+                    <article
+                      key={p._id}
+                      data-player-id={p._id}
+                      className={`admin-player-card${highlightedPlayerId === p._id ? ' admin-player-highlight' : ''}`}
+                    >
+                      <div className="admin-player-card-header">
+                        <span className="admin-player-card-index">#{idx + 1}</span>
+                        <span className="admin-player-card-name-preview">{p.name || 'Unnamed player'}</span>
+                      </div>
+
+                      <label className="admin-player-field admin-player-field-full">
+                        <span className="admin-player-field-label">Name</span>
+                        <input
+                          className="input admin-player-input"
+                          value={p.name || ''}
+                          onChange={e => updatePlayerField(p._id, 'name', e.target.value)}
+                        />
+                      </label>
+
+                      <div className="admin-player-field-row">
+                        <label className="admin-player-field">
+                          <span className="admin-player-field-label">Position</span>
+                          <select
+                            className="input admin-player-input"
+                            value={p.position || 'MF'}
+                            onChange={e => updatePlayerField(p._id, 'position', e.target.value)}
+                          >
+                            {POSITIONS.map(pos => <option key={pos} value={pos}>{pos}</option>)}
+                          </select>
+                        </label>
+                        <label className="admin-player-field">
+                          <span className="admin-player-field-label">Shirt #</span>
+                          <input
+                            className="input admin-player-input admin-player-num-input"
+                            type="number"
+                            value={p.number === null || p.number === undefined ? '' : p.number}
+                            onChange={e => updatePlayerField(p._id, 'number', e.target.value)}
+                          />
+                        </label>
+                      </div>
+
+                      <div className="admin-player-check-row">
+                        <label className="admin-player-check">
+                          <input
+                            type="checkbox"
+                            checked={p.isCaptain || false}
+                            onChange={e => handleCaptainToggle(p._id, e.target.checked)}
+                          />
+                          <span>Captain</span>
+                        </label>
+                        <label className="admin-player-check">
+                          <input
+                            type="checkbox"
+                            checked={p.isViceCaptain || false}
+                            onChange={e => handleViceCaptainToggle(p._id, e.target.checked)}
+                          />
+                          <span>Vice Captain</span>
+                        </label>
+                      </div>
+
+                      <label className="admin-player-field admin-player-field-full">
+                        <span className="admin-player-field-label">Transfer</span>
+                        <select
+                          className="input admin-player-input"
+                          value={p._transferTarget || ''}
+                          onChange={e => updatePlayerField(p._id, '_transferTarget', e.target.value)}
+                        >
+                          <option value="">Select team</option>
+                          {transferOptions.map(t => (
+                            <option key={t._id} value={t._id}>{t.name}</option>
+                          ))}
+                        </select>
+                      </label>
+
+                      <div className="admin-player-card-actions">
+                        <button
+                          type="button"
+                          className="btn btn-success btn-small admin-player-action-btn"
+                          onClick={() => savePlayer(p)}
+                          disabled={savingRow === p._id}
+                        >
+                          {savingRow === p._id ? 'Saving…' : 'Save'}
+                        </button>
+                        <button
+                          type="button"
+                          className="btn btn-info btn-small admin-player-action-btn"
+                          onClick={() => transferPlayer(p._id, p._transferTarget)}
+                          disabled={!p._transferTarget || savingRow === p._id}
+                        >
+                          Transfer
+                        </button>
+                        <button
+                          type="button"
+                          className="btn btn-danger btn-small admin-player-action-btn admin-player-action-btn--remove"
+                          onClick={() => deletePlayer(p._id)}
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    </article>
+                  ))
+                )}
+              </div>
+              </>
             )}
 
-            <div className="admin-player-add-form">
-              <input
-                className="input"
-                placeholder="Name"
-                value={newPlayer.name}
-                onChange={e => setNewPlayer({ ...newPlayer, name: e.target.value })}
-                style={{ minWidth: 180 }}
-              />
-              <input
-                className="input"
-                type="number"
-                placeholder="#"
-                value={newPlayer.number}
-                onChange={e => setNewPlayer({ ...newPlayer, number: e.target.value })}
-                style={{ width: 90 }}
-              />
-              <select
-                className="input"
-                value={newPlayer.position}
-                onChange={e => setNewPlayer({ ...newPlayer, position: e.target.value })}
-              >
-                {POSITIONS.map(pos => <option key={pos} value={pos}>{pos}</option>)}
-              </select>
+            <div className="admin-player-add-section">
+              <h4 className="admin-player-add-title">Add Player</h4>
+              <div className="admin-player-add-form">
+              <label className="admin-player-field admin-player-field-full admin-player-add-name">
+                <span className="admin-player-field-label">Name</span>
+                <input
+                  className="input admin-player-input"
+                  placeholder="Name"
+                  value={newPlayer.name}
+                  onChange={e => setNewPlayer({ ...newPlayer, name: e.target.value })}
+                />
+              </label>
+              <div className="admin-player-field-row admin-player-add-row">
+                <label className="admin-player-field">
+                  <span className="admin-player-field-label">Number</span>
+                  <input
+                    className="input admin-player-input"
+                    type="number"
+                    placeholder="#"
+                    value={newPlayer.number}
+                    onChange={e => setNewPlayer({ ...newPlayer, number: e.target.value })}
+                  />
+                </label>
+                <label className="admin-player-field">
+                  <span className="admin-player-field-label">Position</span>
+                  <select
+                    className="input admin-player-input"
+                    value={newPlayer.position}
+                    onChange={e => setNewPlayer({ ...newPlayer, position: e.target.value })}
+                  >
+                    {POSITIONS.map(pos => <option key={pos} value={pos}>{pos}</option>)}
+                  </select>
+                </label>
+              </div>
               <button type="button" className="btn btn-success btn-small admin-player-add-player-btn" onClick={addPlayer} disabled={addingPlayer}>
                 {addingPlayer ? 'Adding…' : 'Add Player'}
               </button>
+            </div>
             </div>
           </div>
 

@@ -19,3 +19,162 @@
 .countdown { margin-top:8px }
 .countdown-values { font-weight:700 }
 .locked { margin-top:8px; color:#b91c1c; font-weight:700 }
+
+/* ——— Fixture Management: Getting Started + Admin Controls ——— */
+
+.admin-guide-card,
+.admin-controls-card {
+  padding: 12px 14px;
+  margin-bottom: 10px;
+}
+
+.admin-guide-card.card h2,
+.admin-controls-card.card h2 {
+  margin-bottom: 0;
+}
+
+.admin-fixture-section-title {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin: 0 0 10px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #e2e8f0;
+  font-size: 1rem;
+  font-weight: 800;
+  line-height: 1.25;
+  color: #0f172a;
+}
+
+.admin-fixture-section-icon {
+  flex-shrink: 0;
+  color: #64748b;
+}
+
+.admin-guide-steps {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.admin-guide-step {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  min-width: 0;
+}
+
+.admin-guide-step-num {
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  margin-top: 1px;
+  border-radius: 999px;
+  background: #fecaca;
+  color: #991b1b;
+  font-size: 0.68rem;
+  font-weight: 800;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.admin-guide-step-text {
+  font-size: 0.82rem;
+  line-height: 1.35;
+  color: #334155;
+  font-weight: 500;
+}
+
+.admin-controls-stack {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.admin-controls-stack .admin-controls-btn {
+  margin: 0 !important;
+  min-height: 34px;
+  padding: 0.4rem 0.55rem !important;
+  font-size: 0.72rem !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.02em;
+  line-height: 1.2;
+  border-radius: 6px;
+  width: 100%;
+  text-transform: uppercase;
+}
+
+.admin-controls-btn--wide {
+  grid-column: 1 / -1;
+}
+
+.admin-controls-btn--dark {
+  background-color: #222 !important;
+  color: #fff !important;
+  border: 1px solid #222 !important;
+}
+
+.admin-controls-btn--maroon {
+  background-color: #7f1d1d !important;
+  color: #fff !important;
+  border: 1px solid #450a0a !important;
+}
+
+.admin-controls-btn--refresh {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  background-color: #6c757d !important;
+  color: #fff !important;
+  border: 1px solid #6c757d !important;
+}
+
+.admin-controls-btn--refresh svg {
+  flex-shrink: 0;
+}
+
+@media screen and (max-width: 768px) {
+  .admin-guide-card,
+  .admin-controls-card {
+    padding: 10px 12px;
+    margin-bottom: 8px;
+  }
+
+  .admin-fixture-section-title {
+    font-size: 0.95rem;
+    margin-bottom: 8px;
+    padding-bottom: 6px;
+  }
+
+  .admin-guide-steps {
+    gap: 6px;
+  }
+
+  .admin-guide-step-text {
+    font-size: 0.8rem;
+  }
+
+  .admin-controls-stack {
+    gap: 5px;
+  }
+
+  .admin-controls-stack .admin-controls-btn {
+    min-height: 32px;
+    font-size: 0.68rem !important;
+    padding: 0.35rem 0.45rem !important;
+  }
+}
+
+@media screen and (min-width: 769px) {
+  .admin-controls-stack .admin-controls-btn {
+    min-height: 36px;
+    font-size: 0.74rem !important;
+  }
+}
+
