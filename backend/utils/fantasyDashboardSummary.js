@@ -4,6 +4,11 @@ const FantasyUser = require('../models/FantasyUser');
 const { FANTASY_MATCH_COMPETITION } = require('./fantasyLeagueScope');
 const { deriveCurrentGameweekFromMatches } = require('./fantasyGameweek');
 const { latestCompletedMatchweek } = require('./fantasyMatchweek');
+const {
+  computeManagerOfTheWeek,
+  computeTopManager,
+  isUserManagerOfTheWeek,
+} = require('./fantasyManagerAwards');
 const { rescoreGameweek } = require('./fantasyScoring');
 const { backfillMissingSnapshotsForGameweek } = require('./fantasyGameweekSnapshot');
 const { syncFantasyPerformanceForGameweek } = require('./fantasyMatchEventsSync');
@@ -34,6 +39,10 @@ async function buildDashboardSummary(fantasyUserId) {
       highestPoints: 0,
       highestEntry: null,
       hasUserTeam: false,
+      managerOfTheWeek: null,
+      isManagerOfTheWeek: false,
+      managerOfTheWeekGameweek: null,
+      managerOfTheWeekPoints: null,
     };
   }
 
@@ -73,6 +82,9 @@ async function buildDashboardSummary(fantasyUserId) {
     }
   }
 
+  const managerOfTheWeek = await computeManagerOfTheWeek(displayGameweek);
+  const isManagerOfTheWeek = isUserManagerOfTheWeek(fantasyUserId, managerOfTheWeek);
+
   return {
     currentGameweek,
     latestCompletedGameweek,
@@ -82,6 +94,10 @@ async function buildDashboardSummary(fantasyUserId) {
     highestPoints,
     highestEntry,
     hasUserTeam: Boolean(userSquad?.lineup),
+    managerOfTheWeek,
+    isManagerOfTheWeek,
+    managerOfTheWeekGameweek: managerOfTheWeek?.matchweek ?? null,
+    managerOfTheWeekPoints: managerOfTheWeek?.points ?? null,
   };
 }
 

@@ -4,18 +4,43 @@ const Player = require('../models/Player');
 const { isMatchweekComplete } = require('./fantasyMatchweek');
 const { lineupWithResolvedCaptains } = require('./fantasyCaptainRoles');
 const { getTransferCostForGameweek } = require('./fantasyFreeTransfers');
+const { resolveScoringCaptainId } = require('./fantasyCaptainScoring');
 
-function recalcPerformanceTotal(p) {
+/** Goal points by registered position (ATT 4, MF 5, DF 6, GK 10). */
+function goalPointsPerGoal(position) {
+  const p = String(position || '').toUpperCase();
+  if (p === 'GK') return 10;
+  if (p === 'DF') return 6;
+  if (p === 'MF') return 5;
+  if (p === 'ATT') return 4;
+  return 4;
+}
+
+function goalPointsFromCount(goals, position) {
+  return (goals || 0) * goalPointsPerGoal(position);
+}
+
+/** Appearance: 1–44 min = 1 pt, 45+ min = 2 pts. */
+function calculateMinutesPoints(minutes) {
+  const min = Number(minutes) || 0;
+  if (min <= 0) return 0;
+  if (min < 45) return 1;
+  return 2;
+}
+
+function recalcPerformanceTotal(p, position) {
   const goals = p.goals || 0;
   const assists = p.assists || 0;
   const cs = p.cleansheetPoints || 0;
+  const ownGoals = p.ownGoals || 0;
   return (
     (p.minutesPoints || 0) +
     (p.bonusPoints || 0) +
     (p.specialPoints || 0) +
     cs +
-    goals * 4 +
+    goalPointsFromCount(goals, position) +
     assists * 3 -
+    ownGoals * 2 -
     (p.yellowCards || 0) -
     (p.redCards || 0) * 3
   );
@@ -23,25 +48,68 @@ function recalcPerformanceTotal(p) {
 
 async function recalcPerformanceTotalsForMatch(matchId) {
   const rows = await FantasyMatchPerformance.find({ match: matchId });
+  if (!rows.length) return;
+
+  const playerIds = rows.map((row) => row.player);
+  const players = await Player.find({ _id: { $in: playerIds } }).select('position').lean();
+  const positionByPlayer = new Map(players.map((pl) => [String(pl._id), pl.position]));
+
   for (const row of rows) {
-    row.totalPoints = recalcPerformanceTotal(row);
+    const position = positionByPlayer.get(String(row.player));
+    row.totalPoints = recalcPerformanceTotal(row, position);
     await row.save();
   }
 }
 
-async function playerPointsByMatchweek(matchweek) {
+async function gameweekPlayerStats(matchweek) {
   const agg = await FantasyMatchPerformance.aggregate([
     { $match: { matchweek: Number(matchweek) } },
-    { $group: { _id: '$player', total: { $sum: '$totalPoints' } } },
+    {
+      $group: {
+        _id: '$player',
+        totalPoints: { $sum: '$totalPoints' },
+        totalMinutes: { $sum: '$minutesPlayed' },
+      },
+    },
   ]);
-  return new Map(agg.map((r) => [String(r._id), r.total || 0]));
+
+  const points = new Map();
+  const minutes = new Map();
+  for (const row of agg) {
+    const id = String(row._id);
+    points.set(id, row.totalPoints || 0);
+    minutes.set(id, row.totalMinutes || 0);
+  }
+  return { points, minutes };
+}
+
+async function playerPointsByMatchweek(matchweek) {
+  const { points } = await gameweekPlayerStats(matchweek);
+  return points;
+}
+
+async function playerMinutesByMatchweek(matchweek) {
+  const { minutes } = await gameweekPlayerStats(matchweek);
+  return minutes;
 }
 
 function scoreLineupFromSnapshot(lineup, playerPoints, options = {}) {
-  const { captainId, viceCaptainId, chipUsed } = options;
+  const {
+    captainId,
+    viceCaptainId,
+    chipUsed,
+    playerMinutes = new Map(),
+  } = options;
   const benchBoost = chipUsed === 'BB';
   const tripleCap = chipUsed === 'TC';
   const duoCap = chipUsed === 'DC';
+
+  const { scoringCaptainId, captainBlanked, vicePromoted } = resolveScoringCaptainId(
+    captainId,
+    viceCaptainId,
+    playerPoints,
+    playerMinutes,
+  );
 
   const pid = (p) => String(typeof p === 'object' ? p._id || p.id : p);
 
@@ -52,7 +120,10 @@ function scoreLineupFromSnapshot(lineup, playerPoints, options = {}) {
       if (duoCap && (String(captainId) === String(id) || String(viceCaptainId) === String(id))) {
         return base * 2;
       }
-      if (String(captainId) === String(id)) return base * (tripleCap ? 3 : 2);
+      if (scoringCaptainId && String(scoringCaptainId) === String(id)) {
+        const multiplier = tripleCap && !captainBlanked ? 3 : 2;
+        return base * multiplier;
+      }
     }
     return base;
   };
@@ -66,21 +137,25 @@ function scoreLineupFromSnapshot(lineup, playerPoints, options = {}) {
       isBench: !isStarter,
       pointsCountTowardTotal: isStarter || benchBoost,
     };
+    const roleFlags = {
+      isCaptain: String(captainId) === id,
+      isViceCaptain: String(viceCaptainId) === id,
+      actingCaptain: vicePromoted && String(scoringCaptainId) === id,
+      captainDidNotPlay: vicePromoted && String(captainId) === id,
+    };
     if (typeof p === 'object' && p.name) {
       return {
         ...p,
         points,
         ...extra,
-        isCaptain: String(captainId) === id,
-        isViceCaptain: String(viceCaptainId) === id,
+        ...roleFlags,
       };
     }
     return {
       _id: id,
       points,
       ...extra,
-      isCaptain: String(captainId) === id,
-      isViceCaptain: String(viceCaptainId) === id,
+      ...roleFlags,
     };
   };
 
@@ -105,6 +180,8 @@ function scoreLineupFromSnapshot(lineup, playerPoints, options = {}) {
       gameweek: lineup.matchweek,
       chipUsed: chipUsed || null,
       benchBoostActive: benchBoost,
+      captainBlanked: vicePromoted,
+      actingCaptainId: vicePromoted ? scoringCaptainId : captainId || null,
     },
   };
 }
@@ -112,7 +189,7 @@ function scoreLineupFromSnapshot(lineup, playerPoints, options = {}) {
 async function rescoreGameweek(matchweek, matches) {
   const mw = Number(matchweek);
   const squads = await FantasySquad.find({ matchweek: mw });
-  const playerPoints = await playerPointsByMatchweek(mw);
+  const { points: playerPoints, minutes: playerMinutes } = await gameweekPlayerStats(mw);
   const complete = matches ? isMatchweekComplete(matches, mw) : false;
 
   for (const doc of squads) {
@@ -122,6 +199,7 @@ async function rescoreGameweek(matchweek, matches) {
       captainId: resolvedLineup.captainId,
       viceCaptainId: resolvedLineup.viceCaptainId,
       chipUsed: doc.chipUsed,
+      playerMinutes,
     });
     const transferHitPoints = await getTransferCostForGameweek(doc.fantasyUser, mw);
     doc.lineup = resolvedLineup;
@@ -165,9 +243,14 @@ async function hydrateLineupPlayers(lineupRaw) {
 }
 
 module.exports = {
+  goalPointsPerGoal,
+  goalPointsFromCount,
+  calculateMinutesPoints,
   recalcPerformanceTotal,
   recalcPerformanceTotalsForMatch,
+  gameweekPlayerStats,
   playerPointsByMatchweek,
+  playerMinutesByMatchweek,
   scoreLineupFromSnapshot,
   rescoreGameweek,
   hydrateLineupPlayers,

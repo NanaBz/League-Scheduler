@@ -39,7 +39,7 @@ const { recordGameweekTransfers, mergeTransferInOrder } = require('../utils/fant
 const { latestCompletedMatchweek, isMatchweekComplete } = require('../utils/fantasyMatchweek');
 const { upsertGameweekSnapshot } = require('../utils/fantasyGameweekSnapshot');
 const {
-  playerPointsByMatchweek,
+  gameweekPlayerStats,
   scoreLineupFromSnapshot,
   hydrateLineupPlayers,
 } = require('../utils/fantasyScoring');
@@ -730,11 +730,12 @@ router.get('/managers/:fantasyUserId/team-view', authenticateFantasyUser, async 
 
     const hydrated = await hydrateLineupPlayers(gwDoc.lineup);
     const resolvedRaw = await lineupWithResolvedCaptains(gwDoc.lineup, targetId);
-    const playerPoints = await playerPointsByMatchweek(viewGameweek);
+    const { points: playerPoints, minutes: playerMinutes } = await gameweekPlayerStats(viewGameweek);
     const scored = scoreLineupFromSnapshot(hydrated, playerPoints, {
       captainId: resolvedRaw.captainId,
       viceCaptainId: resolvedRaw.viceCaptainId,
       chipUsed: gwDoc.chipUsed,
+      playerMinutes,
     });
 
     const transferHitPoints =

@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { ChevronDown } from 'lucide-react';
+import { ChevronDown, Medal } from 'lucide-react';
 import api from '../utils/api';
 import {
   userFixturePhase,
@@ -200,6 +200,8 @@ export default function FantasyDashboardCard({ user, onPickTeam, onTransfers, on
   const highestPoints = gwSummary?.highestPoints ?? 0;
   const highestEntry = gwSummary?.highestEntry ?? null;
   const hasUserTeam = gwSummary?.hasUserTeam ?? false;
+  const isManagerOfTheWeek = gwSummary?.isManagerOfTheWeek ?? false;
+  const motwGameweek = gwSummary?.managerOfTheWeekGameweek ?? null;
   const fantasyUserId = user?._id || user?.id;
 
   const selfTeam = useMemo(() => ({
@@ -229,7 +231,18 @@ export default function FantasyDashboardCard({ user, onPickTeam, onTransfers, on
         <div className="user-block">
           <div className="avatar">{initials}</div>
           <div className="names">
-            <div className="team">{user?.teamName || 'Your Team'}</div>
+            <div className="team-row">
+              <div className="team">{user?.teamName || 'Your Team'}</div>
+              {isManagerOfTheWeek && motwGameweek ? (
+                <span
+                  className="fantasy-motw-badge"
+                  title={`Manager of the Week — Gameweek ${motwGameweek}`}
+                >
+                  <Medal size={12} aria-hidden="true" />
+                  MOTW · GW{motwGameweek}
+                </span>
+              ) : null}
+            </div>
             <div className="manager">{user?.managerName || 'Manager'}</div>
           </div>
         </div>

@@ -7,15 +7,15 @@ const FantasyMatchPerformance = require('../models/FantasyMatchPerformance');
 const {
   recalcPerformanceTotalsForMatch,
   rescoreGameweek,
+  calculateMinutesPoints,
 } = require('../utils/fantasyScoring');
 const { backfillMissingSnapshotsForGameweek } = require('../utils/fantasyGameweekSnapshot');
 const {
   syncFantasyPerformanceFromMatchEvents,
   syncFantasyPerformanceForGameweek,
 } = require('../utils/fantasyMatchEventsSync');
-const PlayerAvailability = require('../models/PlayerAvailability');
-const Match = require('../models/Match');
 const Player = require('../models/Player');
+const Match = require('../models/Match');
 const { FANTASY_MATCH_COMPETITION, assertFantasyLeagueMatch } = require('../utils/fantasyLeagueScope');
 const { resetFantasySeasonData } = require('../utils/resetFantasySeason');
 const { deriveCurrentGameweekFromMatches } = require('../utils/fantasyGameweek');
@@ -23,6 +23,11 @@ const FantasyMatchweek = require('../models/FantasyMatchweek');
 const { getLiveSeasonStatsNumber } = require('../utils/seasonContext');
 const { isMatchweekComplete, latestCompletedMatchweek } = require('../utils/fantasyMatchweek');
 const { lineupWithResolvedCaptains } = require('../utils/fantasyCaptainRoles');
+const { performanceHasScoringEventStats } = require('../utils/fantasyCaptainScoring');
+const {
+  computeManagerOfTheWeek,
+  computeTopManager,
+} = require('../utils/fantasyManagerAwards');
 
 async function afterMatchPerformanceUpdate(match) {
   await syncFantasyPerformanceFromMatchEvents(match._id);
@@ -167,6 +172,11 @@ router.get('/dashboard', authenticateAdmin, async (req, res) => {
     ]);
     const avgPoints = avgPointsResult.length > 0 ? avgPointsResult[0].avgPoints : 0;
 
+    const managerOfTheWeek = latestCompletedGameweek
+      ? await computeManagerOfTheWeek(latestCompletedGameweek)
+      : null;
+    const topManager = await computeTopManager();
+
     return res.json({
       success: true,
       data: {
@@ -183,6 +193,8 @@ router.get('/dashboard', authenticateAdmin, async (req, res) => {
           count: t.count,
         })),
         topScorers: topScorers.map(s => ({ manager: s.userData.managerName, team: s.userData.teamName, points: s.totalPoints })),
+        managerOfTheWeek,
+        topManager,
         avgPoints: Math.round(avgPoints * 10) / 10
       }
     });
@@ -307,24 +319,25 @@ router.post('/matches/:matchId/minutes', authenticateAdmin, async (req, res) => 
     const match = await Match.findById(req.params.matchId);
     if (!assertFantasyLeagueMatch(match, res)) return;
 
-    // Calculate points based on minutes: <35=1pt, 35-60=2pt, >60=2pt
-    const calculateMinutesPoints = (min) => {
-      if (min === 0) return 0;
-      if (min < 35) return 1;
-      if (min >= 35 && min <= 60) return 2;
-      return 2;
-    };
-
+    // Appearance: 1–44 min = 1 pt, 45+ min = 2 pts
     for (const { playerId, minutes } of playerMinutes) {
-      const minutesPoints = calculateMinutesPoints(minutes);
+      let minutesPlayed = Number(minutes) || 0;
+      const existing = await FantasyMatchPerformance.findOne({
+        match: req.params.matchId,
+        player: playerId,
+      }).lean();
+      if (performanceHasScoringEventStats(existing) && minutesPlayed < 1) {
+        minutesPlayed = 1;
+      }
+      const minutesPoints = calculateMinutesPoints(minutesPlayed);
       await FantasyMatchPerformance.findOneAndUpdate(
         { match: req.params.matchId, player: playerId },
         {
           $set: {
             matchweek: matchweek || match.matchweek,
-            minutesPlayed: minutes,
-            minutesPoints
-          }
+            minutesPlayed,
+            minutesPoints,
+          },
         },
         { upsert: true, new: true }
       );
@@ -382,64 +395,6 @@ router.post('/matches/:matchId/special', authenticateAdmin, async (req, res) => 
     const updatedMatch = await Match.findById(req.params.matchId);
     await afterMatchPerformanceUpdate(updatedMatch);
     return res.json({ success: true, message: 'Special points assigned' });
-  } catch (err) {
-    return res.status(500).json({ success: false, message: err.message });
-  }
-});
-
-// GET /api/fantasy/admin/players/:playerId/availability - Get player injury/availability
-router.get('/players/:playerId/availability', authenticateAdmin, async (req, res) => {
-  try {
-    const player = await Player.findById(req.params.playerId).populate('team', 'competition');
-    if (player?.team && player.team.competition !== FANTASY_MATCH_COMPETITION) {
-      return res.status(403).json({
-        success: false,
-        message: 'Fantasy availability only applies to league competition players.',
-      });
-    }
-
-    const availability = await PlayerAvailability.findOne({
-      player: req.params.playerId
-    }).populate('player');
-
-    return res.json({
-      success: true,
-      data: availability || { player: req.params.playerId, status: 'available', chanceOfPlaying: 100 }
-    });
-  } catch (err) {
-    return res.status(500).json({ success: false, message: err.message });
-  }
-});
-
-// POST /api/fantasy/admin/players/:playerId/availability - Set player injury/availability
-router.post('/players/:playerId/availability', authenticateAdmin, async (req, res) => {
-  try {
-    const { matchweek, injuryDetails, chanceOfPlaying } = req.body;
-
-    const player = await Player.findById(req.params.playerId).populate('team', 'competition category');
-    if (!player || !player.team) {
-      return res.status(404).json({ success: false, message: 'Player not found' });
-    }
-    if (player.team.competition !== FANTASY_MATCH_COMPETITION) {
-      return res.status(403).json({
-        success: false,
-        message: 'Fantasy availability only applies to league competition players.',
-      });
-    }
-
-    await PlayerAvailability.findOneAndUpdate(
-      { player: req.params.playerId, matchweek },
-      {
-        $set: {
-          status: 'injured',
-          injuryDetails,
-          chanceOfPlaying
-        }
-      },
-      { upsert: true }
-    );
-
-    return res.json({ success: true, message: 'Player availability updated' });
   } catch (err) {
     return res.status(500).json({ success: false, message: err.message });
   }

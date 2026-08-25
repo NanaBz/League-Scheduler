@@ -822,107 +822,7 @@ code {
   }
 }
 
-/* Admin Player Management team picker — same visual language as user Teams page */
-
-
-
-
-
-
-
-
-
-
-/* Admin Player Management — roster & coaches (selected team) */
-.admin-player-back-row {
-  margin-bottom: 8px;
-}
-
-.admin-player-roster-title {
-  padding: 6px 10px;
-  border-radius: 8px;
-  background: #e2e8f0;
-  color: #0f172a;
-  font-size: 1.05rem;
-  margin: 0 0 10px 0;
-}
-
-.admin-player-add-form {
-  margin-top: 12px;
-  padding-top: 10px;
-  border-top: 1px solid #e5e7eb;
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-  align-items: center;
-}
-
-.admin-player-coaches-title {
-  margin: 0 0 10px 0;
-  font-size: 1.1rem;
-}
-
-.admin-player-coach-list {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.admin-player-coach-line {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  flex-wrap: wrap;
-}
-
-.admin-player-coach-role {
-  min-width: 90px;
-  font-weight: 600;
-}
-
-.admin-player-coach-empty {
-  color: #666;
-  font-size: 0.9rem;
-}
-
-.admin-coach-add-form {
-  margin-top: 12px;
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-  align-items: center;
-}
-
-/* Player roster table: scroll body, sticky header, horizontal scroll on narrow screens */
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+/* Admin Player Management — styles in PlayerManagement.css */
 
 .team-detail { background:#fff; border:1px solid #eee; border-radius:12px; padding:12px; }
 .squad-groups { display:grid; grid-template-columns: repeat(auto-fill,minmax(220px,1fr)); gap:12px; }
@@ -5820,110 +5720,7 @@ code {
   gap: 0.5rem;
 }
 
-/* ========== Admin: mobile-friendly layout (fixtures + shared admin shell) ========== */
-.admin-mobile-nav {
-  display: none;
-}
-
-@media screen and (max-width: 768px) {
-  .admin-mobile-nav {
-    display: flex !important;
-    flex-direction: row;
-    flex-wrap: nowrap;
-    gap: 8px;
-    margin-bottom: 14px;
-    padding: 4px;
-    background: #f1f5f9;
-    border-radius: 12px;
-    border: 1px solid #e2e8f0;
-  }
-
-  .admin-mobile-nav button {
-    flex: 1;
-    min-height: 44px;
-    border: none;
-    border-radius: 10px;
-    background: #fff;
-    font-weight: 600;
-    font-size: 0.85rem;
-    color: #334155;
-    cursor: pointer;
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
-  }
-
-  .admin-mobile-nav button.active {
-    background: var(--primary-red-lightest);
-    color: var(--primary-red-dark);
-    box-shadow: inset 0 0 0 2px rgba(220, 38, 38, 0.22);
-  }
-}
-
-
-
-.admin-guide-card .admin-guide-steps {
-  margin: 0;
-  padding-left: 1.25rem;
-  line-height: 1.55;
-  font-size: 0.95rem;
-}
-
-@media screen and (max-width: 768px) {
-  .admin-guide-card h2 {
-    font-size: 1.15rem;
-  }
-
-  .admin-guide-card .admin-guide-steps {
-    font-size: 0.9rem;
-    padding-left: 1.1rem;
-  }
-}
-
-.admin-controls-stack {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.65rem;
-}
-
-.admin-controls-stack .btn {
-  flex: 1 1 200px;
-  min-height: 46px;
-  font-size: 0.9rem;
-}
-
-/* Mobile: denser admin controls — shorter buttons, 2 columns where it fits */
-@media screen and (max-width: 640px) {
-  .admin-controls-card h2 {
-    font-size: 1.1rem;
-    margin-bottom: 0.65rem;
-  }
-
-  .admin-controls-stack {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 0.45rem;
-  }
-
-  .admin-controls-stack .btn {
-    flex: none;
-    width: 100%;
-    min-height: 40px;
-    padding: 0.45rem 0.55rem;
-    font-size: 0.78rem;
-    line-height: 1.2;
-    border-radius: 8px;
-  }
-
-  .admin-controls-stack .btn svg {
-    width: 15px !important;
-    height: 15px !important;
-    margin-right: 4px !important;
-  }
-
-  .admin-controls-stack .btn-danger,
-  .admin-controls-stack .btn:last-child {
-    grid-column: 1 / -1;
-  }
-}
+/* Fixture admin guide + controls — see AdminPanel.css */
 
 .admin-backup-banner {
   margin-bottom: 20px;
@@ -6806,20 +6603,6 @@ code {
 
 
 
-.admin-team-tabs {
-  display: flex;
-  gap: 8px;
-  margin-bottom: 16px;
-  flex-wrap: wrap;
-}
-
-@media screen and (max-width: 640px) {
-  .admin-team-tabs .btn {
-    flex: 1 1 calc(50% - 4px);
-    min-height: 44px;
-  }
-}
-
 .admin-fantasy-dash-btns {
   display: flex;
   flex-wrap: wrap;
@@ -6832,7 +6615,7 @@ code {
     flex-direction: column;
   }
 
-  .admin-fantasy-dash-btns .btn {
+  .admin-fantasy-dash-btns .btn:not(.admin-fantasy-editor-btn):not(.admin-fantasy-rescore-btn) {
     width: 100%;
     margin-left: 0 !important;
   }

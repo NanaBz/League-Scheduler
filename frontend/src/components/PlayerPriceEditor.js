@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { ArrowLeft } from 'lucide-react';
 import api from '../utils/api';
 import './PlayerPriceEditor.css';
@@ -13,6 +13,10 @@ export default function PlayerPriceEditor({ onBack }) {
   const [error, setError] = useState('');
   const [savingPlayerId, setSavingPlayerId] = useState(null);
   const [successMessage, setSuccessMessage] = useState('');
+  const [playerSearchQuery, setPlayerSearchQuery] = useState('');
+  const [playerSearchOpen, setPlayerSearchOpen] = useState(false);
+  const [highlightedPlayerId, setHighlightedPlayerId] = useState(null);
+  const playerSearchRef = useRef(null);
 
   const leagueTeams = useMemo(() => teams.filter(t => t && t.competition !== 'acwpl'), [teams]);
   const selectedTeam = useMemo(() => leagueTeams.find(t => t._id === selectedTeamId) || null, [leagueTeams, selectedTeamId]);
@@ -50,6 +54,61 @@ export default function PlayerPriceEditor({ onBack }) {
     };
     fetchPlayers();
   }, [selectedTeamId]);
+
+  useEffect(() => {
+    setPlayerSearchQuery('');
+    setPlayerSearchOpen(false);
+    setHighlightedPlayerId(null);
+  }, [selectedTeamId]);
+
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (playerSearchRef.current && !playerSearchRef.current.contains(e.target)) {
+        setPlayerSearchOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const playerSearchResults = useMemo(() => {
+    const q = playerSearchQuery.trim().toLowerCase();
+    if (!q) return [];
+    return players.filter(p => {
+      const name = (p.name || '').toLowerCase();
+      const num = p.number != null && p.number !== '' ? String(p.number) : '';
+      const pos = (p.position || '').toLowerCase();
+      return name.includes(q) || num.includes(q) || pos.includes(q);
+    }).slice(0, 10);
+  }, [players, playerSearchQuery]);
+
+  const navigateToPlayer = useCallback((playerId) => {
+    setHighlightedPlayerId(playerId);
+    setPlayerSearchQuery('');
+    setPlayerSearchOpen(false);
+
+    requestAnimationFrame(() => {
+      const el = document.querySelector(`.price-player-row[data-player-id="${playerId}"]`);
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        const priceInput = el.querySelector('.price-input');
+        if (priceInput && typeof priceInput.focus === 'function') {
+          setTimeout(() => priceInput.focus({ preventScroll: true }), 400);
+        }
+      }
+    });
+
+    window.setTimeout(() => setHighlightedPlayerId(null), 2500);
+  }, []);
+
+  const handlePlayerSearchKeyDown = (e) => {
+    if (e.key === 'Enter' && playerSearchResults.length > 0) {
+      e.preventDefault();
+      navigateToPlayer(playerSearchResults[0]._id);
+    } else if (e.key === 'Escape') {
+      setPlayerSearchOpen(false);
+    }
+  };
 
   // Update price in local state
   const updatePrice = (playerId, price) => {
@@ -124,6 +183,54 @@ export default function PlayerPriceEditor({ onBack }) {
           {error && <div className="price-error">{error}</div>}
           {successMessage && <div className="price-success">{successMessage}</div>}
 
+          {!loading && players.length > 0 && (
+            <div className="price-player-search" ref={playerSearchRef}>
+              <label htmlFor="price-player-search-input" className="price-player-search-label">
+                Search players
+              </label>
+              <input
+                id="price-player-search-input"
+                type="search"
+                className="price-player-search-input"
+                placeholder="Search by name, shirt number, or position…"
+                value={playerSearchQuery}
+                onChange={e => {
+                  setPlayerSearchQuery(e.target.value);
+                  setPlayerSearchOpen(true);
+                }}
+                onFocus={() => setPlayerSearchOpen(true)}
+                onKeyDown={handlePlayerSearchKeyDown}
+                autoComplete="off"
+                enterKeyHint="search"
+              />
+              {playerSearchOpen && playerSearchQuery.trim() && (
+                <ul className="price-player-search-results" aria-label="Player search results">
+                  {playerSearchResults.length === 0 ? (
+                    <li className="price-player-search-empty">No players found</li>
+                  ) : (
+                    playerSearchResults.map(p => (
+                      <li key={p._id}>
+                        <button
+                          type="button"
+                          className="price-player-search-option"
+                          onClick={() => navigateToPlayer(p._id)}
+                        >
+                          <span className="price-player-search-option-name">{p.name || 'Unnamed player'}</span>
+                          <span className="price-player-search-option-meta">
+                            {p.number != null && p.number !== '' ? `#${p.number}` : 'No #'}
+                            {' · '}
+                            {p.position || 'MF'}
+                            {p.fantasyPrice != null ? ` · ${Number(p.fantasyPrice).toFixed(1)}m` : ''}
+                          </span>
+                        </button>
+                      </li>
+                    ))
+                  )}
+                </ul>
+              )}
+            </div>
+          )}
+
           {loading ? (
             <p className="price-loading">Loading players...</p>
           ) : players.length === 0 ? (
@@ -135,7 +242,11 @@ export default function PlayerPriceEditor({ onBack }) {
                   <h3 className="price-position-title">{pos}s</h3>
                   <div className="price-position-list">
                     {groupedPlayers[pos].map(player => (
-                      <div key={player._id} className="price-player-row">
+                      <div
+                        key={player._id}
+                        data-player-id={player._id}
+                        className={`price-player-row${highlightedPlayerId === player._id ? ' price-player-highlight' : ''}`}
+                      >
                         <div className="price-player-info">
                           <p className="price-player-name">{player.name}</p>
                           <p className="price-player-number">#{player.number || '—'}</p>
