@@ -1,9 +1,9 @@
-/* Player Picker Modal */
-.ppm-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.6); display:flex; align-items:center; justify-content:center; z-index: 1000; }
+/* Player Picker Modal — layout/shell in fantasyUiRefresh.css */
+.ppm-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.6); display:flex; z-index: 1000; }
 .ppm-modal { background: #fff; width: 90%; max-width: 800px; border-radius: 12px; overflow:hidden; box-shadow: 0 10px 25px rgba(0,0,0,0.2); }
 .ppm-header { display:flex; align-items:center; justify-content: space-between; padding: 12px 14px; border-bottom: 1px solid #eee; }
 .ppm-header h3 { margin: 0; font-size: 1.1rem; font-weight: 700; }
-.ppm-close { background:none; border:none; font-size: 1.4rem; cursor:pointer; color:#444; padding: 0; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; }
+.ppm-close { background:none; border:none; font-size: 1.4rem; cursor:pointer; color:#444; padding: 0; min-width: 44px; min-height: 44px; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; }
 .ppm-controls { padding: 10px 12px; border-bottom: 1px solid #eee; }
 .ppm-search { width: 100%; padding: 9px 11px; border: 1px solid #d4d4d8; border-radius: 8px; margin-bottom: 8px; font-size: 0.9rem; }
 .ppm-search::placeholder { color: #999; }
@@ -46,7 +46,8 @@
   z-index: 10;
   box-shadow: 0 4px 12px rgba(0,0,0,0.15);
 }
-.ppm-filter-group:hover .ppm-filter-dropdown { display: flex; }
+.ppm-filter-group:hover .ppm-filter-dropdown,
+.ppm-filter-group.is-open .ppm-filter-dropdown { display: flex; }
 .ppm-filter-item { 
   padding: 8px 10px; 
   border: none; 

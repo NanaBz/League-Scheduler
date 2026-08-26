@@ -159,16 +159,8 @@ function renderStartingLineup(match) {
   };
 
   return (
-    <div
-      style={{
-        backgroundColor: '#f0f7ff',
-        padding: '12px',
-        borderRadius: '4px',
-        marginBottom: '8px',
-        borderLeft: '3px solid #0066cc',
-      }}
-    >
-      <h3 style={{ fontSize: '13px', fontWeight: 600, marginBottom: '8px', color: '#0066cc' }}>⚽ Starting Lineup</h3>
+    <div className="fixture-stats-lineup">
+      <h3 className="fixture-stats-lineup-title">⚽ Starting Lineup</h3>
       {match.startingLineup && (
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
           {match.startingLineup.homeTeam &&
@@ -184,14 +176,7 @@ function renderStartingLineup(match) {
 function renderEventsDesktop(match) {
   if (!hasMatchEvents(match)) return null;
   return (
-    <div
-      style={{
-        backgroundColor: '#fff',
-        padding: '8px',
-        borderRadius: '4px',
-        marginTop: '8px',
-      }}
-    >
+    <div className="fixture-stats-events">
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
         <div>
           <strong>{match.homeTeam?.name}</strong>
@@ -236,14 +221,7 @@ function renderEventsMobileStacked(match) {
 export function FixtureMatchStatsExpanded({ match, variant = 'desktop' }) {
   if (variant === 'mobile') {
     return (
-      <div
-        style={{
-          backgroundColor: '#e9ecef',
-          padding: '12px',
-          borderTop: '2px solid #dee2e6',
-          marginTop: '10px',
-        }}
-      >
+      <div className="fixture-stats-expanded fixture-stats-expanded--mobile">
         {renderStartingLineup(match)}
         {renderEventsMobileStacked(match)}
       </div>
@@ -251,14 +229,7 @@ export function FixtureMatchStatsExpanded({ match, variant = 'desktop' }) {
   }
 
   return (
-    <div
-      style={{
-        backgroundColor: '#f8f9fa',
-        padding: '12px 20px',
-        borderLeft: '3px solid #0066cc',
-        marginBottom: '8px',
-      }}
-    >
+    <div className="fixture-stats-expanded fixture-stats-expanded--desktop">
       {renderStartingLineup(match)}
       {renderEventsDesktop(match)}
     </div>

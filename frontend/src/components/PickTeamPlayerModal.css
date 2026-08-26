@@ -3,10 +3,7 @@
   inset: 0;
   background: rgba(0, 0, 0, 0.55);
   display: flex;
-  align-items: center;
-  justify-content: center;
   z-index: 1100;
-  padding: 16px;
 }
 
 .ptpm-modal {
@@ -44,9 +41,14 @@
   cursor: pointer;
   color: #64748b;
   padding: 0;
-  width: 32px;
-  height: 32px;
+  min-width: 44px;
+  min-height: 44px;
+  width: 44px;
+  height: 44px;
   border-radius: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .ptpm-close:hover {

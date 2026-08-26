@@ -1,8 +1,8 @@
 .pick-team-container {
-  background: var(--white);
-  border-radius: 16px;
-  padding: 16px;
-  min-height: calc(100vh - 24px);
+  background: transparent;
+  border-radius: 0;
+  padding: 0;
+  min-height: 0;
 }
 
 .pick-team-header {
@@ -455,6 +455,7 @@
   .chip-card {
     padding: 6px 5px;
     gap: 3px;
+    min-height: 44px;
   }
 
   .chip-icon {
@@ -482,11 +483,12 @@
   }
 
   .player-slot {
-    min-width: 52px;
-    max-width: 58px;
-    padding: 5px 3px;
-    gap: 2px;
-    font-size: 10px;
+    /* Fixed slot width — centered rows; overridden by fantasyUiRefresh.css */
+    min-width: 92px;
+    max-width: 92px;
+    padding: 0;
+    gap: 4px;
+    font-size: inherit;
   }
 
   .player-name {

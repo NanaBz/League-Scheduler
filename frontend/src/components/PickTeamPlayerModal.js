@@ -113,10 +113,24 @@ export default function PickTeamPlayerModal({
             <span className="ptpm-fixture">
               {formatPitchFixture(player, matches, currentGameweek)}
             </span>
-            <span className="ptpm-stats">
-              Total Points: {displayTotalPoints(player.totalPoints)} · Selection:{' '}
-              {displaySelectionPercentage(player.selectionPercentage)}%
-            </span>
+            <div className="ptpm-stats-grid">
+              <div className="ptpm-stat-tile">
+                <span className="ptpm-stat-tile__label">Total points</span>
+                <span className="ptpm-stat-tile__value">{displayTotalPoints(player.totalPoints)}</span>
+              </div>
+              <div className="ptpm-stat-tile">
+                <span className="ptpm-stat-tile__label">Selected by</span>
+                <span className="ptpm-stat-tile__value">{displaySelectionPercentage(player.selectionPercentage)}%</span>
+              </div>
+              <div className="ptpm-stat-tile">
+                <span className="ptpm-stat-tile__label">Price</span>
+                <span className="ptpm-stat-tile__value">{(player.fantasyPrice || 0).toFixed(1)}m</span>
+              </div>
+              <div className="ptpm-stat-tile">
+                <span className="ptpm-stat-tile__label">Club</span>
+                <span className="ptpm-stat-tile__value">{player.team?.name || '—'}</span>
+              </div>
+            </div>
           </div>
         </div>
 

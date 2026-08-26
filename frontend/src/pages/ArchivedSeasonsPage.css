@@ -1,16 +1,16 @@
 .archived-seasons-page {
-  max-width: 1180px;
+  max-width: var(--apl-page-max, 1180px);
   margin: 0 auto;
-  padding: 0 0 2rem;
+  padding: 0 0 var(--apl-page-padding-bottom, 2rem);
 }
 
 .archived-seasons-hero {
-  margin: 0 -0.5rem 1.5rem;
-  padding: 1.5rem 1.25rem;
-  border-radius: 16px;
-  background: linear-gradient(135deg, #1e293b 0%, #0f172a 55%, #450a0a 140%);
+  margin: 0 -0.5rem var(--apl-space-6, 1.5rem);
+  padding: var(--apl-space-6, 1.5rem) var(--apl-space-5, 1.25rem);
+  border-radius: var(--apl-radius-lg, 16px);
+  background: var(--apl-hero-gradient);
   color: #fff;
-  box-shadow: 0 8px 32px rgba(15, 23, 42, 0.18);
+  box-shadow: var(--apl-shadow-lg);
 }
 
 .archived-seasons-hero-inner {
@@ -33,16 +33,16 @@
 
 .archived-seasons-hero h1 {
   margin: 0 0 0.35rem;
-  font-size: clamp(1.5rem, 3vw, 2rem);
-  letter-spacing: -0.02em;
+  font-size: var(--apl-text-page, clamp(1.5rem, 3vw, 2rem));
+  letter-spacing: var(--apl-tracking-tight, -0.02em);
 }
 
 .archived-seasons-hero p {
   margin: 0;
   max-width: 560px;
   color: rgba(255, 255, 255, 0.78);
-  line-height: 1.55;
-  font-size: 0.95rem;
+  line-height: var(--apl-leading-relaxed, 1.55);
+  font-size: var(--apl-text-base, 0.95rem);
 }
 
 /* Season selector */
@@ -55,13 +55,13 @@
   display: inline-flex;
   align-items: center;
   gap: 0.35rem;
-  margin-bottom: 0.5rem;
-  padding: 0.25rem 0.65rem;
-  border-radius: 999px;
-  background: #fef2f2;
+  margin-bottom: var(--apl-space-2, 0.5rem);
+  padding: var(--apl-space-1, 0.25rem) 0.65rem;
+  border-radius: var(--apl-radius-pill, 999px);
+  background: var(--apl-surface-active, #fef2f2);
   color: var(--primary-red-dark, #b91c1c);
-  font-size: 0.75rem;
-  font-weight: 700;
+  font-size: var(--apl-text-xs, 0.75rem);
+  font-weight: var(--apl-weight-bold, 700);
   letter-spacing: 0.03em;
   text-transform: uppercase;
 }
@@ -70,21 +70,26 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 1rem;
+  gap: var(--apl-space-4, 1rem);
   width: 100%;
   max-width: 420px;
   padding: 0.85rem 1.1rem;
-  border: 1px solid #e2e8f0;
-  border-radius: 12px;
-  background: #fff;
-  box-shadow: 0 2px 10px rgba(15, 23, 42, 0.06);
+  border: 1px solid var(--apl-border-subtle, #e2e8f0);
+  border-radius: var(--apl-radius-md, 12px);
+  background: var(--apl-surface-base, #fff);
+  box-shadow: var(--apl-shadow-sm);
   cursor: pointer;
-  transition: border-color 0.15s, box-shadow 0.15s;
+  transition: border-color var(--apl-transition-fast, 0.15s), box-shadow var(--apl-transition-fast, 0.15s);
 }
 
 .archived-season-selector-trigger:hover {
-  border-color: #cbd5e1;
+  border-color: var(--apl-border-muted, #cbd5e1);
   box-shadow: 0 4px 14px rgba(15, 23, 42, 0.08);
+}
+
+.archived-season-selector-trigger:focus-visible {
+  outline: none;
+  box-shadow: var(--apl-focus-ring), var(--apl-shadow-sm);
 }
 
 .archived-season-selector-label {
@@ -192,19 +197,27 @@
   align-items: stretch;
   min-height: 220px;
   padding: 1.15rem;
-  border: 1px solid #e2e8f0;
-  border-radius: 16px;
-  background: #fff;
+  border: 1px solid var(--apl-border-subtle, #e2e8f0);
+  border-radius: var(--apl-radius-lg, 16px);
+  background: var(--apl-surface-base, #fff);
   text-align: left;
   cursor: pointer;
-  transition: transform 0.18s, box-shadow 0.18s, border-color 0.18s;
-  box-shadow: 0 2px 12px rgba(15, 23, 42, 0.05);
+  transition:
+    transform var(--apl-transition-base, 0.18s),
+    box-shadow var(--apl-transition-base, 0.18s),
+    border-color var(--apl-transition-fast, 0.15s);
+  box-shadow: var(--apl-shadow-md);
 }
 
 .archived-comp-card:hover {
   transform: translateY(-2px);
-  border-color: #cbd5e1;
-  box-shadow: 0 10px 28px rgba(15, 23, 42, 0.1);
+  border-color: var(--apl-border-muted, #cbd5e1);
+  box-shadow: var(--apl-shadow-hover);
+}
+
+.archived-comp-card:focus-visible {
+  outline: none;
+  box-shadow: var(--apl-focus-ring), var(--apl-shadow-md);
 }
 
 .archived-comp-card-top {
@@ -225,28 +238,28 @@
 }
 
 .archived-comp-card--league .archived-comp-card-icon {
-  background: #fef3c7;
-  color: #b45309;
+  background: var(--apl-comp-league-bg, #fef3c7);
+  color: var(--apl-comp-league-fg, #b45309);
 }
 
 .archived-comp-card--cup .archived-comp-card-icon {
-  background: #ede9fe;
-  color: #6d28d9;
+  background: var(--apl-comp-cup-bg, #ede9fe);
+  color: var(--apl-comp-cup-fg, #6d28d9);
 }
 
 .archived-comp-card--super-cup .archived-comp-card-icon {
-  background: #fce7f3;
-  color: #be185d;
+  background: var(--apl-comp-super-cup-bg, #fce7f3);
+  color: var(--apl-comp-super-cup-fg, #be185d);
 }
 
 .archived-comp-card--acwpl .archived-comp-card-icon {
-  background: #dbeafe;
-  color: #1d4ed8;
+  background: var(--apl-comp-acwpl-bg, #dbeafe);
+  color: var(--apl-comp-acwpl-fg, #1d4ed8);
 }
 
 .archived-comp-card--girls-super-cup .archived-comp-card-icon {
-  background: #fae8ff;
-  color: #a21caf;
+  background: var(--apl-comp-girls-super-cup-bg, #fae8ff);
+  color: var(--apl-comp-girls-super-cup-fg, #a21caf);
 }
 
 .archived-comp-card-titles {

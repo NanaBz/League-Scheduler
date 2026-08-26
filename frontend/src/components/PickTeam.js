@@ -59,7 +59,7 @@ function PlayerSlot({
 }) {
   if (!player) {
     return (
-      <div className="player-slot">
+      <div className="player-slot pick-team-player-card pick-team-player-card--empty">
         <span className="empty-slot">{emptyLabel}</span>
       </div>
     );
@@ -70,7 +70,7 @@ function PlayerSlot({
   const isVice = viceCaptainId === pid;
 
   return (
-    <button type="button" className="player-slot" onClick={() => onOpen(player)}>
+    <button type="button" className="player-slot pick-team-player-card" onClick={() => onOpen(player)}>
       {isCaptain ? <span className="role-chip">C</span> : null}
       {isVice ? <span className="role-chip role-chip-vc">V</span> : null}
       <JerseyIcon size={40} {...kitColors(getTeamCode(player), player.position)} />
@@ -755,6 +755,7 @@ export default function PickTeam({ user, onBack, onGoToTransfers }) {
         <span className="formation-display__hint">1 GK · min 2 DEF · min 2 MID · min 1 FWD</span>
       </div>
 
+      <div className="pick-team-pitch-wrap">
       <div className="formation-pitch" aria-label="Starting 9">
         <div className="formation-row">
           {(lineup?.starters?.gk || []).map((p, idx) => (
@@ -812,6 +813,7 @@ export default function PickTeam({ user, onBack, onGoToTransfers }) {
             />
           ))}
         </div>
+      </div>
       </div>
 
       <section className="bench-section" aria-label="Bench">

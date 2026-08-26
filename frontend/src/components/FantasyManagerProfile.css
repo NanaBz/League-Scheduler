@@ -16,7 +16,8 @@
   font-weight: 700;
   font-size: 0.9rem;
   cursor: pointer;
-  padding: 0;
+  padding: 8px 4px;
+  min-height: 44px;
   margin-bottom: 8px;
 }
 
@@ -208,6 +209,18 @@
 @media (max-width: 640px) {
   .fmp-current-grid {
     grid-template-columns: 1fr;
+  }
+
+  .fmp-stat {
+    background: transparent;
+    border: none;
+    border-bottom: 1px solid #e2e8f0;
+    border-radius: 0;
+    padding: 10px 0;
+  }
+
+  .fmp-stat:last-child {
+    border-bottom: none;
   }
 
   .fmp-history-table-wrap {

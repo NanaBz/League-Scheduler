@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { BarChart3, Target, Share2, Shield, Square } from 'lucide-react';
 import api from '../utils/api';
 
 const COMP_TABS = [
@@ -8,6 +9,14 @@ const COMP_TABS = [
   { id: 'acwpl', label: 'ACWPL' },
   { id: 'girls-super-cup', label: 'Girls Super Cup' },
 ];
+
+const METRIC_CONFIG = {
+  goals: { title: 'Goals', Icon: Target },
+  assists: { title: 'Assists', Icon: Share2 },
+  cleanSheets: { title: 'Clean Sheets', Icon: Shield },
+  yellowCards: { title: 'Yellow Cards', Icon: Square, sectionClass: 'stats-section--cards-yellow', iconClass: 'stats-metric-icon--yellow' },
+  redCards: { title: 'Red Cards', Icon: Square, sectionClass: 'stats-section--cards-red', iconClass: 'stats-metric-icon--red' },
+};
 
 export default function StatsPage() {
   const [competition, setCompetition] = useState('league');
@@ -48,6 +57,8 @@ export default function StatsPage() {
     const sectionKey = `${competition}-${metricKey}`;
     const isExpanded = expandedSections[sectionKey] || false;
     const allItems = items || [];
+    const config = METRIC_CONFIG[metricKey] || { title, Icon: Target };
+    const { Icon, sectionClass, iconClass } = config;
 
     // Group by player id (includes orphanedPlayerId when the Player doc was deleted)
     const grouped = {};
@@ -79,9 +90,12 @@ export default function StatsPage() {
     };
 
     return (
-      <div className={`stats-section ${isExpanded ? 'stats-section-expanded' : ''}`}>
+      <div className={`stats-section ${sectionClass || ''} ${isExpanded ? 'stats-section-expanded' : ''}`}>
         <div className="stats-section-header">
-          <h4>{title}</h4>
+          <h4 className="stats-section-title">
+            <Icon size={18} className={iconClass || undefined} aria-hidden="true" />
+            {title}
+          </h4>
           {rankedPlayers.length > 3 && (
             <button
               type="button"
@@ -93,44 +107,60 @@ export default function StatsPage() {
             </button>
           )}
         </div>
-        <ul className="stats-list">
-          {displayItems.map((row, idx) => (
-            <li
-              key={`${metricKey}-${row.player?._id || row.orphanedPlayerId || idx}`}
-              className="stats-item"
-            >
-              <div className="stats-player">
-                {/* Show all team logos for this player */}
-                {row.teams.map((team, tIdx) => (
-                  <img
-                    key={team?._id || tIdx}
-                    src={team?.logo}
-                    alt="logo"
-                    className="stats-team-logo"
-                    style={team?.name === 'Falcons' ? { backgroundColor: '#94a3b8', padding: 4, borderRadius: 8, marginRight: 2 } : { marginRight: 2 }}
-                  />
-                ))}
-                <span className="stats-name">
-                  {(row.player?.name && String(row.player.name).trim()) ||
-                    (row.orphanedPlayerId ? 'Former player (removed)' : 'Unknown')}
-                </span>
-                {/* Show all team names, comma separated */}
-                <span className="stats-team">{row.teams.map(t => t?.name).filter(Boolean).join(', ')}</span>
-              </div>
-              <div className="stats-value">{row.stat || 0}</div>
-            </li>
-          ))}
-        </ul>
+        {rankedPlayers.length === 0 ? (
+          <p className="stats-empty">No {title.toLowerCase()} recorded yet.</p>
+        ) : (
+          <ul className="stats-list">
+            {displayItems.map((row, idx) => (
+              <li
+                key={`${metricKey}-${row.player?._id || row.orphanedPlayerId || idx}`}
+                className={`stats-item${idx < 3 ? ` stats-item--top-${idx + 1}` : ''}`}
+              >
+                <div className="stats-player">
+                  <span className="stats-rank" aria-hidden="true">{idx + 1}</span>
+                  <div className="stats-player-logos">
+                    {row.teams.map((team, tIdx) => (
+                      <img
+                        key={team?._id || tIdx}
+                        src={team?.logo}
+                        alt=""
+                        className={`stats-team-logo${team?.name === 'Falcons' ? ' stats-team-logo--falcons' : ''}`}
+                      />
+                    ))}
+                  </div>
+                  <div className="stats-player-meta">
+                    <span className="stats-name">
+                      {(row.player?.name && String(row.player.name).trim()) ||
+                        (row.orphanedPlayerId ? 'Former player (removed)' : 'Unknown')}
+                    </span>
+                    <span className="stats-team">{row.teams.map(t => t?.name).filter(Boolean).join(', ')}</span>
+                  </div>
+                </div>
+                <div className="stats-value">{row.stat || 0}</div>
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
     );
   };
 
+  const activeCompLabel = COMP_TABS.find((tab) => tab.id === competition)?.label || 'League';
+
   return (
     <div className="stats-page">
-      <div className="comp-tabs">
+      <header className="stats-page-header">
+        <h1><BarChart3 size={22} aria-hidden="true" /> Statistics</h1>
+        <p>Player rankings across school competitions — goals, assists, clean sheets, and discipline.</p>
+      </header>
+
+      <div className="comp-tabs" role="tablist" aria-label="Competition statistics">
         {COMP_TABS.map(ct => (
           <button
             key={ct.id}
+            type="button"
+            role="tab"
+            aria-selected={competition === ct.id}
             className={`comp-tab ${competition === ct.id ? 'active' : ''}`}
             onClick={() => setCompetition(ct.id)}
           >{ct.label}</button>
@@ -138,7 +168,7 @@ export default function StatsPage() {
       </div>
 
       {summary?.seasonNumber != null && (
-        <p className="stats-season-hint">Showing season {summary.seasonNumber}</p>
+        <p className="stats-season-hint">Season {summary.seasonNumber} · {activeCompLabel}</p>
       )}
 
       {loading && <div className="loading-inline">Loading stats…</div>}
@@ -146,11 +176,11 @@ export default function StatsPage() {
 
       {summary && (
         <div className="stats-grid">
-          <Section key={`${competition}-goals`} title="Goals" items={summary.goals} metricKey="goals" />
-          <Section key={`${competition}-assists`} title="Assists" items={summary.assists} metricKey="assists" />
-          <Section key={`${competition}-cleanSheets`} title="Clean Sheets" items={summary.cleanSheets} metricKey="cleanSheets" />
-          <Section key={`${competition}-yellowCards`} title="Yellow Cards" items={summary.yellowCards} metricKey="yellowCards" />
-          <Section key={`${competition}-redCards`} title="Red Cards" items={summary.redCards} metricKey="redCards" />
+          <Section key={`${competition}-goals`} title={METRIC_CONFIG.goals.title} items={summary.goals} metricKey="goals" />
+          <Section key={`${competition}-assists`} title={METRIC_CONFIG.assists.title} items={summary.assists} metricKey="assists" />
+          <Section key={`${competition}-cleanSheets`} title={METRIC_CONFIG.cleanSheets.title} items={summary.cleanSheets} metricKey="cleanSheets" />
+          <Section key={`${competition}-yellowCards`} title={METRIC_CONFIG.yellowCards.title} items={summary.yellowCards} metricKey="yellowCards" />
+          <Section key={`${competition}-redCards`} title={METRIC_CONFIG.redCards.title} items={summary.redCards} metricKey="redCards" />
         </div>
       )}
     </div>

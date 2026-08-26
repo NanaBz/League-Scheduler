@@ -163,3 +163,65 @@ export function teamHeroTheme(teamName) {
 
   return { background, color, mutedColor, backBtnBg, backBtnHoverBg, logoWrapBg, logoBorder };
 }
+
+/**
+ * Readable accent colours for team profile UI (icons, borders) on light surfaces.
+ * Brand primaries that are white or very light (e.g. Falcons) map to slate greys
+ * that still reflect the team's silver / monochrome identity.
+ */
+export function teamProfileAccent(teamName) {
+  const { primary, secondary } = getTeamBrandColors(teamName);
+
+  if (teamName === 'Falcons') {
+    return {
+      accent: '#475569',
+      accentMuted: 'rgba(148, 163, 184, 0.24)',
+      borderAccent: '#94a3b8',
+    };
+  }
+
+  if (teamName === 'Warriors') {
+    return {
+      accent: '#92400e',
+      accentMuted: 'rgba(251, 191, 36, 0.28)',
+      borderAccent: '#d97706',
+    };
+  }
+
+  const p = parseRgb(primary);
+  const lumP = relativeLuminance(p);
+
+  if (lumP > 0.85) {
+    const lumS = relativeLuminance(parseRgb(secondary));
+    if (lumS < 0.45) {
+      const accent = normalizeHex(secondary);
+      return {
+        accent,
+        accentMuted: `${accent}22`,
+        borderAccent: accent,
+      };
+    }
+    return {
+      accent: '#475569',
+      accentMuted: 'rgba(100, 116, 139, 0.16)',
+      borderAccent: '#64748b',
+    };
+  }
+
+  if (lumP > 0.55) {
+    const accent = toHexRgb(mixRgb(p, BLACK, 0.48));
+    const border = normalizeHex(primary);
+    return {
+      accent,
+      accentMuted: `${border}28`,
+      borderAccent: border,
+    };
+  }
+
+  const accent = normalizeHex(primary);
+  return {
+    accent,
+    accentMuted: `${accent}18`,
+    borderAccent: accent,
+  };
+}
