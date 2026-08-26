@@ -1,18 +1,5 @@
-/* Minimal styles for deadline manager */
-.admin-deadline-card .deadline-list { display: flex; flex-direction: column; gap: 8px; }
-.deadline-row { display:flex; align-items:center; gap:12px; padding:8px; border:1px solid #eee; border-radius:6px; }
-.deadline-row .mw { width:60px; font-weight:600 }
-.deadline-row .dl { flex:1 }
-.deadline-row .st { width:80px }
-.deadline-row .rem { width:140px }
-.deadline-row .actions { width:80px }
-
-.deadline-editor label { display:block; margin-top:8px; font-size:13px }
-.deadline-editor input, .deadline-editor select { width:100%; padding:6px; margin-top:4px }
-.deadline-editor .editor-actions { margin-top:12px; display:flex; gap:8px }
-
-.modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,0.4); display:flex; align-items:center; justify-content:center; z-index:9999; pointer-events:auto; }
-.modal { background:#fff; padding:16px; border-radius:8px; min-width:320px; z-index:10000; pointer-events:auto; }
+/* Minimal legacy modal helpers (lineup modal) */
+.modal { background:#fff; padding:16px; border-radius:8px; width: min(100%, 440px); min-width: 0; max-width: calc(100vw - 2rem); max-height: min(92vh, 720px); overflow-y: auto; z-index:10000; pointer-events:auto; box-sizing: border-box; }
 .btn-small { padding:6px 8px; font-size:13px }
 
 /* Countdown styles in dashboard */

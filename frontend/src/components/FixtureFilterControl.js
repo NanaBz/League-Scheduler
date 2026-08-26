@@ -65,6 +65,75 @@ export function buildFixtureFilterOptions(mode, matches) {
   return [];
 }
 
+/** Static options: native select on desktop; bottom sheet + radios on small screens. */
+export function AdminStaticFilter({ options, value, onChange, sheetTitle = 'Filter', className = '' }) {
+  const isMobile = useMediaQuery('(max-width: 768px)');
+  const [sheetOpen, setSheetOpen] = useState(false);
+
+  const currentLabel =
+    options.find((o) => String(o.value) === String(value))?.label ?? options[0]?.label ?? 'Select';
+
+  if (isMobile) {
+    return (
+      <>
+        <button
+          type="button"
+          className={`fixture-filter-trigger ${className}`.trim()}
+          onClick={() => setSheetOpen(true)}
+        >
+          {currentLabel}
+        </button>
+        {sheetOpen && (
+          <div className="fixture-filter-sheet-overlay" role="presentation" onClick={() => setSheetOpen(false)}>
+            <div
+              className="fixture-filter-sheet"
+              role="dialog"
+              aria-modal="true"
+              aria-label={sheetTitle}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="fixture-filter-sheet-handle" />
+              <h3 className="fixture-filter-sheet-title">{sheetTitle}</h3>
+              <ul className="fixture-filter-sheet-list">
+                {options.map((opt) => (
+                  <li key={opt.value === '' ? '__all' : String(opt.value)}>
+                    <label className="fixture-filter-sheet-option">
+                      <input
+                        type="radio"
+                        name={`admin-static-filter-${sheetTitle}`}
+                        checked={String(value) === String(opt.value)}
+                        onChange={() => {
+                          onChange(opt.value);
+                          setSheetOpen(false);
+                        }}
+                      />
+                      <span>{opt.label}</span>
+                    </label>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        )}
+      </>
+    );
+  }
+
+  return (
+    <select
+      className={`fixture-filter-select ${className}`.trim()}
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+    >
+      {options.map((opt) => (
+        <option key={opt.value === '' ? '__all' : String(opt.value)} value={opt.value}>
+          {opt.label}
+        </option>
+      ))}
+    </select>
+  );
+}
+
 /** League / Cup / ACWPL / Girls Super Cup filter: native select on desktop; bottom sheet + radios on small screens. */
 export default function FixtureFilterControl({ mode, matches, value, onChange, className = '' }) {
   const isMobile = useMediaQuery('(max-width: 768px)');
@@ -120,7 +189,7 @@ export default function FixtureFilterControl({ mode, matches, value, onChange, c
   }
 
   return (
-    <select className={className} value={value} onChange={(e) => onChange(e.target.value)}>
+    <select className={`fixture-filter-select ${className}`.trim()} value={value} onChange={(e) => onChange(e.target.value)}>
       {options.map((opt) => (
         <option key={opt.value === '' ? '__all' : String(opt.value)} value={opt.value}>
           {opt.label}

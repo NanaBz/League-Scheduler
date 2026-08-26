@@ -401,8 +401,11 @@ export default function FantasyMatchweekEditor({ matchweeks, onBackToDashboard }
         return (
           <React.Fragment key={s.key}>
             {idx > 0 ? <span className={`fme-progress-line${isComplete || isActive ? ' active' : ''}`} aria-hidden="true" /> : null}
-            <div className={`fme-progress-step${isActive ? ' active' : ''}${isComplete ? ' complete' : ''}`}>
-              <span className="fme-progress-dot">{isComplete ? '✓' : s.id}</span>
+            <div
+              className={`fme-progress-step${isActive ? ' active' : ''}${isComplete ? ' complete' : ''}`}
+              aria-current={isActive ? 'step' : undefined}
+            >
+              <span className="fme-progress-dot" aria-hidden="true">{isComplete ? '✓' : s.id}</span>
               <span className="fme-progress-label">{s.label}</span>
             </div>
           </React.Fragment>
@@ -414,16 +417,18 @@ export default function FantasyMatchweekEditor({ matchweeks, onBackToDashboard }
   const renderContextBar = () => {
     if (step < 2 || !selectedMatchweek) return null;
     return (
-      <div className="fme-context">
-        <span className="fme-context-item"><strong>Matchweek {selectedMatchweek.number}</strong></span>
+      <div className="fme-context" role="status" aria-live="polite">
+        <span className="fme-context-chip fme-context-chip--mw">
+          <span className="fme-context-chip-label">Matchweek</span>
+          <strong>{selectedMatchweek.number}</strong>
+        </span>
         {selectedMatch ? (
-          <>
-            <span className="fme-context-sep">·</span>
-            <span className="fme-context-item">{matchLabel(selectedMatch)}</span>
-          </>
+          <span className="fme-context-chip fme-context-chip--match">
+            <span className="fme-context-chip-label">Match</span>
+            <strong>{matchLabel(selectedMatch)}</strong>
+          </span>
         ) : null}
-        <span className="fme-context-sep">·</span>
-        <span className="fme-context-item">Step {step} of 4</span>
+        <span className="fme-context-step">Step {step} of 4</span>
         {isDirty ? <span className="fme-unsaved-pill">Unsaved changes</span> : null}
       </div>
     );
@@ -705,9 +710,9 @@ export default function FantasyMatchweekEditor({ matchweeks, onBackToDashboard }
   const showSave = step === 4;
 
   return (
-    <div className="fme-root">
+    <div className="fme-root admin-fantasy-mw-editor">
       <div className="fme-header">
-        <button type="button" className="fme-link-btn" onClick={requestCancel}>
+        <button type="button" className="admin-back-link" onClick={requestCancel}>
           ← Fantasy Management
         </button>
         <h2 className="fme-title">Edit Matchweek Data</h2>

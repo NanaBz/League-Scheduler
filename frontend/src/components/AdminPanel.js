@@ -1,13 +1,13 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Trophy, Award, RefreshCcw, Edit3, Save, FileDown, FileBarChart2, ClipboardList, Settings } from 'lucide-react';
+import { Trophy, Award, RefreshCcw, Edit3, Save, FileDown, FileBarChart2, ClipboardList, Settings, ListChecks, Target, BarChart3 } from 'lucide-react';
 import PropTypes from 'prop-types';
 import api from '../utils/api';
 import './AdminPanel.css';
+import '../styles/adminFixtureMgmt.css';
 import { matchEventsToGoalscorerForm, resizeGoalsToScores } from '../utils/matchEventsForm';
 import GoalScorerSelector from './GoalScorerSelector';
-import FixtureFilterControl from './FixtureFilterControl';
+import FixtureFilterControl, { AdminStaticFilter } from './FixtureFilterControl';
 import TeamSelection from './TeamSelection';
-import PlayerPriceEditor from './PlayerPriceEditor';
 import { userFixturePhase, desktopFixtureBadgeClass, desktopFixtureBadgeLabel } from '../utils/matchDisplayState';
 import { clearFantasyClientSeasonKeys } from '../utils/fantasyGameweek';
 import SeasonResetWorkflow from './SeasonResetWorkflow';
@@ -15,10 +15,22 @@ import SeasonResetWorkflow from './SeasonResetWorkflow';
 const ADMIN_GETTING_STARTED_STEPS = [
   'Initialize Teams to create the six league teams.',
   'Set League Fixtures to generate 10 matchweeks (home and away).',
-  'Open Fixture Management below and click "Save League Fixtures" to publish them to users.',
+  'Use Publish & Reset and click "Save League Fixtures" to publish them to users.',
   'Edit Matches to enter scores; add goals, assists, cards, and clean sheets under "Select Goalscorers & Events".',
   'Use Refresh Fixtures to sync the admin and user views.',
 ];
+
+const ADMIN_COMPETITION_OPTIONS = [
+  { value: 'league', label: 'League' },
+  { value: 'cup', label: 'Cup' },
+  { value: 'super-cup', label: 'Super Cup' },
+  { value: 'acwpl', label: 'ACWPL' },
+  { value: 'girls-super-cup', label: 'Girls Super Cup' },
+];
+
+const COMPETITION_LABELS = Object.fromEntries(
+  ADMIN_COMPETITION_OPTIONS.map((option) => [option.value, option.label])
+);
 
 function buildServerFormSnapshot(match, homeScore, awayScore) {
   const h = parseInt(homeScore, 10) || 0;
@@ -65,7 +77,6 @@ const AdminPanel = ({ onDataChange, isAdmin }) => {
   const [runnerUpId, setRunnerUpId] = useState('');
   const [showCupSelection, setShowCupSelection] = useState(false);
   const [showSuperCupSelection, setShowSuperCupSelection] = useState(false);
-  const [showPriceEditor, setShowPriceEditor] = useState(false);
   const [editedMatches, setEditedMatches] = useState({}); // Store local edits
   const [savingMatches, setSavingMatches] = useState(new Set()); // Track which matches are being saved
   const [fixtureStatus, setFixtureStatus] = useState({}); // Track fixture publication status
@@ -941,13 +952,40 @@ const AdminPanel = ({ onDataChange, isAdmin }) => {
 
   return (
     <>
-    <div className="admin-panel-root">
-      {/* Admin Getting Started Guide */}
-      <div className="card admin-guide-card">
-        <h2 className="admin-fixture-section-title">
-          <ClipboardList size={18} className="admin-fixture-section-icon" aria-hidden="true" />
+    <div className="admin-panel-root admin-fixture-mgmt">
+      <header className="admin-page-header">
+        <div className="admin-page-header__main">
+          <div className="admin-page-header__icon" aria-hidden="true">
+            <ListChecks size={20} />
+          </div>
+          <div className="admin-page-header__text">
+            <p className="admin-page-header__eyebrow">Admin · Fixtures</p>
+            <h1 className="admin-page-header__title">Fixture Management</h1>
+            <p className="admin-page-header__subtitle">
+              Generate fixtures, publish to users, and edit match results across all competitions.
+            </p>
+          </div>
+        </div>
+        <div className="admin-page-header__actions">
+          <button
+            type="button"
+            className="btn btn-ghost btn-compact"
+            onClick={handleRefreshFixtures}
+            disabled={loading}
+            title="Refresh fixtures data without page reload"
+          >
+            <RefreshCcw size={15} aria-hidden="true" />
+            Refresh Fixtures
+          </button>
+        </div>
+      </header>
+
+      <section className="admin-fixture-ops" aria-label="Generate and publish fixtures">
+      <details className="admin-guide-details">
+        <summary>
+          <ClipboardList size={16} aria-hidden="true" />
           Getting Started
-        </h2>
+        </summary>
         <ol className="admin-guide-steps">
           {ADMIN_GETTING_STARTED_STEPS.map((step, index) => (
             <li key={step} className="admin-guide-step">
@@ -956,12 +994,12 @@ const AdminPanel = ({ onDataChange, isAdmin }) => {
             </li>
           ))}
         </ol>
-      </div>
+      </details>
       {/* Admin Controls */}
       <div className="card admin-controls-card">
         <h2 className="admin-fixture-section-title">
           <Settings size={18} className="admin-fixture-section-icon" aria-hidden="true" />
-          Admin Controls
+          Generate Fixtures
         </h2>
         <div className="admin-controls-stack">
           <button 
@@ -1020,19 +1058,182 @@ const AdminPanel = ({ onDataChange, isAdmin }) => {
           >
             Reset Season
           </button>
-          <button 
-            type="button"
-            className="btn admin-controls-btn admin-controls-btn--wide admin-controls-btn--refresh" 
-            onClick={handleRefreshFixtures}
-            disabled={loading}
-            title="Refresh fixtures data without page reload"
-          >
-            <RefreshCcw size={15} aria-hidden="true" />
-            Refresh Fixtures
-          </button>
-          
         </div>
       </div>
+
+      <div className="admin-publish-block">
+        <h2 className="admin-section__title">
+          <Target size={18} aria-hidden="true" />
+          Publish & Reset
+        </h2>
+        <p className="admin-publish-lead">Save fixtures to make them visible to users, or reset to regenerate them.</p>
+
+        <div className="admin-fixture-mgmt-grid">
+          {/* League Fixtures */}
+          <div className="fixture-management-card">
+            <h3><Trophy size={18} aria-hidden="true" />League Fixtures</h3>
+            <div className="status-info">
+              <p>Status: <span className={`status-badge ${getFixtureStatusForCompetition('league').isPublished ? 'published' : 'draft'}`}>
+                {getFixtureStatusForCompetition('league').isPublished ? 'Published' : getFixtureStatusForCompetition('league').hasFixtures ? 'Draft' : 'Not Generated'}
+              </span></p>
+              <p>Matches: {getFixtureStatusForCompetition('league').totalMatches}/30</p>
+            </div>
+            <div className="fixture-actions">
+              {getFixtureStatusForCompetition('league').hasFixtures && !getFixtureStatusForCompetition('league').isPublished && (
+                <button 
+                  className="btn btn-success btn-small" 
+                  onClick={() => saveFixtures('league')}
+                  disabled={loading}
+                >
+                  Save League Fixtures
+                </button>
+              )}
+              {getFixtureStatusForCompetition('league').hasFixtures && (
+                <button 
+                  className="btn btn-danger btn-small" 
+                  onClick={() => resetFixtures('league')}
+                  disabled={loading}
+                >
+                  Reset League
+                </button>
+              )}
+              <button
+                type="button"
+                className="btn btn-secondary btn-small"
+                onClick={recalculateLeagueTable}
+                disabled={loading}
+                title="Rebuild P/W/D/L/pts/form from finished league matches"
+              >
+                Recalculate table
+              </button>
+            </div>
+          </div>
+
+          {/* Cup Fixtures */}
+          <div className="fixture-management-card">
+            <h3><Award size={18} aria-hidden="true" />Cup Fixtures</h3>
+            <div className="status-info">
+              <p>Status: <span className={`status-badge ${getFixtureStatusForCompetition('cup').isPublished ? 'published' : 'draft'}`}>
+                {getFixtureStatusForCompetition('cup').isPublished ? 'Published' : getFixtureStatusForCompetition('cup').hasFixtures ? 'Draft' : 'Not Generated'}
+              </span></p>
+              <p>Matches: {getFixtureStatusForCompetition('cup').totalMatches}/3</p>
+            </div>
+            <div className="fixture-actions">
+              {getFixtureStatusForCompetition('cup').hasFixtures && !getFixtureStatusForCompetition('cup').isPublished && (
+                <button 
+                  className="btn btn-success btn-small" 
+                  onClick={() => saveFixtures('cup')}
+                  disabled={loading}
+                >
+                  Save Cup Fixtures
+                </button>
+              )}
+              {getFixtureStatusForCompetition('cup').hasFixtures && (
+                <button 
+                  className="btn btn-danger btn-small" 
+                  onClick={() => resetFixtures('cup')}
+                  disabled={loading}
+                >
+                  Reset Cup
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Super Cup Fixtures */}
+          <div className="fixture-management-card">
+            <h3><Award size={18} aria-hidden="true" />Super Cup Fixtures</h3>
+            <div className="status-info">
+              <p>Status: <span className={`status-badge ${getFixtureStatusForCompetition('super-cup').isPublished ? 'published' : 'draft'}`}>
+                {getFixtureStatusForCompetition('super-cup').isPublished ? 'Published' : getFixtureStatusForCompetition('super-cup').hasFixtures ? 'Draft' : 'Not Generated'}
+              </span></p>
+              <p>Matches: {getFixtureStatusForCompetition('super-cup').totalMatches}/1</p>
+            </div>
+            <div className="fixture-actions">
+              {getFixtureStatusForCompetition('super-cup').hasFixtures && !getFixtureStatusForCompetition('super-cup').isPublished && (
+                <button 
+                  className="btn btn-success btn-small" 
+                  onClick={() => saveFixtures('super-cup')}
+                  disabled={loading}
+                >
+                  Save Super Cup Fixtures
+                </button>
+              )}
+              {getFixtureStatusForCompetition('super-cup').hasFixtures && (
+                <button 
+                  className="btn btn-danger btn-small" 
+                  onClick={() => resetFixtures('super-cup')}
+                  disabled={loading}
+                >
+                  Reset Super Cup
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* ACWPL Fixtures */}
+          <div className="fixture-management-card">
+            <h3><Trophy size={18} aria-hidden="true" />ACWPL Fixtures</h3>
+            <div className="status-info">
+              <p>Status: <span className={`status-badge ${getFixtureStatusForCompetition('acwpl').isPublished ? 'published' : 'draft'}`}>
+                {getFixtureStatusForCompetition('acwpl').isPublished ? 'Published' : getFixtureStatusForCompetition('acwpl').hasFixtures ? 'Draft' : 'Not Generated'}
+              </span></p>
+              <p>Matches: {getFixtureStatusForCompetition('acwpl').totalMatches}/5</p>
+            </div>
+            <div className="fixture-actions">
+              {getFixtureStatusForCompetition('acwpl').hasFixtures && !getFixtureStatusForCompetition('acwpl').isPublished && (
+                <button 
+                  className="btn btn-success btn-small" 
+                  onClick={() => saveFixtures('acwpl')}
+                  disabled={loading}
+                >
+                  Save ACWPL Fixtures
+                </button>
+              )}
+              {getFixtureStatusForCompetition('acwpl').hasFixtures && (
+                <button 
+                  className="btn btn-danger btn-small" 
+                  onClick={() => resetFixtures('acwpl')}
+                  disabled={loading}
+                >
+                  Reset ACWPL
+                </button>
+              )}
+            </div>
+          </div>
+
+          <div className="fixture-management-card">
+            <h3><Trophy size={18} aria-hidden="true" />Girls Super Cup</h3>
+            <div className="status-info">
+              <p>Status: <span className={`status-badge ${getFixtureStatusForCompetition('girls-super-cup').isPublished ? 'published' : 'draft'}`}>
+                {getFixtureStatusForCompetition('girls-super-cup').isPublished ? 'Published' : getFixtureStatusForCompetition('girls-super-cup').hasFixtures ? 'Draft' : 'Not Generated'}
+              </span></p>
+              <p>Matches: {getFixtureStatusForCompetition('girls-super-cup').totalMatches}/3</p>
+            </div>
+            <div className="fixture-actions">
+              {getFixtureStatusForCompetition('girls-super-cup').hasFixtures && !getFixtureStatusForCompetition('girls-super-cup').isPublished && (
+                <button
+                  className="btn btn-success btn-small"
+                  onClick={() => saveFixtures('girls-super-cup')}
+                  disabled={loading}
+                >
+                  Save Girls Super Cup Fixtures
+                </button>
+              )}
+              {getFixtureStatusForCompetition('girls-super-cup').hasFixtures && (
+                <button
+                  className="btn btn-danger btn-small"
+                  onClick={() => resetFixtures('girls-super-cup')}
+                  disabled={loading}
+                >
+                  Reset Girls Super Cup
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+      </section>
         {/* Matchweek Deadline Manager */}
         
 
@@ -1100,7 +1301,7 @@ const AdminPanel = ({ onDataChange, isAdmin }) => {
             <p>Select the League Winner and Cup Winner for the Super Cup:</p>
             <div className="super-cup-selection">
               <div className="winner-selection">
-                <label htmlFor="league-winner">🥇 League Winner:</label>
+                <label htmlFor="league-winner"><Trophy size={16} style={{ marginRight: 4, verticalAlign: 'middle' }} aria-hidden="true" />League Winner:</label>
                 <select
                   id="league-winner"
                   value={leagueWinnerId}
@@ -1140,45 +1341,41 @@ const AdminPanel = ({ onDataChange, isAdmin }) => {
             </div>
             {/* Show runner-up modal immediately if both winners are the same */}
             {leagueWinnerId && cupWinnerId && leagueWinnerId === cupWinnerId ? (
-              <>
-                <div className="modal-overlay">
-                  <div className="modal">
-                    <h3><Trophy size={18} style={{ marginRight: 6, verticalAlign: 'middle' }} />Double Winner Detected</h3>
-                    <p>The same team was selected as both League Winner and Cup Winner. Please select a runner-up team to play in the Super Cup:</p>
-                    <select
-                      value={runnerUpId}
-                      onChange={e => setRunnerUpId(e.target.value)}
-                      className="team-dropdown"
-                    >
-                      <option value="">Select Runner-up</option>
-                      {teams?.filter(team => team && team._id && team.name && team._id !== leagueWinnerId && team.name !== 'Orion' && team.name !== 'Firestorm').map(team => (
-                        <option key={team._id} value={team._id}>{team.name}</option>
-                      ))}
-                    </select>
-                    <div className="modal-actions">
-                      <button 
-                        className="btn btn-success" 
-                        onClick={handleRunnerUpConfirm}
-                        disabled={!runnerUpId || loading}
-                      >
-                        Confirm Runner-up
-                      </button>
-                      <button 
-                        className="btn btn-secondary" 
-                        onClick={() => {
-                          setShowSuperCupSelection(false);
-                          setShowRunnerUpSelection(false);
-                          setLeagueWinnerId('');
-                          setCupWinnerId('');
-                          setRunnerUpId('');
-                        }}
-                      >
-                        Cancel
-                      </button>
-                    </div>
-                  </div>
+              <div className="admin-modal-inline-panel">
+                <h4><Trophy size={16} style={{ marginRight: 6, verticalAlign: 'middle' }} />Double Winner Detected</h4>
+                <p>The same team was selected as both League Winner and Cup Winner. Please select a runner-up team to play in the Super Cup:</p>
+                <select
+                  value={runnerUpId}
+                  onChange={e => setRunnerUpId(e.target.value)}
+                  className="team-dropdown"
+                >
+                  <option value="">Select Runner-up</option>
+                  {teams?.filter(team => team && team._id && team.name && team._id !== leagueWinnerId && team.name !== 'Orion' && team.name !== 'Firestorm').map(team => (
+                    <option key={team._id} value={team._id}>{team.name}</option>
+                  ))}
+                </select>
+                <div className="modal-actions">
+                  <button 
+                    className="btn btn-success" 
+                    onClick={handleRunnerUpConfirm}
+                    disabled={!runnerUpId || loading}
+                  >
+                    Confirm Runner-up
+                  </button>
+                  <button 
+                    className="btn btn-secondary" 
+                    onClick={() => {
+                      setShowSuperCupSelection(false);
+                      setShowRunnerUpSelection(false);
+                      setLeagueWinnerId('');
+                      setCupWinnerId('');
+                      setRunnerUpId('');
+                    }}
+                  >
+                    Cancel
+                  </button>
                 </div>
-              </>
+              </div>
             ) : (
               leagueWinnerId && cupWinnerId && (
                 <div className="super-cup-preview">
@@ -1259,7 +1456,13 @@ const AdminPanel = ({ onDataChange, isAdmin }) => {
 
       {/* Match Editor */}
       <div className={`card admin-edit-matches${selectedCompetition === 'league' ? ' admin-league-numbered' : ''}`}>
-        <h2><Edit3 size={22} style={{ marginRight: 8, verticalAlign: 'middle' }} />Edit Matches</h2>
+        <h2><Edit3 size={20} aria-hidden="true" />Edit Matches</h2>
+        <p className="admin-edit-context">
+          Editing <strong>{COMPETITION_LABELS[selectedCompetition] || selectedCompetition}</strong>
+          {' · '}
+          {matchesForEditList.length} fixture{matchesForEditList.length === 1 ? '' : 's'}
+          {getFixtureStatusForCompetition(selectedCompetition).isPublished ? ' · Published' : getFixtureStatusForCompetition(selectedCompetition).hasFixtures ? ' · Draft' : ''}
+        </p>
         
           <div className="admin-backup-banner">
             <h3 className="admin-backup-title">
@@ -1288,16 +1491,13 @@ const AdminPanel = ({ onDataChange, isAdmin }) => {
           </div>
         
         <div className="filter-section admin-filter-section">
-          <select
+          <AdminStaticFilter
+            options={ADMIN_COMPETITION_OPTIONS}
             value={selectedCompetition}
-            onChange={(e) => setSelectedCompetition(e.target.value)}
-          >
-            <option value="league">League</option>
-            <option value="cup">Cup</option>
-            <option value="super-cup">Super Cup</option>
-            <option value="acwpl">ACWPL</option>
-            <option value="girls-super-cup">Girls Super Cup</option>
-          </select>
+            onChange={setSelectedCompetition}
+            sheetTitle="Competition"
+            className="admin-competition-filter"
+          />
           
           {selectedCompetition === 'league' && (
             <FixtureFilterControl mode="league" matches={matches} value={leagueMwFilter} onChange={setLeagueMwFilter} />
@@ -1318,6 +1518,8 @@ const AdminPanel = ({ onDataChange, isAdmin }) => {
           )}
         </div>
 
+        <div className="admin-edit-matches-scroll">
+        <div className="admin-edit-matches-scroll-inner">
         <div className="match-header admin-match-header">
           {selectedCompetition === 'league' && <div>#</div>}
           <div>Date</div>
@@ -1557,19 +1759,22 @@ const AdminPanel = ({ onDataChange, isAdmin }) => {
           </div>
         ))}
 
+        </div>
+        </div>
+
         {matches.length === 0 && (
-          <div style={{ textAlign: 'center', padding: '2rem', color: '#666' }}>
+          <div className="admin-edit-empty">
             No matches found. Generate fixtures first.
           </div>
         )}
         {matches.length > 0 && matchesForEditList.length === 0 && (
-          <div style={{ textAlign: 'center', padding: '2rem', color: '#666' }}>
+          <div className="admin-edit-empty">
             No fixtures in this filter. Choose a different round or &quot;All&quot;.
           </div>
         )}
       </div>
       <div className="card admin-league-table-card">
-        <h2>📊 Current League Table</h2>
+        <h2><BarChart3 size={20} aria-hidden="true" />Current League Table</h2>
         <div className="admin-table-scroll">
         <table className="table">
           <thead>
@@ -1606,180 +1811,6 @@ const AdminPanel = ({ onDataChange, isAdmin }) => {
         </div>
       </div>
 
-      {/* Fixture Management */}
-      <div className="card">
-        <h2>🎯 Fixture Management</h2>
-        <p>Save fixtures to make them visible to users, or reset to regenerate them.</p>
-        
-        <div
-          className="admin-fixture-mgmt-grid"
-          style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1rem' }}
-        >
-          {/* League Fixtures */}
-          <div className="fixture-management-card">
-            <h3><Trophy size={18} style={{ marginRight: 6, verticalAlign: 'middle' }} />League Fixtures</h3>
-            <div className="status-info">
-              <p>Status: <span className={`status-badge ${getFixtureStatusForCompetition('league').isPublished ? 'published' : 'draft'}`}>
-                {getFixtureStatusForCompetition('league').isPublished ? 'Published' : getFixtureStatusForCompetition('league').hasFixtures ? 'Draft' : 'Not Generated'}
-              </span></p>
-              <p>Matches: {getFixtureStatusForCompetition('league').totalMatches}/30</p>
-            </div>
-            <div className="fixture-actions">
-              {getFixtureStatusForCompetition('league').hasFixtures && !getFixtureStatusForCompetition('league').isPublished && (
-                <button 
-                  className="btn btn-success btn-small" 
-                  onClick={() => saveFixtures('league')}
-                  disabled={loading}
-                >
-                  Save League Fixtures
-                </button>
-              )}
-              {getFixtureStatusForCompetition('league').hasFixtures && (
-                <button 
-                  className="btn btn-danger btn-small" 
-                  onClick={() => resetFixtures('league')}
-                  disabled={loading}
-                >
-                  Reset League
-                </button>
-              )}
-              <button
-                type="button"
-                className="btn btn-secondary btn-small"
-                onClick={recalculateLeagueTable}
-                disabled={loading}
-                title="Rebuild P/W/D/L/pts/form from finished league matches"
-              >
-                Recalculate table
-              </button>
-            </div>
-          </div>
-
-          {/* Cup Fixtures */}
-          <div className="fixture-management-card">
-            <h3><Award size={18} style={{ marginRight: 6, verticalAlign: 'middle' }} />Cup Fixtures</h3>
-            <div className="status-info">
-              <p>Status: <span className={`status-badge ${getFixtureStatusForCompetition('cup').isPublished ? 'published' : 'draft'}`}>
-                {getFixtureStatusForCompetition('cup').isPublished ? 'Published' : getFixtureStatusForCompetition('cup').hasFixtures ? 'Draft' : 'Not Generated'}
-              </span></p>
-              <p>Matches: {getFixtureStatusForCompetition('cup').totalMatches}/3</p>
-            </div>
-            <div className="fixture-actions">
-              {getFixtureStatusForCompetition('cup').hasFixtures && !getFixtureStatusForCompetition('cup').isPublished && (
-                <button 
-                  className="btn btn-success btn-small" 
-                  onClick={() => saveFixtures('cup')}
-                  disabled={loading}
-                >
-                  Save Cup Fixtures
-                </button>
-              )}
-              {getFixtureStatusForCompetition('cup').hasFixtures && (
-                <button 
-                  className="btn btn-danger btn-small" 
-                  onClick={() => resetFixtures('cup')}
-                  disabled={loading}
-                >
-                  Reset Cup
-                </button>
-              )}
-            </div>
-          </div>
-
-          {/* Super Cup Fixtures */}
-          <div className="fixture-management-card">
-            <h3><Award size={18} style={{ marginRight: 6, verticalAlign: 'middle' }} />Super Cup Fixtures</h3>
-            <div className="status-info">
-              <p>Status: <span className={`status-badge ${getFixtureStatusForCompetition('super-cup').isPublished ? 'published' : 'draft'}`}>
-                {getFixtureStatusForCompetition('super-cup').isPublished ? 'Published' : getFixtureStatusForCompetition('super-cup').hasFixtures ? 'Draft' : 'Not Generated'}
-              </span></p>
-              <p>Matches: {getFixtureStatusForCompetition('super-cup').totalMatches}/1</p>
-            </div>
-            <div className="fixture-actions">
-              {getFixtureStatusForCompetition('super-cup').hasFixtures && !getFixtureStatusForCompetition('super-cup').isPublished && (
-                <button 
-                  className="btn btn-success btn-small" 
-                  onClick={() => saveFixtures('super-cup')}
-                  disabled={loading}
-                >
-                  Save Super Cup Fixtures
-                </button>
-              )}
-              {getFixtureStatusForCompetition('super-cup').hasFixtures && (
-                <button 
-                  className="btn btn-danger btn-small" 
-                  onClick={() => resetFixtures('super-cup')}
-                  disabled={loading}
-                >
-                  Reset Super Cup
-                </button>
-              )}
-            </div>
-          </div>
-
-          {/* ACWPL Fixtures */}
-          <div className="fixture-management-card">
-            <h3><Trophy size={18} style={{ marginRight: 6, verticalAlign: 'middle' }} />ACWPL Fixtures</h3>
-            <div className="status-info">
-              <p>Status: <span className={`status-badge ${getFixtureStatusForCompetition('acwpl').isPublished ? 'published' : 'draft'}`}>
-                {getFixtureStatusForCompetition('acwpl').isPublished ? 'Published' : getFixtureStatusForCompetition('acwpl').hasFixtures ? 'Draft' : 'Not Generated'}
-              </span></p>
-              <p>Matches: {getFixtureStatusForCompetition('acwpl').totalMatches}/5</p>
-            </div>
-            <div className="fixture-actions">
-              {getFixtureStatusForCompetition('acwpl').hasFixtures && !getFixtureStatusForCompetition('acwpl').isPublished && (
-                <button 
-                  className="btn btn-success btn-small" 
-                  onClick={() => saveFixtures('acwpl')}
-                  disabled={loading}
-                >
-                  Save ACWPL Fixtures
-                </button>
-              )}
-              {getFixtureStatusForCompetition('acwpl').hasFixtures && (
-                <button 
-                  className="btn btn-danger btn-small" 
-                  onClick={() => resetFixtures('acwpl')}
-                  disabled={loading}
-                >
-                  Reset ACWPL
-                </button>
-              )}
-            </div>
-          </div>
-
-          <div className="fixture-management-card">
-            <h3><Trophy size={18} style={{ marginRight: 6, verticalAlign: 'middle' }} />Girls Super Cup</h3>
-            <div className="status-info">
-              <p>Status: <span className={`status-badge ${getFixtureStatusForCompetition('girls-super-cup').isPublished ? 'published' : 'draft'}`}>
-                {getFixtureStatusForCompetition('girls-super-cup').isPublished ? 'Published' : getFixtureStatusForCompetition('girls-super-cup').hasFixtures ? 'Draft' : 'Not Generated'}
-              </span></p>
-              <p>Matches: {getFixtureStatusForCompetition('girls-super-cup').totalMatches}/3</p>
-            </div>
-            <div className="fixture-actions">
-              {getFixtureStatusForCompetition('girls-super-cup').hasFixtures && !getFixtureStatusForCompetition('girls-super-cup').isPublished && (
-                <button
-                  className="btn btn-success btn-small"
-                  onClick={() => saveFixtures('girls-super-cup')}
-                  disabled={loading}
-                >
-                  Save Girls Super Cup Fixtures
-                </button>
-              )}
-              {getFixtureStatusForCompetition('girls-super-cup').hasFixtures && (
-                <button
-                  className="btn btn-danger btn-small"
-                  onClick={() => resetFixtures('girls-super-cup')}
-                  disabled={loading}
-                >
-                  Reset Girls Super Cup
-                </button>
-              )}
-            </div>
-          </div>
-        </div>
-      </div>
-
       {/* Team Selection Modal */}
       {selectedMatchForLineup && (
         <div style={styles.modalOverlay} onClick={() => setSelectedMatchForLineup(null)}>
@@ -1792,15 +1823,6 @@ const AdminPanel = ({ onDataChange, isAdmin }) => {
               }}
               onClose={() => setSelectedMatchForLineup(null)}
             />
-          </div>
-        </div>
-      )}
-
-      {/* Player Price Editor Modal */}
-      {showPriceEditor && (
-        <div style={styles.modalOverlay} onClick={() => setShowPriceEditor(false)}>
-          <div style={styles.modalContent} onClick={(e) => e.stopPropagation()}>
-            <PlayerPriceEditor onBack={() => setShowPriceEditor(false)} />
           </div>
         </div>
       )}

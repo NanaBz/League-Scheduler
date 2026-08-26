@@ -1,0 +1,363 @@
+/**
+ * Phase 3 — Fixture Management visual redesign
+ * Scoped to .admin-fixture-mgmt inside .admin-shell
+ */
+
+.admin-fixture-mgmt .admin-page-header {
+  margin-bottom: 0.5rem;
+  padding-bottom: 0.75rem;
+}
+
+.admin-fixture-mgmt .admin-fixture-ops {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* Getting started — compact collapsible */
+.admin-fixture-mgmt .admin-guide-details {
+  border: 1px solid var(--apl-border-subtle, #e2e8f0);
+  border-radius: var(--apl-radius-md, 12px);
+  background: var(--apl-surface-base, #fff);
+  overflow: hidden;
+}
+
+.admin-fixture-mgmt .admin-guide-details summary {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 10px 12px;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #0f172a;
+  cursor: pointer;
+  list-style: none;
+  user-select: none;
+  transition: background 0.15s ease;
+}
+
+.admin-fixture-mgmt .admin-guide-details summary::-webkit-details-marker {
+  display: none;
+}
+
+.admin-fixture-mgmt .admin-guide-details summary:hover {
+  background: var(--apl-surface-muted, #f8fafc);
+}
+
+.admin-fixture-mgmt .admin-guide-details summary:focus-visible {
+  outline: none;
+  box-shadow: inset 0 0 0 2px var(--primary-red, #dc2626);
+}
+
+.admin-fixture-mgmt .admin-guide-details[open] summary {
+  border-bottom: 1px solid var(--apl-border-subtle, #e2e8f0);
+}
+
+.admin-fixture-mgmt .admin-guide-details .admin-guide-steps {
+  padding: 10px 12px 12px;
+}
+
+/* Publish block — grouped with generation controls */
+.admin-fixture-mgmt .admin-publish-block {
+  padding: 12px 14px;
+  border: 1px solid var(--apl-border-subtle, #e2e8f0);
+  border-radius: var(--apl-radius-md, 12px);
+  background: var(--apl-surface-base, #fff);
+}
+
+.admin-fixture-mgmt .admin-publish-lead {
+  margin: 0 0 10px;
+  font-size: 0.82rem;
+  line-height: 1.45;
+  color: var(--apl-text-muted, #64748b);
+}
+
+.admin-fixture-mgmt .admin-fixture-mgmt-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 0.65rem;
+}
+
+.admin-fixture-mgmt .fixture-management-card {
+  border: 1px solid var(--apl-border-subtle, #e2e8f0);
+  border-radius: 10px;
+  padding: 0.75rem 0.85rem;
+  background: var(--apl-surface-muted, #f8fafc);
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.admin-fixture-mgmt .fixture-management-card:hover {
+  border-color: var(--apl-border-muted, #cbd5e1);
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.05);
+}
+
+.admin-fixture-mgmt .fixture-management-card h3 {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0 0 0.55rem;
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.admin-fixture-mgmt .fixture-management-card .status-info {
+  margin-bottom: 0.55rem;
+}
+
+.admin-fixture-mgmt .fixture-management-card .status-info p {
+  margin: 0.15rem 0;
+  font-size: 0.78rem;
+  color: #475569;
+}
+
+.admin-fixture-mgmt .fixture-management-card .fixture-actions {
+  gap: 6px;
+}
+
+/* Edit matches section */
+.admin-fixture-mgmt .admin-edit-matches > h2,
+.admin-fixture-mgmt .admin-league-table-card > h2 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 0.75rem;
+  padding-bottom: 0.65rem;
+  border-bottom: 1px solid var(--apl-border-subtle, #e2e8f0);
+  font-size: 1rem;
+  font-weight: 800;
+  color: #0f172a;
+  line-height: 1.25;
+}
+
+.admin-fixture-mgmt .admin-edit-matches > h2 svg,
+.admin-fixture-mgmt .admin-league-table-card > h2 svg {
+  flex-shrink: 0;
+  color: #64748b;
+}
+
+.admin-fixture-mgmt .admin-edit-context {
+  margin: -0.35rem 0 0.75rem;
+  font-size: 0.8rem;
+  color: var(--apl-text-muted, #64748b);
+}
+
+.admin-fixture-mgmt .admin-edit-context strong {
+  color: #334155;
+  font-weight: 700;
+}
+
+.admin-fixture-mgmt .admin-filter-section.filter-section {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.admin-fixture-mgmt .admin-filter-section .fixture-filter-select,
+.admin-fixture-mgmt .admin-filter-section .fixture-filter-trigger,
+.admin-fixture-mgmt .admin-filter-section .admin-competition-filter {
+  min-height: 38px;
+  font-size: 0.8125rem;
+}
+
+/* Horizontal scroll for wide match grid (tablet / narrow desktop) */
+.admin-fixture-mgmt .admin-edit-matches-scroll {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  border-radius: 8px;
+}
+
+.admin-fixture-mgmt .admin-edit-matches-scroll-inner {
+  min-width: 0;
+}
+
+@media screen and (min-width: 769px) and (max-width: 1024px) {
+  .admin-fixture-mgmt .admin-edit-matches-scroll {
+    margin: 0;
+    padding: 0;
+    border: none;
+    background: transparent;
+    overflow-x: visible;
+  }
+
+  .admin-fixture-mgmt .admin-edit-matches-scroll-inner {
+    min-width: 0;
+    padding: 0;
+  }
+}
+
+@media screen and (min-width: 1025px) {
+  .admin-fixture-mgmt .admin-edit-matches-scroll-inner {
+    min-width: 720px;
+  }
+}
+
+.admin-fixture-mgmt .admin-edit-empty {
+  text-align: center;
+  padding: 1.75rem 1rem;
+  color: var(--apl-text-muted, #64748b);
+  font-size: 0.875rem;
+}
+
+/* Goalscorer collapse */
+.admin-fixture-mgmt .goalscorer-admin-root {
+  margin-top: 8px;
+  border: 1px solid var(--apl-border-subtle, #e2e8f0);
+  border-radius: 8px;
+  background: var(--apl-surface-muted, #f8fafc);
+  overflow: hidden;
+}
+
+.admin-fixture-mgmt .goalscorer-admin-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  width: 100%;
+  margin: 0;
+  padding: 10px 12px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.15s ease;
+}
+
+.admin-fixture-mgmt .goalscorer-admin-toggle:hover {
+  background: #f1f5f9;
+}
+
+.admin-fixture-mgmt .goalscorer-admin-toggle:focus-visible {
+  outline: none;
+  box-shadow: inset 0 0 0 2px var(--primary-red, #dc2626);
+}
+
+.admin-fixture-mgmt .goalscorer-admin-toggle h4 {
+  margin: 0;
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.admin-fixture-mgmt .goalscorer-admin-toggle svg {
+  flex-shrink: 0;
+  color: #64748b;
+}
+
+.admin-fixture-mgmt .goalscorer-admin-body {
+  padding: 0 12px 12px;
+  border-top: 1px solid var(--apl-border-subtle, #e2e8f0);
+}
+
+.admin-fixture-mgmt .goalscorer-admin-root.is-collapsed .goalscorer-admin-body {
+  display: none;
+}
+
+/* Hover / focus fixes — no white-on-white */
+.admin-fixture-mgmt .fixture-management-card .fixture-actions .btn-small:hover:not(:disabled) {
+  filter: brightness(0.96);
+  transform: none;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.12);
+}
+
+.admin-fixture-mgmt .admin-match-actions .btn-small.btn-secondary:hover:not(:disabled) {
+  background-color: #5a6268 !important;
+  border-color: #545b62 !important;
+  color: #fff !important;
+}
+
+.admin-fixture-mgmt .admin-match-actions .btn-small.btn-primary:hover:not(:disabled) {
+  background-color: #0056b3 !important;
+  border-color: #004085 !important;
+}
+
+.admin-fixture-mgmt .admin-match-actions .btn-small.btn-success:hover:not(:disabled) {
+  background-color: #449d44 !important;
+  border-color: #398439 !important;
+}
+
+.admin-fixture-mgmt .admin-match-actions .btn-small.btn-danger:hover:not(:disabled) {
+  background-color: #c82333 !important;
+  border-color: #bd2130 !important;
+}
+
+.admin-fixture-mgmt .admin-controls-btn--refresh:hover:not(:disabled) {
+  background-color: #5a6268 !important;
+  border-color: #545b62 !important;
+}
+
+.admin-fixture-mgmt .admin-match-row:hover {
+  background: rgba(248, 250, 252, 0.6);
+}
+
+@media screen and (min-width: 1025px) {
+  .admin-fixture-mgmt .admin-match-header.match-header {
+    position: sticky;
+    left: 0;
+    z-index: 1;
+    background: #fff;
+    border-bottom: 1px solid var(--apl-border-subtle, #e2e8f0);
+    padding-bottom: 6px;
+    margin-bottom: 4px;
+  }
+}
+
+/* Inline runner-up panel (Super Cup modal) */
+.admin-fixture-mgmt .admin-modal-inline-panel {
+  margin: 12px 0;
+  padding: 12px;
+  border: 1px solid #fbbf24;
+  border-radius: 8px;
+  background: #fffbeb;
+}
+
+.admin-fixture-mgmt .admin-modal-inline-panel h4 {
+  margin: 0 0 8px;
+  font-size: 0.95rem;
+  color: #92400e;
+}
+
+@media screen and (max-width: 1024px) {
+  .admin-fixture-mgmt .admin-page-header__actions .btn-ghost {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .admin-fixture-mgmt .admin-publish-block {
+    padding: 10px 12px;
+  }
+
+  .admin-fixture-mgmt .admin-fixture-mgmt-grid {
+    grid-template-columns: 1fr;
+    gap: 6px;
+  }
+
+  .admin-fixture-mgmt .admin-filter-section.filter-section {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .admin-fixture-mgmt .admin-filter-section .fixture-filter-trigger,
+  .admin-fixture-mgmt .admin-filter-section .fixture-filter-select,
+  .admin-fixture-mgmt .admin-filter-section .admin-competition-filter {
+    width: 100%;
+  }
+}
+
+@media screen and (max-width: 640px) {
+  .admin-fixture-mgmt .admin-guide-details summary {
+    font-size: 0.85rem;
+    padding: 9px 10px;
+  }
+
+  .admin-fixture-mgmt .admin-guide-details .admin-guide-steps {
+    padding: 8px 10px 10px;
+  }
+}

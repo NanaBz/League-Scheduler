@@ -1,8 +1,23 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Users } from 'lucide-react';
 import api from '../utils/api';
 import './PlayerManagement.css';
 
 const POSITIONS = ['GK', 'DF', 'MF', 'ATT'];
+
+function playerSnapshot(player) {
+  return JSON.stringify({
+    name: player.name || '',
+    number: player.number === null || player.number === undefined ? '' : String(player.number),
+    position: player.position || 'MF',
+    isCaptain: !!player.isCaptain,
+    isViceCaptain: !!player.isViceCaptain,
+  });
+}
+
+function buildSnapshots(list) {
+  return Object.fromEntries((list || []).map((p) => [p._id, playerSnapshot(p)]));
+}
 
 export default function PlayerManagement({ onDataChange = () => {} }) {
   const [teams, setTeams] = useState([]);
@@ -17,7 +32,19 @@ export default function PlayerManagement({ onDataChange = () => {} }) {
   const [playerSearchQuery, setPlayerSearchQuery] = useState('');
   const [playerSearchOpen, setPlayerSearchOpen] = useState(false);
   const [highlightedPlayerId, setHighlightedPlayerId] = useState(null);
+  const [savedSnapshots, setSavedSnapshots] = useState({});
   const playerSearchRef = useRef(null);
+
+  const isPlayerDirty = useCallback((player) => {
+    const saved = savedSnapshots[player._id];
+    if (saved === undefined) return false;
+    return playerSnapshot(player) !== saved;
+  }, [savedSnapshots]);
+
+  const dirtyCount = useMemo(
+    () => players.filter((p) => isPlayerDirty(p)).length,
+    [players, isPlayerDirty]
+  );
 
   // Boys teams: not acwpl, Girls teams: Orion/Firestorm or acwpl
   const boysTeams = useMemo(() => teams.filter(t => t && t.competition !== 'acwpl' && t.name !== 'Orion' && t.name !== 'Firestorm'), [teams]);
@@ -45,7 +72,9 @@ export default function PlayerManagement({ onDataChange = () => {} }) {
     setError('');
     try {
       const { data } = await api.get('/players', { params: { teamId } });
-      setPlayers(data || []);
+      const list = data || [];
+      setPlayers(list);
+      setSavedSnapshots(buildSnapshots(list));
     } catch (e) {
       setError(e.response?.data?.message || e.message);
       setPlayers([]);
@@ -179,6 +208,7 @@ export default function PlayerManagement({ onDataChange = () => {} }) {
       });
       // Update local state with the server response to ensure consistency
       setPlayers(prev => prev.map(p => p._id === player._id ? response.data : p));
+      setSavedSnapshots(prev => ({ ...prev, [player._id]: playerSnapshot(response.data) }));
       onDataChange();
     } catch (e) {
       setError(e.response?.data?.message || e.message);
@@ -195,6 +225,11 @@ export default function PlayerManagement({ onDataChange = () => {} }) {
       await api.delete(`/players/${playerId}`);
       // Optimistically remove from local state
       setPlayers(prev => prev.filter(p => p._id !== playerId));
+      setSavedSnapshots(prev => {
+        const next = { ...prev };
+        delete next[playerId];
+        return next;
+      });
       onDataChange();
     } catch (e) {
       setError(e.response?.data?.message || e.message);
@@ -212,6 +247,11 @@ export default function PlayerManagement({ onDataChange = () => {} }) {
       await api.post(`/players/${playerId}/transfer`, { toTeamId });
       // Remove from current team view since they've been transferred
       setPlayers(prev => prev.filter(p => p._id !== playerId));
+      setSavedSnapshots(prev => {
+        const next = { ...prev };
+        delete next[playerId];
+        return next;
+      });
       // Clear transfer target
       onDataChange();
     } catch (e) {
@@ -239,6 +279,7 @@ export default function PlayerManagement({ onDataChange = () => {} }) {
       });
       // Add the new player to local state
       setPlayers(prev => [...prev, response.data]);
+      setSavedSnapshots(prev => ({ ...prev, [response.data._id]: playerSnapshot(response.data) }));
       setNewPlayer({ name: '', number: '', position: 'MF' });
       onDataChange();
     } catch (e) {
@@ -274,10 +315,32 @@ export default function PlayerManagement({ onDataChange = () => {} }) {
   };
 
   return (
-    <div className="admin-panel-root">
+    <div className="admin-panel-root admin-player-mgmt-page">
+      <header className="admin-page-header admin-player-page-header">
+        <div className="admin-page-header__main">
+          <div className="admin-page-header__icon" aria-hidden="true">
+            <Users size={20} />
+          </div>
+          <div className="admin-page-header__text">
+            <p className="admin-page-header__eyebrow">Admin · Squad</p>
+            <h1 className="admin-page-header__title">Player Management</h1>
+            <p className="admin-page-header__subtitle">
+              Manage rosters, captains, transfers, and coaching staff.
+            </p>
+          </div>
+        </div>
+        {selectedTeamId && dirtyCount > 0 && (
+          <div className="admin-page-header__actions">
+            <span className="admin-player-unsaved-badge" title={`${dirtyCount} player${dirtyCount === 1 ? '' : 's'} with unsaved changes`}>
+              {dirtyCount} unsaved
+            </span>
+          </div>
+        )}
+      </header>
+
       <div className="card admin-player-mgmt">
         <div className="admin-player-mgmt-header">
-          <h2 className="admin-player-mgmt-title">Player Management</h2>
+          <h2 className="admin-player-mgmt-title">Select Team</h2>
           {!selectedTeamId && (
             <div className="admin-player-category-toggle" role="tablist" aria-label="Team category">
               <button
@@ -314,11 +377,11 @@ export default function PlayerManagement({ onDataChange = () => {} }) {
                 {team.logo && (
                   <img
                     src={team.logo}
-                    alt={team.name}
+                    alt=""
                     className={team.name === 'Falcons' ? 'team-logo--falcons-bg' : undefined}
                   />
                 )}
-                <span className="admin-player-team-name">{team.name}</span>
+                <span className="admin-player-team-name" title={team.name}>{team.name}</span>
                 <span className="admin-player-team-meta">
                   {team.competition === 'league' ? 'League' : 'ACWPL'}
                 </span>
@@ -383,7 +446,27 @@ export default function PlayerManagement({ onDataChange = () => {} }) {
                 )}
               </div>
             )}
-            {loading && <div>Loading players…</div>}
+            {loading && (
+              <div className="admin-player-loading" aria-busy="true" aria-label="Loading players">
+                <div className="admin-player-skeleton admin-player-skeleton--desktop admin-player-desktop-only">
+                  {Array.from({ length: 5 }, (_, i) => (
+                    <div key={i} className="admin-player-skeleton-row" aria-hidden="true">
+                      <span /><span /><span /><span /><span /><span /><span /><span />
+                    </div>
+                  ))}
+                </div>
+                <div className="admin-player-skeleton admin-player-skeleton--mobile admin-player-mobile-only">
+                  {Array.from({ length: 3 }, (_, i) => (
+                    <div key={i} className="admin-player-skeleton-card" aria-hidden="true">
+                      <div className="admin-player-skeleton-card-head" />
+                      <div className="admin-player-skeleton-line" />
+                      <div className="admin-player-skeleton-line admin-player-skeleton-line--short" />
+                      <div className="admin-player-skeleton-actions" />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
             {!loading && (
               <>
               <div className="admin-player-table-wrap admin-player-desktop-only">
@@ -405,56 +488,63 @@ export default function PlayerManagement({ onDataChange = () => {} }) {
                     <tr
                       key={p._id}
                       data-player-id={p._id}
-                      className={`admin-player-row${highlightedPlayerId === p._id ? ' admin-player-highlight' : ''}`}
+                      className={`admin-player-row${highlightedPlayerId === p._id ? ' admin-player-highlight' : ''}${isPlayerDirty(p) ? ' admin-player-row--dirty' : ''}`}
                     >
                       <td className="admin-player-index-cell" title={`Player ${idx + 1} of ${players.length}`}>
                         {idx + 1}
                       </td>
-                      <td>
+                      <td className="admin-player-name-cell">
                         <input
-                          className="input"
+                          className="input admin-player-table-input"
                           value={p.name || ''}
+                          title={p.name || 'Player name'}
                           onChange={e => updatePlayerField(p._id, 'name', e.target.value)}
                         />
                       </td>
-                      <td>
+                      <td className="admin-player-num-cell">
                         <input
-                          className="input admin-player-num-input"
+                          className="input admin-player-num-input admin-player-table-input"
                           type="number"
                           value={p.number === null || p.number === undefined ? '' : p.number}
+                          title={p.number != null && p.number !== '' ? `Shirt #${p.number}` : 'No shirt number'}
                           onChange={e => updatePlayerField(p._id, 'number', e.target.value)}
-                          style={{ width: 70 }}
                         />
                       </td>
-                      <td>
+                      <td className="admin-player-pos-cell">
                         <select
-                          className="input"
+                          className="input admin-player-table-input"
                           value={p.position || 'MF'}
+                          title={`Position: ${p.position || 'MF'}`}
                           onChange={e => updatePlayerField(p._id, 'position', e.target.value)}
                         >
                           {POSITIONS.map(pos => <option key={pos} value={pos}>{pos}</option>)}
                         </select>
                       </td>
-                      <td>
+                      <td className="admin-player-flag-cell">
                         <input
                           type="checkbox"
+                          className="admin-player-flag-checkbox"
                           checked={p.isCaptain || false}
+                          title={p.isCaptain ? 'Captain' : 'Set as captain'}
                           onChange={e => handleCaptainToggle(p._id, e.target.checked)}
-                          style={{ cursor: 'pointer' }}
+                          aria-label={`${p.name || 'Player'} captain`}
                         />
                       </td>
-                      <td>
+                      <td className="admin-player-flag-cell">
                         <input
                           type="checkbox"
+                          className="admin-player-flag-checkbox"
                           checked={p.isViceCaptain || false}
+                          title={p.isViceCaptain ? 'Vice captain' : 'Set as vice captain'}
                           onChange={e => handleViceCaptainToggle(p._id, e.target.checked)}
-                          style={{ cursor: 'pointer' }}
+                          aria-label={`${p.name || 'Player'} vice captain`}
                         />
                       </td>
-                      <td>
+                      <td className="admin-player-transfer-cell">
                         <select
-                          className="input"
+                          className="input admin-player-table-input admin-player-transfer-select"
                           value={p._transferTarget || ''}
+                          title={p._transferTarget ? `Transfer to ${transferOptions.find(t => t._id === p._transferTarget)?.name || 'selected team'}` : 'Select transfer destination'}
                           onChange={e => updatePlayerField(p._id, '_transferTarget', e.target.value)}
                         >
                           <option value="">Select team</option>
@@ -467,11 +557,12 @@ export default function PlayerManagement({ onDataChange = () => {} }) {
                         <div className="admin-player-action-btns">
                           <button
                             type="button"
-                            className="btn btn-success btn-small"
+                            className={`btn btn-success btn-small admin-player-save-btn${isPlayerDirty(p) ? ' admin-player-save-btn--dirty' : ''}`}
                             onClick={() => savePlayer(p)}
                             disabled={savingRow === p._id}
+                            title={isPlayerDirty(p) ? 'Save unsaved changes' : 'Save player'}
                           >
-                            {savingRow === p._id ? 'Saving…' : 'Save'}
+                            {savingRow === p._id ? 'Saving…' : isPlayerDirty(p) ? 'Save *' : 'Save'}
                           </button>
                           <button
                             type="button"
@@ -493,7 +584,7 @@ export default function PlayerManagement({ onDataChange = () => {} }) {
                     </tr>
                   ))}
                   {players.length === 0 && (
-                    <tr className="admin-player-empty-row"><td colSpan={8} style={{ textAlign: 'center', color: '#666' }}>No players yet.</td></tr>
+                    <tr className="admin-player-empty-row"><td colSpan={8} className="admin-player-empty-cell">No players yet.</td></tr>
                   )}
                 </tbody>
               </table>
@@ -507,11 +598,14 @@ export default function PlayerManagement({ onDataChange = () => {} }) {
                     <article
                       key={p._id}
                       data-player-id={p._id}
-                      className={`admin-player-card${highlightedPlayerId === p._id ? ' admin-player-highlight' : ''}`}
+                      className={`admin-player-card${highlightedPlayerId === p._id ? ' admin-player-highlight' : ''}${isPlayerDirty(p) ? ' admin-player-card--dirty' : ''}`}
                     >
                       <div className="admin-player-card-header">
                         <span className="admin-player-card-index">#{idx + 1}</span>
-                        <span className="admin-player-card-name-preview">{p.name || 'Unnamed player'}</span>
+                        <span className="admin-player-card-name-preview" title={p.name || 'Unnamed player'}>{p.name || 'Unnamed player'}</span>
+                        {isPlayerDirty(p) && (
+                          <span className="admin-player-card-unsaved" title="Unsaved changes">Unsaved</span>
+                        )}
                       </div>
 
                       <label className="admin-player-field admin-player-field-full">
@@ -581,11 +675,11 @@ export default function PlayerManagement({ onDataChange = () => {} }) {
                       <div className="admin-player-card-actions">
                         <button
                           type="button"
-                          className="btn btn-success btn-small admin-player-action-btn"
+                          className={`btn btn-success btn-small admin-player-action-btn${isPlayerDirty(p) ? ' admin-player-save-btn--dirty' : ''}`}
                           onClick={() => savePlayer(p)}
                           disabled={savingRow === p._id}
                         >
-                          {savingRow === p._id ? 'Saving…' : 'Save'}
+                          {savingRow === p._id ? 'Saving…' : isPlayerDirty(p) ? 'Save *' : 'Save'}
                         </button>
                         <button
                           type="button"
@@ -668,20 +762,18 @@ export default function PlayerManagement({ onDataChange = () => {} }) {
 
             <div className="admin-coach-add-form">
               <select
-                className="input"
+                className="input admin-coach-role-select"
                 value={staffForm.role}
                 onChange={e => setStaffForm({ ...staffForm, role: e.target.value })}
-                style={{ width: 140 }}
               >
                 <option value="Coach">Coach</option>
                 <option value="Assistant">Assistant</option>
               </select>
               <input
-                className="input"
+                className="input admin-coach-name-input"
                 placeholder="Name"
                 value={staffForm.name}
                 onChange={e => setStaffForm({ ...staffForm, name: e.target.value })}
-                style={{ minWidth: 200 }}
               />
               <button type="button" className="btn btn-success btn-small admin-coach-add-btn" onClick={addStaff}>Add Coach</button>
             </div>

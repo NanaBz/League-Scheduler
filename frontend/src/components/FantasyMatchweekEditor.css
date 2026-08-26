@@ -1,48 +1,48 @@
-/* Fantasy Matchweek Editor — admin multi-step workflow */
+/**
+ * Fantasy Matchweek Editor — Phase 7 admin design polish
+ * Workflow and layout preserved; visual alignment with admin foundation.
+ */
 
-.fme-root {
+.admin-fantasy-mw-page .admin-fantasy-mw-card {
+  padding: 1rem 1.1rem !important;
+  overflow: visible;
+}
+
+.admin-fantasy-mw-editor.fme-root {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 10px;
   min-width: 0;
 }
 
+/* ── Header ── */
 .fme-header {
   display: flex;
   flex-direction: column;
   gap: 4px;
-}
-
-.fme-link-btn {
-  align-self: flex-start;
-  border: none;
-  background: transparent;
-  padding: 0;
-  font-size: 0.82rem;
-  font-weight: 600;
-  color: var(--primary-red-dark, #991b1b);
-  cursor: pointer;
-}
-
-.fme-link-btn:hover {
-  color: var(--primary-red, #dc2626);
-  text-decoration: underline;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--apl-border-subtle, #e2e8f0);
 }
 
 .fme-title {
   margin: 0;
-  font-size: 1.2rem;
+  font-size: 1.1rem;
+  font-weight: 800;
   line-height: 1.25;
-  color: #0f172a;
+  letter-spacing: -0.01em;
+  color: var(--apl-text-body, #1e293b);
 }
 
+/* ── Progress stepper ── */
 .fme-progress {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
+  justify-content: space-between;
   gap: 0;
   overflow-x: auto;
-  padding: 4px 0 8px;
+  padding: 2px 0 6px;
   scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
 }
 
 .fme-progress::-webkit-scrollbar {
@@ -53,90 +53,142 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 4px;
-  min-width: 72px;
+  gap: 5px;
+  min-width: 68px;
+  flex: 1 1 0;
   flex-shrink: 0;
+  text-align: center;
 }
 
 .fme-progress-dot {
-  width: 26px;
-  height: 26px;
+  width: 28px;
+  height: 28px;
   border-radius: 999px;
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 0.75rem;
-  font-weight: 700;
-  background: #e2e8f0;
+  font-weight: 800;
+  background: var(--apl-surface-muted, #f1f5f9);
   color: #64748b;
   border: 2px solid #cbd5e1;
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease,
+    box-shadow 0.15s ease;
 }
 
 .fme-progress-step.active .fme-progress-dot {
-  background: var(--primary-red-lightest, #fef2f2);
+  background: var(--apl-surface-active, #fef2f2);
   color: var(--primary-red-dark, #991b1b);
   border-color: var(--primary-red, #dc2626);
+  box-shadow: 0 0 0 2px rgba(220, 38, 38, 0.12);
 }
 
 .fme-progress-step.complete .fme-progress-dot {
-  background: #dcfce7;
+  background: #ecfdf5;
   color: #166534;
   border-color: #86efac;
 }
 
 .fme-progress-label {
-  font-size: 0.68rem;
+  font-size: 0.65rem;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: #64748b;
+  letter-spacing: 0.05em;
+  color: #94a3b8;
+  line-height: 1.2;
+  max-width: 72px;
 }
 
 .fme-progress-step.active .fme-progress-label {
   color: var(--primary-red-dark, #991b1b);
 }
 
+.fme-progress-step.complete .fme-progress-label {
+  color: #475569;
+}
+
 .fme-progress-line {
-  flex: 1;
-  min-width: 12px;
+  flex: 1 1 12px;
+  min-width: 8px;
+  max-width: 48px;
   height: 2px;
   background: #e2e8f0;
-  margin-bottom: 18px;
+  margin-top: 14px;
+  border-radius: 999px;
+  transition: background 0.15s ease;
 }
 
 .fme-progress-line.active {
   background: #fca5a5;
 }
 
+/* ── Context bar ── */
 .fme-context {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   padding: 8px 10px;
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
+  background: #fff;
+  border: 1px solid var(--apl-border-subtle, #e2e8f0);
+  border-left: 3px solid var(--primary-red, #dc2626);
   border-radius: 8px;
-  font-size: 0.82rem;
+  font-size: 0.8125rem;
   color: #475569;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
 }
 
-.fme-context-sep {
+.fme-context-chip {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  min-width: 0;
+}
+
+.fme-context-chip-label {
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
   color: #94a3b8;
+  flex-shrink: 0;
+}
+
+.fme-context-chip strong {
+  font-weight: 700;
+  color: #0f172a;
+  line-height: 1.25;
+}
+
+.fme-context-chip--match strong {
+  font-size: 0.8125rem;
+}
+
+.fme-context-step {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #64748b;
+  white-space: nowrap;
 }
 
 .fme-unsaved-pill {
   margin-left: auto;
-  padding: 2px 8px;
+  padding: 3px 8px;
   border-radius: 999px;
-  font-size: 0.68rem;
+  font-size: 0.65rem;
   font-weight: 700;
+  letter-spacing: 0.03em;
   text-transform: uppercase;
-  background: #fef3c7;
-  color: #92400e;
-  border: 1px solid #fcd34d;
+  background: #fff7ed;
+  color: #c2410c;
+  border: 1px solid #fdba74;
+  white-space: nowrap;
 }
 
+/* ── Alerts ── */
 .fme-error {
   padding: 10px 12px;
   border-radius: 8px;
@@ -155,39 +207,44 @@
   color: #166534;
   font-size: 0.875rem;
   font-weight: 600;
-  margin-bottom: 10px;
+  margin-bottom: 8px;
 }
 
 .fme-body {
   min-width: 0;
+  flex: 1 1 auto;
 }
 
 .fme-step-title {
   margin: 0 0 4px;
-  font-size: 1.05rem;
+  font-size: 1rem;
+  font-weight: 800;
   color: #0f172a;
+  line-height: 1.3;
 }
 
 .fme-step-desc {
   margin: 0 0 12px;
-  font-size: 0.85rem;
+  font-size: 0.8125rem;
   color: #64748b;
-  line-height: 1.45;
+  line-height: 1.5;
 }
 
 .fme-empty,
 .fme-loading {
   color: #64748b;
-  font-size: 0.9rem;
+  font-size: 0.875rem;
+  padding: 8px 0;
 }
 
+/* ── Pick lists (matchweek / match) ── */
 .fme-pick-list {
   list-style: none;
   margin: 0;
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
 }
 
 .fme-pick-btn {
@@ -204,17 +261,21 @@
   font-family: inherit;
   text-align: left;
   cursor: pointer;
-  transition: background-color 0.15s ease, border-color 0.15s ease;
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
 }
 
 .fme-pick-btn:hover {
-  background: #f1f5f9;
+  background: #f8fafc;
   border-color: #94a3b8;
 }
 
 .fme-pick-btn:focus-visible {
-  outline: 2px solid var(--primary-red, #dc2626);
-  outline-offset: 2px;
+  outline: none;
+  border-color: var(--primary-red, #dc2626);
+  box-shadow: 0 0 0 2px rgba(220, 38, 38, 0.15);
 }
 
 .fme-pick-btn.saved {
@@ -227,7 +288,8 @@
   align-items: center;
   gap: 6px;
   font-weight: 600;
-  font-size: 0.9rem;
+  font-size: 0.875rem;
+  min-width: 0;
 }
 
 .fme-saved-icon {
@@ -236,44 +298,50 @@
 }
 
 .fme-pick-meta {
-  font-size: 0.78rem;
+  font-size: 0.75rem;
   color: #64748b;
   font-weight: 600;
+  flex-shrink: 0;
 }
 
+/* ── Performance table (desktop) ── */
 .fme-team-block {
-  margin-bottom: 16px;
+  margin-bottom: 14px;
 }
 
 .fme-team-title {
   margin: 0 0 8px;
-  font-size: 0.95rem;
+  font-size: 0.875rem;
+  font-weight: 700;
   color: #334155;
 }
 
 .fme-player-table-wrap {
   display: block;
   overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
   border: 1px solid #e2e8f0;
   border-radius: 8px;
+  background: #fff;
 }
 
 .fme-player-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 0.82rem;
+  font-size: 0.8125rem;
 }
 
 .fme-player-table th {
   padding: 8px 10px;
   text-align: left;
-  background: #f1f5f9;
-  color: #475569;
-  font-size: 0.68rem;
+  background: #f8fafc;
+  color: #64748b;
+  font-size: 0.65rem;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.05em;
   border-bottom: 1px solid #e2e8f0;
+  white-space: nowrap;
 }
 
 .fme-player-table td {
@@ -282,8 +350,12 @@
   vertical-align: middle;
 }
 
+.fme-player-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
 .fme-player-table tbody tr:hover {
-  background: #f8fafc;
+  background: #fafbfc;
 }
 
 .fme-col-player {
@@ -295,6 +367,7 @@
   font-size: 0.75rem;
   color: #166534;
   font-weight: 600;
+  line-height: 1.35;
 }
 
 .fme-events-none {
@@ -305,10 +378,11 @@
   width: 100%;
   box-sizing: border-box;
   padding: 6px 8px;
+  min-height: 36px;
   border: 1px solid #cbd5e1;
   border-radius: 6px;
   font-family: inherit;
-  font-size: 0.82rem;
+  font-size: 0.8125rem;
   background: #fff;
   color: #0f172a;
 }
@@ -316,7 +390,7 @@
 .fme-input:focus {
   outline: none;
   border-color: var(--primary-red, #dc2626);
-  box-shadow: 0 0 0 2px rgba(220, 38, 38, 0.15);
+  box-shadow: 0 0 0 2px rgba(220, 38, 38, 0.12);
 }
 
 .fme-input-min {
@@ -327,27 +401,31 @@
   max-width: 80px;
 }
 
+/* ── Mobile player cards ── */
 .fme-player-cards {
   display: none;
 }
 
 .fme-special-block {
-  margin-top: 8px;
+  margin-top: 10px;
   padding: 12px;
   border: 1px solid #e2e8f0;
   border-radius: 8px;
-  background: #fafafa;
+  background: #f8fafc;
 }
 
 .fme-special-title {
   margin: 0 0 4px;
-  font-size: 0.9rem;
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: #0f172a;
 }
 
 .fme-special-desc {
   margin: 0 0 10px;
-  font-size: 0.8rem;
+  font-size: 0.78rem;
   color: #64748b;
+  line-height: 1.45;
 }
 
 .fme-special-fields {
@@ -360,7 +438,7 @@
   display: flex;
   flex-direction: column;
   gap: 4px;
-  font-size: 0.72rem;
+  font-size: 0.68rem;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.04em;
@@ -371,6 +449,7 @@
   min-width: 0;
 }
 
+/* ── Review step ── */
 .fme-review-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -383,6 +462,7 @@
   border: 1px solid #e2e8f0;
   border-radius: 8px;
   background: #fff;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.03);
 }
 
 .fme-review-card-wide {
@@ -391,7 +471,7 @@
 
 .fme-review-label {
   display: block;
-  font-size: 0.65rem;
+  font-size: 0.62rem;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.05em;
@@ -400,29 +480,36 @@
 }
 
 .fme-review-value {
-  font-size: 0.88rem;
+  font-size: 0.875rem;
   font-weight: 600;
   color: #0f172a;
-  line-height: 1.35;
+  line-height: 1.4;
+  word-break: break-word;
 }
 
 .fme-review-note {
   margin: 0;
-  font-size: 0.8rem;
+  font-size: 0.78rem;
   color: #64748b;
+  line-height: 1.45;
 }
 
+/* ── Sticky action footer ── */
 .fme-actions-bar {
   display: grid;
   grid-template-columns: 1fr auto auto;
   gap: 8px;
   align-items: center;
-  padding: 12px 0 4px;
-  border-top: 1px solid #e2e8f0;
   position: sticky;
   bottom: 0;
-  background: #fff;
-  z-index: 2;
+  z-index: 12;
+  margin-top: 4px;
+  padding: 10px 0 calc(10px + env(safe-area-inset-bottom, 0px));
+  border-top: 1px solid #e2e8f0;
+  background: rgba(255, 255, 255, 0.96);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  box-shadow: 0 -4px 14px rgba(15, 23, 42, 0.06);
 }
 
 .fme-btn {
@@ -430,19 +517,25 @@
   align-items: center;
   justify-content: center;
   gap: 4px;
-  min-height: 40px;
+  min-height: 42px;
   padding: 0 14px;
   border-radius: 8px;
   font-family: inherit;
-  font-size: 0.85rem;
+  font-size: 0.8125rem;
   font-weight: 600;
   cursor: pointer;
   border: 1px solid transparent;
-  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+  text-transform: none;
+  letter-spacing: 0.01em;
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease,
+    box-shadow 0.15s ease;
 }
 
 .fme-btn:disabled {
-  opacity: 0.6;
+  opacity: 0.55;
   cursor: not-allowed;
 }
 
@@ -475,19 +568,93 @@
   background: var(--primary-red, #dc2626);
   border-color: var(--primary-red, #dc2626);
   color: #fff;
+  font-weight: 700;
 }
 
 .fme-btn-primary:hover:not(:disabled) {
   background: var(--primary-red-dark, #991b1b);
   border-color: var(--primary-red-dark, #991b1b);
+  filter: brightness(1.02);
 }
 
 .fme-btn:focus-visible {
-  outline: 2px solid var(--primary-red, #dc2626);
-  outline-offset: 2px;
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(220, 38, 38, 0.25);
 }
 
-@media screen and (max-width: 768px) {
+/* ── Tablet ── */
+@media screen and (min-width: 769px) {
+  .fme-col-events {
+    max-width: 220px;
+  }
+
+  .admin-fantasy-mw-page .admin-fantasy-mw-card {
+    padding: 1.1rem 1.25rem !important;
+  }
+}
+
+/* ── Tablet & mobile (card layout) ── */
+@media screen and (max-width: 1024px) {
+  .admin-fantasy-mw-page .admin-fantasy-mw-card {
+    padding: 0.85rem 0.9rem !important;
+  }
+
+  .fme-title {
+    font-size: 1.05rem;
+  }
+
+  .fme-progress {
+    justify-content: space-between;
+    gap: 2px;
+    padding-bottom: 4px;
+  }
+
+  .fme-progress-line {
+    min-width: 4px;
+    max-width: 20px;
+    margin-top: 13px;
+  }
+
+  .fme-progress-step {
+    min-width: 0;
+    flex: 1 1 0;
+  }
+
+  .fme-progress-dot {
+    width: 26px;
+    height: 26px;
+    font-size: 0.7rem;
+  }
+
+  .fme-progress-label {
+    font-size: 0.58rem;
+    max-width: 100%;
+  }
+
+  .fme-context {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 6px;
+    padding: 8px 10px;
+  }
+
+  .fme-context-chip {
+    flex-wrap: wrap;
+  }
+
+  .fme-context-chip--match strong {
+    word-break: break-word;
+  }
+
+  .fme-unsaved-pill {
+    margin-left: 0;
+    align-self: flex-start;
+  }
+
+  .fme-context-step {
+    font-size: 0.68rem;
+  }
+
   .fme-player-table-wrap {
     display: none;
   }
@@ -499,37 +666,46 @@
   }
 
   .fme-player-card {
-    padding: 10px;
+    padding: 12px;
     border: 1px solid #e2e8f0;
-    border-radius: 8px;
+    border-radius: 10px;
     background: #fff;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
   }
 
   .fme-player-card-head {
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     justify-content: space-between;
     gap: 8px;
-    margin-bottom: 4px;
+    margin-bottom: 6px;
   }
 
   .fme-player-card-name {
     font-weight: 700;
     font-size: 0.9rem;
     color: #0f172a;
+    line-height: 1.25;
+    min-width: 0;
+    word-break: break-word;
   }
 
   .fme-player-card-pos {
-    font-size: 0.75rem;
-    font-weight: 700;
+    flex-shrink: 0;
+    font-size: 0.72rem;
+    font-weight: 800;
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: #f1f5f9;
     color: #64748b;
   }
 
   .fme-player-card-events {
     font-size: 0.75rem;
     color: #166534;
-    margin-bottom: 8px;
-    line-height: 1.35;
+    margin-bottom: 10px;
+    line-height: 1.4;
+    word-break: break-word;
   }
 
   .fme-player-card-fields {
@@ -538,12 +714,25 @@
     gap: 8px;
   }
 
+  .fme-player-card-fields .fme-input {
+    min-height: 44px;
+    font-size: 0.875rem;
+  }
+
   .fme-special-fields {
     grid-template-columns: 1fr;
   }
 
+  .fme-special-fields .fme-input {
+    min-height: 44px;
+  }
+
   .fme-review-grid {
     grid-template-columns: 1fr;
+  }
+
+  .fme-body {
+    padding-bottom: 4px;
   }
 
   .fme-actions-bar {
@@ -551,34 +740,64 @@
     grid-template-areas:
       'back back'
       'cancel primary';
+    gap: 6px;
+    padding: 8px 0 calc(8px + env(safe-area-inset-bottom, 0px));
+    margin-left: -0.9rem;
+    margin-right: -0.9rem;
+    padding-left: 0.9rem;
+    padding-right: 0.9rem;
+    z-index: 20;
   }
 
   .fme-btn-back {
     grid-area: back;
     width: 100%;
+    min-height: 44px;
   }
 
   .fme-btn-cancel {
     grid-area: cancel;
     width: 100%;
+    min-height: 44px;
   }
 
   .fme-btn-primary {
     grid-area: primary;
     width: 100%;
+    min-height: 44px;
   }
 
-  .fme-progress-label {
-    font-size: 0.62rem;
-  }
-
-  .fme-progress-step {
-    min-width: 64px;
+  .fme-pick-btn {
+    min-height: 48px;
   }
 }
 
-@media screen and (min-width: 769px) {
-  .fme-col-events {
-    max-width: 220px;
+@media screen and (min-width: 769px) and (max-width: 1024px) {
+  .admin-fantasy-mw-page .admin-fantasy-mw-card {
+    padding: 1rem 1.1rem !important;
+  }
+
+  .fme-actions-bar {
+    margin-left: -1.1rem;
+    margin-right: -1.1rem;
+    padding-left: 1.1rem;
+    padding-right: 1.1rem;
+  }
+}
+
+/* ── Phone-only refinements ── */
+@media screen and (max-width: 768px) {
+  .admin-fantasy-mw-page .admin-fantasy-mw-card {
+    padding: 0.85rem 0.9rem !important;
+  }
+}
+
+@media screen and (max-width: 390px) {
+  .fme-progress-label {
+    font-size: 0.55rem;
+  }
+
+  .fme-player-card-fields {
+    grid-template-columns: 1fr;
   }
 }

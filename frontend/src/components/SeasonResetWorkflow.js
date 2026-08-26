@@ -16,6 +16,14 @@ const STEPS = {
   RESULT: 5,
 };
 
+const PROGRESS_STEPS = [
+  { id: STEPS.CONFIRM, label: 'Confirm' },
+  { id: STEPS.TYPE, label: 'Type' },
+  { id: STEPS.ARCHIVE_INFO, label: 'Archive' },
+  { id: STEPS.FINAL, label: 'Review' },
+  { id: STEPS.RESULT, label: 'Result' },
+];
+
 export default function SeasonResetWorkflow({ open, onClose, onComplete, busy, setBusy }) {
   const [step, setStep] = useState(STEPS.CONFIRM);
   const [resetType, setResetType] = useState(null);
@@ -111,6 +119,49 @@ export default function SeasonResetWorkflow({ open, onClose, onComplete, busy, s
     }
   };
 
+  const getProgressStepClass = (stepId) => {
+    if (resetType === 'testing' && stepId === STEPS.ARCHIVE_INFO && step >= STEPS.FINAL) {
+      return 'skipped';
+    }
+    if (step === STEPS.RESULT && stepId < STEPS.RESULT) {
+      if (resetType === 'testing' && stepId === STEPS.ARCHIVE_INFO) return 'skipped';
+      return 'complete';
+    }
+    if (step > stepId) return 'complete';
+    if (step === stepId) return 'active';
+    return '';
+  };
+
+  const renderProgress = () => (
+    <nav className="season-reset-progress" aria-label="Season reset progress">
+      {PROGRESS_STEPS.map((progressStep, idx) => {
+        const state = getProgressStepClass(progressStep.id);
+        const isActive = state === 'active';
+        const isComplete = state === 'complete';
+        const isSkipped = state === 'skipped';
+        return (
+          <React.Fragment key={progressStep.id}>
+            {idx > 0 ? (
+              <span
+                className={`season-reset-progress-line${isComplete || isActive ? ' active' : ''}${isSkipped ? ' skipped' : ''}`}
+                aria-hidden="true"
+              />
+            ) : null}
+            <div
+              className={`season-reset-progress-step${isActive ? ' active' : ''}${isComplete ? ' complete' : ''}${isSkipped ? ' skipped' : ''}`}
+              aria-current={isActive ? 'step' : undefined}
+            >
+              <span className="season-reset-progress-dot" aria-hidden="true">
+                {isSkipped ? '—' : isComplete ? '✓' : progressStep.id}
+              </span>
+              <span className="season-reset-progress-label">{progressStep.label}</span>
+            </div>
+          </React.Fragment>
+        );
+      })}
+    </nav>
+  );
+
   if (!open) return null;
 
   return (
@@ -119,6 +170,8 @@ export default function SeasonResetWorkflow({ open, onClose, onComplete, busy, s
         <h2 id="season-reset-title" className="season-reset-title">
           Reset Current Season
         </h2>
+
+        {renderProgress()}
 
         {step === STEPS.CONFIRM && (
           <div className="season-reset-body">
@@ -133,11 +186,11 @@ export default function SeasonResetWorkflow({ open, onClose, onComplete, busy, s
               players in Player Management instead of repopulating every squad.
               You will choose whether to archive the completed season or perform a testing reset without archiving.
             </p>
-            <div className="modal-actions">
-              <button type="button" className="btn btn-secondary" onClick={handleClose}>
+            <div className="modal-actions season-reset-actions">
+              <button type="button" className="btn btn-secondary season-reset-btn-secondary" onClick={handleClose}>
                 Cancel
               </button>
-              <button type="button" className="btn btn-danger" onClick={() => setStep(STEPS.TYPE)}>
+              <button type="button" className="btn btn-danger season-reset-btn-danger" onClick={() => setStep(STEPS.TYPE)}>
                 Continue
               </button>
             </div>
@@ -151,6 +204,7 @@ export default function SeasonResetWorkflow({ open, onClose, onComplete, busy, s
               <button
                 type="button"
                 className={`season-reset-type-card ${resetType === 'archive' ? 'selected' : ''}`}
+                aria-pressed={resetType === 'archive'}
                 onClick={() => setResetType('archive')}
               >
                 <Archive size={22} aria-hidden />
@@ -160,6 +214,7 @@ export default function SeasonResetWorkflow({ open, onClose, onComplete, busy, s
               <button
                 type="button"
                 className={`season-reset-type-card ${resetType === 'testing' ? 'selected' : ''}`}
+                aria-pressed={resetType === 'testing'}
                 onClick={() => setResetType('testing')}
               >
                 <RotateCcw size={22} aria-hidden />
@@ -167,13 +222,13 @@ export default function SeasonResetWorkflow({ open, onClose, onComplete, busy, s
                 <span>Clear live data only. No historical season record is created.</span>
               </button>
             </div>
-            <div className="modal-actions">
-              <button type="button" className="btn btn-secondary" onClick={() => setStep(STEPS.CONFIRM)}>
+            <div className="modal-actions season-reset-actions">
+              <button type="button" className="btn btn-secondary season-reset-btn-secondary" onClick={() => setStep(STEPS.CONFIRM)}>
                 Back
               </button>
               <button
                 type="button"
-                className="btn btn-primary"
+                className="btn btn-primary season-reset-btn-primary"
                 disabled={!resetType}
                 onClick={() => {
                   if (resetType === 'testing') setStep(STEPS.FINAL);
@@ -215,13 +270,13 @@ export default function SeasonResetWorkflow({ open, onClose, onComplete, busy, s
             )}
             {!academicYear && <p className="season-reset-hint">Academic year is required.</p>}
             {!semester && academicYear && <p className="season-reset-hint">Semester is required.</p>}
-            <div className="modal-actions">
-              <button type="button" className="btn btn-secondary" onClick={() => setStep(STEPS.TYPE)}>
+            <div className="modal-actions season-reset-actions">
+              <button type="button" className="btn btn-secondary season-reset-btn-secondary" onClick={() => setStep(STEPS.TYPE)}>
                 Back
               </button>
               <button
                 type="button"
-                className="btn btn-primary"
+                className="btn btn-primary season-reset-btn-primary"
                 disabled={!canContinueArchiveInfo}
                 onClick={() => setStep(STEPS.FINAL)}
               >
@@ -271,16 +326,16 @@ export default function SeasonResetWorkflow({ open, onClose, onComplete, busy, s
                 </>
               )}
             </dl>
-            <div className="modal-actions">
+            <div className="modal-actions season-reset-actions">
               <button
                 type="button"
-                className="btn btn-secondary"
+                className="btn btn-secondary season-reset-btn-secondary"
                 onClick={() => setStep(resetType === 'archive' ? STEPS.ARCHIVE_INFO : STEPS.TYPE)}
                 disabled={busy}
               >
                 Back
               </button>
-              <button type="button" className="btn btn-danger" disabled={busy} onClick={runReset}>
+              <button type="button" className="btn btn-danger season-reset-btn-danger" disabled={busy} onClick={runReset}>
                 {busy ? 'Processing…' : 'Confirm reset'}
               </button>
             </div>
@@ -300,8 +355,8 @@ export default function SeasonResetWorkflow({ open, onClose, onComplete, busy, s
               </div>
             )}
             {!busy && (
-              <div className="modal-actions">
-                <button type="button" className="btn btn-primary" onClick={handleClose}>
+              <div className="modal-actions season-reset-actions">
+                <button type="button" className="btn btn-primary season-reset-btn-primary" onClick={handleClose}>
                   Close
                 </button>
               </div>

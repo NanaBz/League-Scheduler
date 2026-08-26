@@ -1,0 +1,386 @@
+/**
+ * APL Design Foundation
+ * Shared visual tokens and utilities inspired by the Archived Seasons module.
+ * Adopt incrementally — pages should opt in via utility classes, not global overrides.
+ */
+
+:root {
+  /* ── Spacing ── */
+  --apl-space-1: 0.25rem;
+  --apl-space-2: 0.5rem;
+  --apl-space-3: 0.75rem;
+  --apl-space-4: 1rem;
+  --apl-space-5: 1.25rem;
+  --apl-space-6: 1.5rem;
+  --apl-space-8: 2rem;
+
+  /* ── Layout ── */
+  --apl-page-max: 1180px;
+  --apl-page-max-narrow: 900px;
+  --apl-page-padding-bottom: 2rem;
+
+  /* ── Radius ── */
+  --apl-radius-sm: 8px;
+  --apl-radius-md: 12px;
+  --apl-radius-lg: 16px;
+  --apl-radius-pill: 999px;
+
+  /* ── Borders ── */
+  --apl-border-subtle: #e2e8f0;
+  --apl-border-muted: #cbd5e1;
+  --apl-border-brand: var(--primary-red-lightest, #fee2e2);
+
+  /* ── Shadows ── */
+  --apl-shadow-sm: 0 2px 10px rgba(15, 23, 42, 0.06);
+  --apl-shadow-md: 0 2px 12px rgba(15, 23, 42, 0.05);
+  --apl-shadow-lg: 0 8px 32px rgba(15, 23, 42, 0.12);
+  --apl-shadow-hover: 0 10px 28px rgba(15, 23, 42, 0.1);
+  --apl-shadow-brand: 0 4px 20px rgba(220, 38, 38, 0.08);
+
+  /* ── Typography ── */
+  --apl-text-xs: 0.75rem;
+  --apl-text-sm: 0.875rem;
+  --apl-text-base: 0.95rem;
+  --apl-text-lg: 1.1rem;
+  --apl-text-section: 1.5rem;
+  --apl-text-page: clamp(1.5rem, 3vw, 2rem);
+  --apl-weight-semibold: 600;
+  --apl-weight-bold: 700;
+  --apl-weight-extrabold: 800;
+  --apl-tracking-tight: -0.02em;
+  --apl-leading-relaxed: 1.55;
+
+  /* ── Surfaces ── */
+  --apl-surface-base: var(--white, #ffffff);
+  --apl-surface-muted: #f8fafc;
+  --apl-surface-active: #fef2f2;
+  --apl-text-muted: #64748b;
+  --apl-text-body: var(--text-dark, #1e293b);
+
+  /* ── Motion ── */
+  --apl-transition-fast: 0.15s ease;
+  --apl-transition-base: 0.18s ease;
+  --apl-transition-smooth: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* ── Focus ── */
+  --apl-focus-ring: 0 0 0 3px rgba(220, 38, 38, 0.35);
+  --apl-focus-ring-offset: 2px;
+
+  /* ── Breakpoints (reference — use in media queries, not runtime) ── */
+  --apl-bp-sm: 640px;
+  --apl-bp-md: 768px;
+  --apl-bp-lg: 992px;
+  --apl-bp-xl: 1180px;
+
+  /* ── Hero gradients ── */
+  --apl-hero-gradient: linear-gradient(135deg, #1e293b 0%, #0f172a 55%, #450a0a 140%);
+  --apl-hero-gradient-comp: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+
+  /* ── Competition accent pairs (bg / fg) ── */
+  --apl-comp-league-bg: #fef3c7;
+  --apl-comp-league-fg: #b45309;
+  --apl-comp-cup-bg: #ede9fe;
+  --apl-comp-cup-fg: #6d28d9;
+  --apl-comp-super-cup-bg: #fce7f3;
+  --apl-comp-super-cup-fg: #be185d;
+  --apl-comp-acwpl-bg: #dbeafe;
+  --apl-comp-acwpl-fg: #1d4ed8;
+  --apl-comp-girls-super-cup-bg: #fae8ff;
+  --apl-comp-girls-super-cup-fg: #a21caf;
+
+  /* ── Touch ── */
+  --apl-touch-min: 44px;
+
+  /* ── Admin (compact ops console — extends archive tokens) ── */
+  --apl-admin-title: clamp(1.25rem, 2.5vw, 1.5rem);
+  --apl-admin-section-gap: var(--apl-space-5);
+  --apl-admin-section-gap-mobile: var(--apl-space-4);
+  --apl-admin-card-padding: var(--apl-space-5);
+  --apl-admin-card-padding-mobile: var(--apl-space-4);
+  --apl-admin-stat-value: 1.25rem;
+  --apl-admin-stat-value-mobile: 1.1rem;
+}
+
+/* ── Base layout shell (container had no root definition) ── */
+.container {
+  width: 100%;
+  max-width: 100%;
+  margin: 0 auto;
+  padding: var(--apl-space-4);
+  box-sizing: border-box;
+}
+
+/* ── Page & section layout ── */
+.apl-page {
+  max-width: var(--apl-page-max);
+  margin: 0 auto;
+  padding: 0 0 var(--apl-page-padding-bottom);
+}
+
+.apl-page--narrow {
+  max-width: var(--apl-page-max-narrow);
+}
+
+.apl-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--apl-space-5);
+  margin-bottom: var(--apl-space-5);
+}
+
+.apl-section:last-child {
+  margin-bottom: 0;
+}
+
+/* ── Typography utilities ── */
+.apl-heading-page {
+  margin: 0 0 var(--apl-space-2);
+  font-size: var(--apl-text-page);
+  font-weight: var(--apl-weight-bold);
+  letter-spacing: var(--apl-tracking-tight);
+  color: var(--apl-text-body);
+  line-height: 1.2;
+}
+
+.apl-heading-section {
+  margin: 0 0 var(--apl-space-3);
+  font-size: var(--apl-text-section);
+  font-weight: var(--apl-weight-bold);
+  color: var(--apl-text-body);
+  line-height: 1.25;
+}
+
+.apl-heading-card {
+  margin: 0 0 var(--apl-space-2);
+  font-size: var(--apl-text-lg);
+  font-weight: var(--apl-weight-bold);
+  color: var(--apl-text-body);
+}
+
+.apl-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--apl-space-2);
+  margin-bottom: var(--apl-space-2);
+  padding: var(--apl-space-1) 0.65rem;
+  border-radius: var(--apl-radius-pill);
+  background: var(--apl-surface-active);
+  color: var(--primary-red-dark, #b91c1c);
+  font-size: var(--apl-text-xs);
+  font-weight: var(--apl-weight-bold);
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.apl-text-muted {
+  margin: 0;
+  color: var(--apl-text-muted);
+  font-size: var(--apl-text-base);
+  line-height: var(--apl-leading-relaxed);
+}
+
+.apl-text-caption {
+  margin: 0;
+  color: var(--apl-text-muted);
+  font-size: var(--apl-text-sm);
+  line-height: 1.4;
+}
+
+/* ── Surfaces ── */
+.apl-surface {
+  background: var(--apl-surface-base);
+  border: 1px solid var(--apl-border-subtle);
+  border-radius: var(--apl-radius-lg);
+  box-shadow: var(--apl-shadow-md);
+  padding: var(--apl-space-5);
+}
+
+.apl-surface-interactive {
+  background: var(--apl-surface-base);
+  border: 1px solid var(--apl-border-subtle);
+  border-radius: var(--apl-radius-lg);
+  box-shadow: var(--apl-shadow-md);
+  padding: var(--apl-space-5);
+  cursor: pointer;
+  text-align: left;
+  transition:
+    transform var(--apl-transition-base),
+    box-shadow var(--apl-transition-base),
+    border-color var(--apl-transition-fast);
+}
+
+.apl-surface-interactive:hover {
+  transform: translateY(-2px);
+  border-color: var(--apl-border-muted);
+  box-shadow: var(--apl-shadow-hover);
+}
+
+.apl-surface-interactive:active {
+  transform: translateY(0);
+}
+
+.apl-surface-interactive:focus-visible {
+  outline: none;
+  box-shadow: var(--apl-focus-ring), var(--apl-shadow-md);
+}
+
+/* ── Hero block (Archives-inspired) ── */
+.apl-hero {
+  margin: 0 0 var(--apl-space-6);
+  padding: var(--apl-space-6) var(--apl-space-5);
+  border-radius: var(--apl-radius-lg);
+  background: var(--apl-hero-gradient);
+  color: #fff;
+  box-shadow: var(--apl-shadow-lg);
+}
+
+.apl-hero--comp {
+  background: var(--apl-hero-gradient-comp);
+}
+
+.apl-hero__inner {
+  display: flex;
+  gap: var(--apl-space-4);
+  align-items: flex-start;
+}
+
+.apl-hero__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: 56px;
+  border-radius: 14px;
+  background: rgba(220, 38, 38, 0.22);
+  color: #fecaca;
+  flex-shrink: 0;
+}
+
+.apl-hero__title {
+  margin: 0 0 var(--apl-space-2);
+  font-size: var(--apl-text-page);
+  font-weight: var(--apl-weight-bold);
+  letter-spacing: var(--apl-tracking-tight);
+}
+
+.apl-hero__subtitle {
+  margin: 0;
+  max-width: 560px;
+  color: rgba(255, 255, 255, 0.78);
+  line-height: var(--apl-leading-relaxed);
+  font-size: var(--apl-text-base);
+}
+
+/* ── Segmented control (e.g. Boys / Girls teams toggle) ── */
+.apl-segmented-wrap {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.apl-segmented {
+  display: inline-flex;
+  gap: 0;
+  background: var(--medium-gray, #f1f5f9);
+  border-radius: var(--apl-radius-pill);
+  margin: 0 auto var(--apl-space-4);
+  padding: 3px;
+  box-shadow: var(--apl-shadow-sm);
+}
+
+.apl-segmented-btn {
+  font-weight: var(--apl-weight-semibold);
+  padding: var(--apl-space-2) var(--apl-space-4);
+  border-radius: var(--apl-radius-pill);
+  background: transparent;
+  color: var(--apl-text-body);
+  border: none;
+  cursor: pointer;
+  min-height: var(--apl-touch-min);
+  transition:
+    background var(--apl-transition-fast),
+    box-shadow var(--apl-transition-fast),
+    color var(--apl-transition-fast);
+}
+
+.apl-segmented-btn[aria-current='page'],
+.apl-segmented-btn--active {
+  background: var(--apl-surface-base);
+  box-shadow: 0 0 0 2px var(--apl-border-subtle);
+  cursor: default;
+}
+
+.apl-segmented-btn:not([aria-current='page']):not(.apl-segmented-btn--active):hover {
+  background: rgba(255, 255, 255, 0.65);
+}
+
+.apl-segmented-btn:focus-visible {
+  outline: none;
+  box-shadow: var(--apl-focus-ring);
+}
+
+/* ── Empty / loading / error states ── */
+.apl-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--apl-space-3);
+  padding: 3rem var(--apl-space-6);
+  text-align: center;
+  color: var(--apl-text-muted);
+  background: var(--apl-surface-muted);
+  border-radius: var(--apl-radius-md);
+  border: 1px solid var(--apl-border-subtle);
+}
+
+.apl-state--error {
+  color: var(--primary-red-dark, #b91c1c);
+}
+
+/* ── Shared focus helper ── */
+.apl-focusable:focus-visible {
+  outline: none;
+  box-shadow: var(--apl-focus-ring);
+}
+
+/* ── Competition icon tile (for future section headers) ── */
+.apl-comp-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  border-radius: var(--apl-radius-md);
+  flex-shrink: 0;
+}
+
+.apl-comp-icon--league { background: var(--apl-comp-league-bg); color: var(--apl-comp-league-fg); }
+.apl-comp-icon--cup { background: var(--apl-comp-cup-bg); color: var(--apl-comp-cup-fg); }
+.apl-comp-icon--super-cup { background: var(--apl-comp-super-cup-bg); color: var(--apl-comp-super-cup-fg); }
+.apl-comp-icon--acwpl { background: var(--apl-comp-acwpl-bg); color: var(--apl-comp-acwpl-fg); }
+.apl-comp-icon--girls-super-cup { background: var(--apl-comp-girls-super-cup-bg); color: var(--apl-comp-girls-super-cup-fg); }
+
+/* ── Responsive page padding ── */
+@media (max-width: 768px) {
+  .container {
+    padding: var(--apl-space-3);
+  }
+
+  .apl-hero {
+    margin-left: calc(-1 * var(--apl-space-2));
+    margin-right: calc(-1 * var(--apl-space-2));
+    padding: var(--apl-space-5) var(--apl-space-4);
+  }
+
+  .apl-surface,
+  .apl-surface-interactive {
+    padding: var(--apl-space-4);
+  }
+}
+
+@media (min-width: 769px) {
+  .container {
+    padding: var(--apl-space-4);
+  }
+}

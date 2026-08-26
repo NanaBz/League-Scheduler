@@ -1,9 +1,28 @@
 import React, { useEffect, useState } from 'react';
+import { Trophy, Clock } from 'lucide-react';
 import api from '../utils/api';
 import { clearFantasyClientSeasonKeys } from '../utils/fantasyGameweek';
 import PlayerPriceEditor from './PlayerPriceEditor';
 import FantasyAdminDashboardStats from './FantasyAdminDashboardStats';
 import FantasyMatchweekEditor from './FantasyMatchweekEditor';
+import '../styles/adminFantasyDeadline.css';
+
+function deadlineStatusClass(status) {
+  const key = String(status || '').toLowerCase();
+  if (['open', 'locked', 'live', 'finished'].includes(key)) {
+    return `admin-deadline-status admin-deadline-status--${key}`;
+  }
+  return 'admin-deadline-status admin-deadline-status--finished';
+}
+
+function formatRemainingLabel(remaining) {
+  if (remaining <= 0) return 'Closed';
+  const days = Math.floor(remaining / (24 * 60 * 60 * 1000));
+  const hours = Math.floor((remaining % (24 * 60 * 60 * 1000)) / (60 * 60 * 1000));
+  const mins = Math.floor((remaining % (60 * 60 * 1000)) / (60 * 1000));
+  const secs = Math.floor((remaining % (60 * 1000)) / 1000);
+  return `${String(days).padStart(2, '0')}d ${String(hours).padStart(2, '0')}h ${String(mins).padStart(2, '0')}m ${String(secs).padStart(2, '0')}s`;
+}
 
 function DeadlineEditor({ row, onClose, matchweeks, saveDeadline }) {
   const [matchweekVal, setMatchweekVal] = useState(row?.matchweek ?? (matchweeks?.[0]?.number ?? ''));
@@ -35,39 +54,53 @@ function DeadlineEditor({ row, onClose, matchweeks, saveDeadline }) {
   const title = matchweekVal ? `Edit Matchweek ${matchweekVal}` : 'New Matchweek Deadline';
 
   return (
-    <div className="deadline-editor">
-      <h4>{title}</h4>
-      <label>Matchweek</label>
-      <select value={matchweekVal} onChange={handleMatchweekChange}>
-        <option value="">Select matchweek...</option>
-        {matchweeks.map((mw) => (
-          <option key={mw.number} value={mw.number}>MW {mw.number} — {mw.matchCount ?? '0'} matches</option>
-        ))}
-      </select>
-      {loadingMatches && <div style={{ marginTop: 8, fontSize: '0.9rem', color: '#666' }}>Loading matches...</div>}
+    <div className="admin-deadline-editor">
+      <h4 className="admin-deadline-editor__title" id="admin-deadline-editor-title">{title}</h4>
+
+      <div className="admin-deadline-editor__field">
+        <label htmlFor="admin-deadline-mw">Matchweek</label>
+        <select id="admin-deadline-mw" value={matchweekVal} onChange={handleMatchweekChange}>
+          <option value="">Select matchweek...</option>
+          {matchweeks.map((mw) => (
+            <option key={mw.number} value={mw.number}>MW {mw.number} — {mw.matchCount ?? '0'} matches</option>
+          ))}
+        </select>
+      </div>
+
+      {loadingMatches && <p className="admin-deadline-editor__loading">Loading matches…</p>}
       {!loadingMatches && matchesInWeek.length > 0 && (
-        <div style={{ marginTop: 8, fontSize: '0.9rem', color: '#444' }}>
-          <strong>Matches in this week:</strong>
-          <ul style={{ marginTop: 6 }}>
+        <div className="admin-deadline-editor__matches">
+          <strong>Matches in this week</strong>
+          <ul>
             {matchesInWeek.map(m => (
               <li key={m._id}>{m.homeTeam?.name} vs {m.awayTeam?.name} — {m.kickoff ? new Date(m.kickoff).toLocaleString() : 'TBD'}</li>
             ))}
           </ul>
         </div>
       )}
-      <label>Start Date (optional)</label>
-      <input type="datetime-local" value={startVal} onChange={(e) => setStartVal(e.target.value)} />
-      <label>Deadline</label>
-      <input type="datetime-local" value={deadlineVal} onChange={(e) => setDeadlineVal(e.target.value)} />
-      <label>Status</label>
-      <select value={statusVal} onChange={(e) => setStatusVal(e.target.value)}>
-        <option value="OPEN">OPEN</option>
-        <option value="LOCKED">LOCKED</option>
-        <option value="LIVE">LIVE</option>
-        <option value="FINISHED">FINISHED</option>
-      </select>
-      <div className="editor-actions" style={{ marginTop: 8 }}>
-        <button type="button" className="btn" onClick={async () => {
+
+      <div className="admin-deadline-editor__field">
+        <label htmlFor="admin-deadline-start">Start date (optional)</label>
+        <input id="admin-deadline-start" type="datetime-local" value={startVal} onChange={(e) => setStartVal(e.target.value)} />
+      </div>
+
+      <div className="admin-deadline-editor__field">
+        <label htmlFor="admin-deadline-deadline">Deadline</label>
+        <input id="admin-deadline-deadline" type="datetime-local" value={deadlineVal} onChange={(e) => setDeadlineVal(e.target.value)} />
+      </div>
+
+      <div className="admin-deadline-editor__field">
+        <label htmlFor="admin-deadline-status">Status</label>
+        <select id="admin-deadline-status" value={statusVal} onChange={(e) => setStatusVal(e.target.value)}>
+          <option value="OPEN">OPEN</option>
+          <option value="LOCKED">LOCKED</option>
+          <option value="LIVE">LIVE</option>
+          <option value="FINISHED">FINISHED</option>
+        </select>
+      </div>
+
+      <div className="admin-deadline-editor__actions">
+        <button type="button" className="btn btn-success" onClick={async () => {
           const mwNum = Number(matchweekVal);
           if (!Number.isFinite(mwNum) || mwNum < 1) {
             alert('Select a valid matchweek');
@@ -80,7 +113,7 @@ function DeadlineEditor({ row, onClose, matchweeks, saveDeadline }) {
           const ok = await saveDeadline(mwNum, payload);
           if (ok) onClose();
         }}>Save</button>
-        <button type="button" className="btn btn-ghost" onClick={onClose} style={{ marginLeft: 8 }}>Cancel</button>
+        <button type="button" className="btn btn-ghost" onClick={onClose}>Cancel</button>
       </div>
     </div>
   );
@@ -89,6 +122,7 @@ function DeadlineEditor({ row, onClose, matchweeks, saveDeadline }) {
 export default function FantasyManagement() {
   const [view, setView] = useState('dashboard'); // dashboard | matchweek-editor | player-prices
   const [dashboard, setDashboard] = useState(null);
+  const [dashboardError, setDashboardError] = useState(null);
   const [matchweeks, setMatchweeks] = useState([]);
   const [rescoreWeek, setRescoreWeek] = useState('1');
   const [loading, setLoading] = useState(false);
@@ -103,10 +137,13 @@ export default function FantasyManagement() {
 
   const fetchDashboard = async () => {
     try {
+      setDashboardError(null);
       const { data } = await api.get('/fantasy/admin/dashboard');
       setDashboard(data.data);
     } catch (err) {
       console.error('Dashboard fetch error:', err);
+      setDashboard(null);
+      setDashboardError(err.response?.data?.message || err.message || 'Failed to load dashboard statistics');
     }
   };
 
@@ -212,10 +249,27 @@ export default function FantasyManagement() {
 
   if (view === 'dashboard') {
     return (
-      <div className="admin-panel-root">
+      <div className="admin-panel-root admin-fantasy-mgmt-page">
       <div className="card admin-fantasy-dashboard">
-        <h2 className="admin-fantasy-dashboard-title">Fantasy Management</h2>
-        <FantasyAdminDashboardStats dashboard={dashboard} />
+        <header className="admin-page-header admin-fantasy-page-header">
+          <div className="admin-page-header__main">
+            <div className="admin-page-header__icon" aria-hidden="true">
+              <Trophy size={20} />
+            </div>
+            <div className="admin-page-header__text">
+              <p className="admin-page-header__eyebrow">Admin · Fantasy</p>
+              <h1 className="admin-page-header__title">Fantasy Management</h1>
+              <p className="admin-page-header__subtitle">
+                Season overview, matchweek tools, and manager statistics.
+              </p>
+            </div>
+          </div>
+        </header>
+        <FantasyAdminDashboardStats
+          dashboard={dashboard}
+          error={dashboardError}
+          onRetry={fetchDashboard}
+        />
 
         <div className="admin-fantasy-dash-actions">
           <div className="admin-fantasy-action-group">
@@ -249,21 +303,26 @@ export default function FantasyManagement() {
 
         <div className="admin-fantasy-dash-btns">
         <div className="card admin-deadline-card">
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <h3 style={{ margin: 0 }}>🕒 Matchweek Deadlines</h3>
-            <div>
-              <button type="button" className="btn btn-small" onClick={() => {
+          <div className="admin-deadline-card__header">
+            <h3 className="admin-deadline-card__title">
+              <Clock size={17} aria-hidden="true" />
+              Matchweek Deadlines
+            </h3>
+            <button
+              type="button"
+              className="btn btn-secondary btn-small admin-deadline-card__add-btn"
+              onClick={() => {
                 const nextAvailableMw = matchweeks.find(mw => !matchweekDeadlines.some(d => d.matchweek === mw.number));
                 setEditingDeadline({ matchweek: nextAvailableMw?.number || 1, deadline: null, startDate: null, status: 'OPEN' });
-              }}>
-                + Add Deadline
-              </button>
-            </div>
+              }}
+            >
+              + Add Deadline
+            </button>
           </div>
-          <p style={{ marginTop: 4, marginBottom: 8 }}>Configure fantasy deadlines per matchweek.</p>
-          <div className="deadline-list">
+          <p className="admin-deadline-card__lead">Configure fantasy deadlines per matchweek.</p>
+          <div className="admin-deadline-list">
             {matchweekDeadlines.length === 0 ? (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <div className="admin-deadline-empty">
                 <p>No deadlines configured yet.</p>
                 <div>
                   {(() => {
@@ -274,9 +333,9 @@ export default function FantasyManagement() {
                     if (mw1Exists) tooltipText = 'MW1 deadline already configured';
                     if (!mw1Available) tooltipText = 'MW1 has already been played';
                     return (
-                      <button 
-                        type="button" 
-                        className="btn btn-primary btn-small" 
+                      <button
+                        type="button"
+                        className="btn btn-primary btn-small"
                         onClick={() => setEditingDeadline({ matchweek: 1, deadline: null, startDate: null, status: 'OPEN' })}
                         disabled={isDisabled}
                         title={tooltipText}
@@ -288,29 +347,60 @@ export default function FantasyManagement() {
                 </div>
               </div>
             ) : (
-              matchweekDeadlines.map((row) => {
-                const remaining = deadlineCountdowns[row.matchweek] || 0;
-                const days = Math.floor(remaining / (24 * 60 * 60 * 1000));
-                const hours = Math.floor((remaining % (24 * 60 * 60 * 1000)) / (60 * 60 * 1000));
-                const mins = Math.floor((remaining % (60 * 60 * 1000)) / (60 * 1000));
-                const secs = Math.floor((remaining % (60 * 1000)) / 1000);
-                const remainingLabel = remaining > 0 ? `${String(days).padStart(2,'0')}d ${String(hours).padStart(2,'0')}h ${String(mins).padStart(2,'0')}m ${String(secs).padStart(2,'0')}s` : 'Closed';
-                return (
-                  <div key={row.matchweek} className="deadline-row" style={{ display: 'flex', gap: 12, alignItems: 'center', padding: 8 }}>
-                    <div className="mw">MW {row.matchweek}</div>
-                    <div className="dl">{row.deadline ? new Date(row.deadline).toLocaleString() : '—'}</div>
-                    <div className="st">{row.status || '—'}</div>
-                    <div className="rem">{remainingLabel}</div>
-                    <div className="actions"><button type="button" className="btn-small" onClick={() => setEditingDeadline(row)}>Edit</button></div>
-                  </div>
-                );
-              })
+              <>
+                <div className="admin-deadline-list-header" aria-hidden="true">
+                  <span>Matchweek</span>
+                  <span>Deadline</span>
+                  <span>Status</span>
+                  <span>Time left</span>
+                  <span>Actions</span>
+                </div>
+                {matchweekDeadlines.map((row) => {
+                  const remaining = deadlineCountdowns[row.matchweek] || 0;
+                  const remainingLabel = formatRemainingLabel(remaining);
+                  const deadlineLabel = row.deadline ? new Date(row.deadline).toLocaleString() : '—';
+                  return (
+                    <article key={row.matchweek} className="admin-deadline-item">
+                      <div className="admin-deadline-item__cell admin-deadline-item__mw" data-label="Matchweek">
+                        <span className="admin-deadline-item__mw-badge">MW {row.matchweek}</span>
+                      </div>
+                      <div className="admin-deadline-item__cell admin-deadline-item__dl" data-label="Deadline" title={deadlineLabel}>
+                        {deadlineLabel}
+                      </div>
+                      <div className="admin-deadline-item__cell admin-deadline-item__st" data-label="Status">
+                        <span className={deadlineStatusClass(row.status)}>{row.status || '—'}</span>
+                      </div>
+                      <div
+                        className={`admin-deadline-item__cell admin-deadline-item__rem${remaining <= 0 ? ' is-closed' : ''}`}
+                        data-label="Time left"
+                      >
+                        {remainingLabel}
+                      </div>
+                      <div className="admin-deadline-item__cell admin-deadline-item__actions" data-label="Actions">
+                        <button
+                          type="button"
+                          className="btn btn-secondary btn-small admin-deadline-edit-btn"
+                          onClick={() => setEditingDeadline(row)}
+                        >
+                          Edit
+                        </button>
+                      </div>
+                    </article>
+                  );
+                })}
+              </>
             )}
           </div>
         </div>
         {editingDeadline ? (
-          <div className="modal-overlay" style={{ zIndex: 20000, pointerEvents: 'auto' }}>
-            <div className="modal" style={{ zIndex: 20001, pointerEvents: 'auto' }}>
+          <div className="modal-overlay admin-deadline-modal-overlay" role="presentation" onClick={() => setEditingDeadline(null)}>
+            <div
+              className="modal admin-deadline-modal"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="admin-deadline-editor-title"
+              onClick={(e) => e.stopPropagation()}
+            >
               <DeadlineEditor row={editingDeadline} onClose={() => setEditingDeadline(null)} matchweeks={matchweeks} saveDeadline={saveDeadline} />
             </div>
           </div>
@@ -334,8 +424,8 @@ export default function FantasyManagement() {
 
   if (view === 'player-prices') {
     return (
-      <div className="admin-panel-root">
-      <div className="card">
+      <div className="admin-panel-root admin-fantasy-pe-page">
+      <div className="card admin-fantasy-pe-card">
         <PlayerPriceEditor onBack={() => setView('dashboard')} />
       </div>
       </div>
@@ -343,8 +433,8 @@ export default function FantasyManagement() {
   }
 
   return (
-    <div className="admin-panel-root">
-      <div className="card">
+    <div className="admin-panel-root admin-fantasy-mw-page">
+      <div className="card admin-fantasy-mw-card">
         <FantasyMatchweekEditor
           matchweeks={matchweeks}
           onBackToDashboard={() => setView('dashboard')}

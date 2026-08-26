@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
-import { ArrowLeft } from 'lucide-react';
 import api from '../utils/api';
 import './PlayerPriceEditor.css';
 
@@ -147,26 +146,24 @@ export default function PlayerPriceEditor({ onBack }) {
   }, [players]);
 
   return (
-    <div className="price-editor-container">
-      {/* Header */}
+    <div className="price-editor-container admin-fantasy-pe-editor">
       <div className="price-editor-header">
-        <button className="price-back-link" onClick={onBack} aria-label="Back">
-          <ArrowLeft size={18} />
-          <span>Back</span>
+        <button type="button" className="admin-back-link" onClick={onBack}>
+          ← Fantasy Management
         </button>
-        <div className="price-editor-title-block">
-          <h2 className="price-editor-title">Player Fantasy Prices</h2>
-          <p className="price-editor-subtitle">Edit FPL prices for your squad</p>
-        </div>
+        <h2 className="price-editor-title">Player Fantasy Prices</h2>
+        <p className="price-editor-subtitle">Edit FPL prices for your squad</p>
       </div>
 
-      {/* Team Selection */}
       <div className="price-team-selection">
-        <p className="price-team-label">Select Team:</p>
-        <div className="price-team-cards">
+        <p className="price-team-label" id="price-team-label">Select team</p>
+        <div className="price-team-cards" role="tablist" aria-labelledby="price-team-label">
           {leagueTeams.map(team => (
             <button
               key={team._id}
+              type="button"
+              role="tab"
+              aria-selected={selectedTeamId === team._id}
               className={`price-team-card ${selectedTeamId === team._id ? 'active' : ''}`}
               onClick={() => setSelectedTeamId(team._id)}
             >
@@ -180,8 +177,8 @@ export default function PlayerPriceEditor({ onBack }) {
       {/* Player List */}
       {selectedTeam && (
         <div className="price-editor-content">
-          {error && <div className="price-error">{error}</div>}
-          {successMessage && <div className="price-success">{successMessage}</div>}
+          {error && <div className="price-error" role="alert">{error}</div>}
+          {successMessage && <div className="price-success" role="status">{successMessage}</div>}
 
           {!loading && players.length > 0 && (
             <div className="price-player-search" ref={playerSearchRef}>
@@ -265,6 +262,7 @@ export default function PlayerPriceEditor({ onBack }) {
                           <span className="price-currency">m</span>
                         </div>
                         <button
+                          type="button"
                           className="price-save-btn"
                           onClick={() => savePrice(player)}
                           disabled={savingPlayerId === player._id}

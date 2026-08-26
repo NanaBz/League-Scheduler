@@ -43,6 +43,7 @@ export default function AdminNav({ activeSection, onSelect, onSwitchToUser }) {
             type="button"
             className="admin-nav-user-link"
             onClick={onSwitchToUser}
+            title="Switch to User View"
           >
             <Eye size={15} aria-hidden="true" />
             <span>User view</span>

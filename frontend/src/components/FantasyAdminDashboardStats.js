@@ -1,19 +1,70 @@
 import React from 'react';
-import { Users, BarChart3, Crown, ArrowDownLeft, ArrowUpRight, Medal, Trophy } from 'lucide-react';
+import {
+  Users,
+  BarChart3,
+  Crown,
+  ArrowDownLeft,
+  ArrowUpRight,
+  Medal,
+  Trophy,
+  AlertCircle,
+} from 'lucide-react';
 import './FantasyAdminDashboardStats.css';
 
-function StatTile({ variant, icon: Icon, label, value, meta, title }) {
+function StatTile({ icon: Icon, label, value, meta, title, accent }) {
   return (
-    <article className={`admin-fantasy-stat admin-fantasy-stat--${variant}`}>
-      <div className="admin-fantasy-stat-head">
-        <Icon className="admin-fantasy-stat-icon" size={variant === 'primary' ? 17 : 15} aria-hidden="true" />
-        <span className="admin-fantasy-stat-label">{label}</span>
+    <article className={`admin-fantasy-stat-tile${accent ? ' admin-fantasy-stat-tile--accent' : ''}`}>
+      <div className="admin-fantasy-stat-tile__head">
+        <span className="admin-fantasy-stat-tile__icon" aria-hidden="true">
+          <Icon size={15} />
+        </span>
+        <span className="admin-fantasy-stat-tile__label">{label}</span>
       </div>
-      <div className="admin-fantasy-stat-value" title={title || (typeof value === 'string' ? value : undefined)}>
+      <div
+        className="admin-fantasy-stat-tile__value"
+        title={title || (typeof value === 'string' ? value : undefined)}
+      >
         {value}
       </div>
-      {meta ? <div className="admin-fantasy-stat-meta">{meta}</div> : null}
+      {meta ? <div className="admin-fantasy-stat-tile__meta">{meta}</div> : null}
     </article>
+  );
+}
+
+function StatsSkeleton() {
+  return (
+    <div
+      className="admin-fantasy-stats-grid admin-fantasy-stats-grid--loading"
+      aria-busy="true"
+      aria-label="Loading dashboard statistics"
+    >
+      {Array.from({ length: 7 }, (_, index) => (
+        <div key={index} className="admin-fantasy-stat-skeleton" aria-hidden="true">
+          <div className="admin-fantasy-stat-skeleton__head" />
+          <div className="admin-fantasy-stat-skeleton__value" />
+          <div className="admin-fantasy-stat-skeleton__meta" />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function StatsError({ message, onRetry }) {
+  return (
+    <div className="admin-fantasy-stats-error" role="alert">
+      <span className="admin-fantasy-stats-error__icon" aria-hidden="true">
+        <AlertCircle size={18} />
+      </span>
+      <div className="admin-fantasy-stats-error__text">
+        <p className="admin-fantasy-stats-error__title">Statistics unavailable</p>
+        <p className="admin-fantasy-stats-error__message">{message}</p>
+      </div>
+      {onRetry ? (
+        <button type="button" className="btn btn-ghost btn-compact admin-fantasy-stats-error__retry" onClick={onRetry}>
+          Try again
+        </button>
+      ) : null}
+    </div>
   );
 }
 
@@ -29,13 +80,13 @@ function formatMotwMeta(motw) {
   return `GW${motw.matchweek} · ${motw.points} pts${tieNote}`;
 }
 
-export default function FantasyAdminDashboardStats({ dashboard }) {
+export default function FantasyAdminDashboardStats({ dashboard, error, onRetry }) {
+  if (error) {
+    return <StatsError message={error} onRetry={onRetry} />;
+  }
+
   if (!dashboard) {
-    return (
-      <div className="admin-fantasy-stats admin-fantasy-stats--loading" aria-live="polite">
-        Loading dashboard…
-      </div>
-    );
+    return <StatsSkeleton />;
   }
 
   const mostCaptained = dashboard.mostCaptained?.[0];
@@ -59,65 +110,52 @@ export default function FantasyAdminDashboardStats({ dashboard }) {
   const topManagerMeta = topManager ? `${topManager.points} pts total` : null;
 
   return (
-    <section className="admin-fantasy-stats" aria-label="Fantasy dashboard statistics">
-      <div className="admin-fantasy-stats-row admin-fantasy-stats-row--primary">
-        <StatTile
-          variant="primary"
-          icon={Users}
-          label="Total Fantasy Players"
-          value={dashboard.totalFantasyPlayers}
-        />
-        <StatTile
-          variant="primary"
-          icon={BarChart3}
-          label="Average Points"
-          value={dashboard.avgPoints}
-        />
-      </div>
-
-      <div className="admin-fantasy-stats-row admin-fantasy-stats-row--secondary">
-        <StatTile
-          variant="secondary"
-          icon={Crown}
-          label="Most Captained"
-          value={mostCaptainedName}
-          meta={mostCaptainedMeta}
-          title={mostCaptainedName}
-        />
-        <StatTile
-          variant="secondary"
-          icon={ArrowDownLeft}
-          label="Top Transfer In"
-          value={transferInValue}
-          title={transferInValue}
-        />
-        <StatTile
-          variant="secondary"
-          icon={ArrowUpRight}
-          label="Top Transfer Out"
-          value={transferOutValue}
-          title={transferOutValue}
-        />
-      </div>
-
-      <div className="admin-fantasy-stats-row admin-fantasy-stats-row--managers">
-        <StatTile
-          variant="secondary"
-          icon={Medal}
-          label="Manager of the Week"
-          value={motwName}
-          meta={motwMeta}
-          title={motwTitle || motwName}
-        />
-        <StatTile
-          variant="secondary"
-          icon={Trophy}
-          label="Top Manager"
-          value={topManagerName}
-          meta={topManagerMeta}
-          title={topManager ? `${topManager.manager} — ${topManager.team}` : topManagerName}
-        />
-      </div>
+    <section className="admin-fantasy-stats-grid" aria-label="Fantasy dashboard statistics">
+      <StatTile
+        accent
+        icon={Users}
+        label="Total Fantasy Players"
+        value={dashboard.totalFantasyPlayers}
+      />
+      <StatTile
+        accent
+        icon={BarChart3}
+        label="Average Points"
+        value={dashboard.avgPoints}
+      />
+      <StatTile
+        icon={Crown}
+        label="Most Captained"
+        value={mostCaptainedName}
+        meta={mostCaptainedMeta}
+        title={mostCaptainedName}
+      />
+      <StatTile
+        icon={ArrowDownLeft}
+        label="Top Transfer In"
+        value={transferInValue}
+        title={transferInValue}
+      />
+      <StatTile
+        icon={ArrowUpRight}
+        label="Top Transfer Out"
+        value={transferOutValue}
+        title={transferOutValue}
+      />
+      <StatTile
+        icon={Medal}
+        label="Manager of the Week"
+        value={motwName}
+        meta={motwMeta}
+        title={motwTitle || motwName}
+      />
+      <StatTile
+        icon={Trophy}
+        label="Top Manager"
+        value={topManagerName}
+        meta={topManagerMeta}
+        title={topManager ? `${topManager.manager} — ${topManager.team}` : topManagerName}
+      />
     </section>
   );
 }

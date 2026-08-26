@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Lock, Shield } from 'lucide-react';
 import axios from 'axios';
 
 const AdminAuth = ({ onLoginSuccess, onCancel }) => {
@@ -144,7 +145,10 @@ const AdminAuth = ({ onLoginSuccess, onCancel }) => {
     <div className="modal-overlay">
       <div className="modal admin-auth-modal">
         <div className="admin-auth-header">
-          <h3>🔐 Admin Access</h3>
+          <h3>
+            <Lock size={18} aria-hidden="true" style={{ marginRight: 6, verticalAlign: 'middle' }} />
+            Admin Access
+          </h3>
           <button className="close-btn" onClick={onCancel}>×</button>
         </div>
 
@@ -274,7 +278,10 @@ const AdminAuth = ({ onLoginSuccess, onCancel }) => {
         )}
 
         <div className="auth-info">
-          <small>🔒 Only authorized admin emails can access this system</small>
+          <small>
+            <Shield size={14} aria-hidden="true" style={{ marginRight: 4, verticalAlign: 'middle' }} />
+            Only authorized admin emails can access this system
+          </small>
         </div>
       </div>
     </div>

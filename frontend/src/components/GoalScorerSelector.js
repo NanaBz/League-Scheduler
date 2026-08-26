@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { ChevronDown, ChevronUp } from 'lucide-react';
 import api from '../utils/api';
 import {
   emptyGoalsForScores,
@@ -52,6 +53,7 @@ export default function GoalScorerSelector({ match, homeScore, awayScore, onGoal
   const [cleanSheets, setCleanSheets] = useState(defaultCleanSheets());
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [expanded, setExpanded] = useState(false);
 
   const onGoalscorerDataRef = useRef(onGoalscorerData);
   onGoalscorerDataRef.current = onGoalscorerData;
@@ -210,18 +212,18 @@ export default function GoalScorerSelector({ match, homeScore, awayScore, onGoal
   const awayCleanSheetAllowed = homeGoalsParsed !== null && homeGoalsParsed === 0;
 
   return (
-    <div
-      className="goalscorer-admin-root"
-      style={{
-      backgroundColor: '#f8f9fa', 
-      padding: '12px', 
-      borderRadius: '6px', 
-      marginTop: '10px',
-      border: '2px solid #dee2e6'
-    }}
-    >
-      <h4 style={{ marginTop: 0, marginBottom: '12px' }}>Select Goalscorers & Events</h4>
-      
+    <div className={`goalscorer-admin-root ${expanded ? 'is-expanded' : 'is-collapsed'}`}>
+      <button
+        type="button"
+        className="goalscorer-admin-toggle"
+        onClick={() => setExpanded((open) => !open)}
+        aria-expanded={expanded}
+      >
+        <h4>Select Goalscorers & Events</h4>
+        {expanded ? <ChevronUp size={18} aria-hidden="true" /> : <ChevronDown size={18} aria-hidden="true" />}
+      </button>
+
+      <div className="goalscorer-admin-body">
       {error && <div style={{ color: '#dc3545', marginBottom: '10px' }}>Error: {error}</div>}
       {loading && <div style={{ color: '#0066cc', marginBottom: '10px' }}>Loading players...</div>}
 
@@ -469,6 +471,7 @@ export default function GoalScorerSelector({ match, homeScore, awayScore, onGoal
             </div>
           ))}
         </div>
+      </div>
       </div>
     </div>
   );

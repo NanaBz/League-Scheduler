@@ -7,6 +7,7 @@ export default function AdminSidebar({ activeSection, onSelect, onSwitchToUser, 
 
   const Item = ({ id, icon, label }) => (
     <button
+      type="button"
       className={`ls-sidebar-item ${activeSection === id ? 'active' : ''}`}
       onClick={() => onSelect(id)}
       aria-current={activeSection === id ? 'page' : undefined}
@@ -18,10 +19,11 @@ export default function AdminSidebar({ activeSection, onSelect, onSwitchToUser, 
   );
 
   return (
-    <aside className={`ls-sidebar ${collapsed ? 'collapsed' : ''}`} aria-label="Admin Navigation">
+    <aside className={`ls-sidebar ls-sidebar--admin ${collapsed ? 'collapsed' : ''}`} aria-label="Admin Navigation">
       <div className="ls-sidebar-header">
-        {!collapsed && <span>Admin</span>}
+        {!collapsed && <span className="ls-sidebar-header__label">Admin</span>}
         <button
+          type="button"
           className="ls-sidebar-toggle"
           onClick={() => setCollapsed(c => !c)}
           aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
@@ -31,14 +33,15 @@ export default function AdminSidebar({ activeSection, onSelect, onSwitchToUser, 
         </button>
       </div>
       <button
-        className="ls-sidebar-item"
+        type="button"
+        className="ls-sidebar-item ls-sidebar-item--user-view"
         onClick={() => onSwitchToUser && onSwitchToUser()}
         title="Switch to User View"
       >
-        <Eye size={18} />
+        <Eye size={18} aria-hidden="true" />
         {!collapsed && <span>Switch to User View</span>}
       </button>
-      <div style={{ borderTop: '1px solid #e5e7eb', margin: '8px 0' }}></div>
+      <hr className="admin-sidebar-divider" aria-hidden="true" />
       <Item id="fixtures-mgmt" icon={<ListChecks size={18} />} label="Fixture Management" />
       <Item id="players-mgmt" icon={<Users size={18} />} label="Player Management" />
       <Item id="fantasy-mgmt" icon={<Trophy size={18} />} label="Fantasy Management" />
