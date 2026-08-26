@@ -24,7 +24,15 @@ import {
   SECTION_TO_PATH,
   savedSectionPath,
 } from './utils/userRoutes';
+import './styles/designFoundation.css';
+import './styles/fixtures.css';
+import './styles/aghaCup.css';
+import './styles/superCup.css';
 import './index.css';
+import './styles/schoolGirlsCompetitions.css';
+import './styles/statsPage.css';
+import './styles/teamsPage.css';
+import './styles/fantasyUiRefresh.css';
 
 const COMPETITION_IDS = ['league', 'cup', 'super-cup', 'acwpl', 'girls-super-cup'];
 
@@ -35,45 +43,27 @@ function HomeRedirect() {
 function TeamsSection({ girlsTeamsActive, setGirlsTeamsActive, dataRefreshKey }) {
   return (
     <>
-      <div className="toggle-bar" style={{ display: 'inline-flex', gap: 0, background: '#f3f4f6', borderRadius: 999, margin: '0 auto 18px', justifyContent: 'center', alignItems: 'center', boxShadow: '0 1px 4px rgba(0,0,0,0.04)' }}>
+      <div className="apl-segmented-wrap">
+        <div className="apl-segmented">
         <button
-          className="toggle-btn"
+          type="button"
+          className="apl-segmented-btn"
           aria-current={!girlsTeamsActive ? 'page' : undefined}
-          style={{
-            fontWeight: 600,
-            padding: '8px 18px',
-            borderRadius: 999,
-            background: !girlsTeamsActive ? '#fff' : 'transparent',
-            color: '#1e293b',
-            border: 'none',
-            boxShadow: !girlsTeamsActive ? '0 0 0 2px #e5e7eb' : 'none',
-            cursor: !girlsTeamsActive ? 'default' : 'pointer',
-            transition: 'background 0.2s, color 0.2s',
-          }}
           onClick={() => setGirlsTeamsActive(false)}
           disabled={!girlsTeamsActive}
         >
           Boys Teams
         </button>
         <button
-          className="toggle-btn"
+          type="button"
+          className="apl-segmented-btn"
           aria-current={girlsTeamsActive ? 'page' : undefined}
-          style={{
-            fontWeight: 600,
-            padding: '8px 18px',
-            borderRadius: 999,
-            background: girlsTeamsActive ? '#fff' : 'transparent',
-            color: '#1e293b',
-            border: 'none',
-            boxShadow: girlsTeamsActive ? '0 0 0 2px #e5e7eb' : 'none',
-            cursor: girlsTeamsActive ? 'default' : 'pointer',
-            transition: 'background 0.2s, color 0.2s',
-          }}
           onClick={() => setGirlsTeamsActive(true)}
           disabled={girlsTeamsActive}
         >
           Girls Teams
         </button>
+      </div>
       </div>
       {girlsTeamsActive ? (
         <GirlsTeamsPage />
@@ -327,7 +317,10 @@ function App() {
               <AdminSidebar
                 activeSection={adminSection}
                 onSelect={(id) => setAdminSection(id)}
-                onSwitchToUser={() => setActiveTab('user')}
+                onSwitchToUser={() => {
+                  setActiveTab('user');
+                  navigate(savedSectionPath());
+                }}
                 isAdmin={isAdmin}
               />
             ) : null}

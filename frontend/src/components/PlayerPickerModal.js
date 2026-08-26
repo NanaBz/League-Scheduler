@@ -31,6 +31,11 @@ export default function PlayerPickerModal({ lockedPosition, selectedIds = [], on
   const [players, setPlayers] = useState([]);
   const [loading, setLoading] = useState(false);
   const [loadError, setLoadError] = useState('');
+  const [openFilter, setOpenFilter] = useState(null);
+
+  const toggleFilter = (key) => {
+    setOpenFilter((prev) => (prev === key ? null : key));
+  };
 
   useEffect(() => { if (lockedPosition) setPosition(lockedPosition); }, [lockedPosition]);
 
@@ -85,11 +90,13 @@ export default function PlayerPickerModal({ lockedPosition, selectedIds = [], on
     setMinPrice(range.min);
     setMaxPrice(range.max);
     setBudgetLabel(range.label);
+    setOpenFilter(null);
   };
 
   const handlePositionSelect = (pos) => {
     if (lockedPosition) return;
     setPosition(pos);
+    setOpenFilter(null);
   };
 
   return (
@@ -102,8 +109,15 @@ export default function PlayerPickerModal({ lockedPosition, selectedIds = [], on
         <div className="ppm-controls">
           <input className="ppm-search" placeholder="Search by name" value={search} onChange={e => setSearch(e.target.value)} />
           <div className="ppm-filters">
-            <div className="ppm-filter-group">
-              <button className="ppm-filter-btn" disabled={!!lockedPosition} title="Position filter">
+            <div className={`ppm-filter-group${openFilter === 'position' ? ' is-open' : ''}`}>
+              <button
+                type="button"
+                className="ppm-filter-btn"
+                disabled={!!lockedPosition}
+                title="Position filter"
+                aria-expanded={openFilter === 'position'}
+                onClick={() => toggleFilter('position')}
+              >
                 {POSITION_OPTIONS.find(p => p.value === position)?.label || 'Position'}
               </button>
               <div className="ppm-filter-dropdown">
@@ -119,8 +133,15 @@ export default function PlayerPickerModal({ lockedPosition, selectedIds = [], on
                 ))}
               </div>
             </div>
-            <div className="ppm-filter-group">
-              <button className="ppm-filter-btn">{budgetLabel}</button>
+            <div className={`ppm-filter-group${openFilter === 'budget' ? ' is-open' : ''}`}>
+              <button
+                type="button"
+                className="ppm-filter-btn"
+                aria-expanded={openFilter === 'budget'}
+                onClick={() => toggleFilter('budget')}
+              >
+                {budgetLabel}
+              </button>
               <div className="ppm-filter-dropdown">
                 {BUDGET_RANGES.map(range => (
                   <button key={range.label} className={`ppm-filter-item ${budgetLabel === range.label ? 'active' : ''}`} onClick={() => handleBudgetSelect(range)}>
@@ -129,8 +150,15 @@ export default function PlayerPickerModal({ lockedPosition, selectedIds = [], on
                 ))}
               </div>
             </div>
-            <div className="ppm-filter-group">
-              <button className="ppm-filter-btn">{clubLabel}</button>
+            <div className={`ppm-filter-group${openFilter === 'club' ? ' is-open' : ''}`}>
+              <button
+                type="button"
+                className="ppm-filter-btn"
+                aria-expanded={openFilter === 'club'}
+                onClick={() => toggleFilter('club')}
+              >
+                {clubLabel}
+              </button>
               <div className="ppm-filter-dropdown ppm-clubs-dropdown">
                 {teams.map(team => (
                   <label key={team._id} className="ppm-club-item">

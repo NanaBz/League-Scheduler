@@ -1,11 +1,11 @@
 .archived-competition-page {
-  max-width: 900px;
+  max-width: var(--apl-page-max-narrow, 900px);
   margin: 0 auto;
-  padding: 0 0 2rem;
+  padding: 0 0 var(--apl-page-padding-bottom, 2rem);
 }
 
 .archived-competition-page--wide {
-  max-width: 1180px;
+  max-width: var(--apl-page-max, 1180px);
 }
 
 .archived-competition-back {
@@ -43,11 +43,11 @@
 
 .archived-competition-header {
   display: flex;
-  gap: 1rem;
+  gap: var(--apl-space-4, 1rem);
   align-items: flex-start;
-  padding: 1.5rem;
-  border-radius: 16px;
-  background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+  padding: var(--apl-space-6, 1.5rem);
+  border-radius: var(--apl-radius-lg, 16px);
+  background: var(--apl-hero-gradient-comp);
   color: #fff;
 }
 

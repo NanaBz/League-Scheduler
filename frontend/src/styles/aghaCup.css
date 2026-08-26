@@ -1,0 +1,420 @@
+/**
+ * Agha Cup (school competition) — bracket presentation only.
+ * Scoped to .agha-cup-bracket — NOT used by ACFPL Fantasy Cup (.acfpl-cup-*).
+ */
+
+.agha-cup-bracket-header {
+  margin-bottom: var(--apl-space-5, 1.25rem);
+}
+
+.agha-cup-bracket-header h2 {
+  margin-bottom: var(--apl-space-2, 0.5rem);
+}
+
+.agha-cup-bracket-sub {
+  margin: 0;
+  font-size: var(--apl-text-sm, 0.875rem);
+  color: var(--apl-text-muted, #64748b);
+  line-height: var(--apl-leading-relaxed, 1.55);
+}
+
+.agha-cup-bracket {
+  display: flex;
+  flex-direction: column;
+  gap: var(--apl-space-4, 1rem);
+  padding: var(--apl-space-2, 0.5rem) 0;
+}
+
+/* ── Round sections ── */
+.agha-cup-round {
+  display: flex;
+  flex-direction: column;
+  gap: var(--apl-space-4, 1rem);
+}
+
+.agha-cup-round-title {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--apl-space-2, 0.5rem);
+  margin: 0;
+  padding: 0.65rem 1rem;
+  border-radius: var(--apl-radius-md, 12px);
+  font-size: 0.95rem;
+  font-weight: var(--apl-weight-bold, 700);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #fff;
+  background: var(--apl-hero-gradient-comp, linear-gradient(135deg, #1e293b 0%, #334155 100%));
+  box-shadow: var(--apl-shadow-sm);
+}
+
+.agha-cup-round--final .agha-cup-round-title {
+  background: linear-gradient(135deg, #7f1d1d 0%, var(--primary-red-dark, #b91c1c) 55%, var(--primary-red, #dc2626) 100%);
+}
+
+.agha-cup-round-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.15);
+  flex-shrink: 0;
+}
+
+/* ── Semi-finals grid (desktop) / stack (mobile) ── */
+.agha-cup-semis-grid {
+  display: flex;
+  flex-direction: column;
+  gap: var(--apl-space-4, 1rem);
+  align-items: stretch;
+}
+
+/* ── Connector between rounds ── */
+.agha-cup-connector {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.25rem 0;
+  color: var(--apl-comp-cup-fg, #6d28d9);
+}
+
+.agha-cup-connector-line {
+  width: 2px;
+  height: 1.25rem;
+  background: linear-gradient(180deg, var(--apl-border-muted, #cbd5e1) 0%, var(--apl-comp-cup-fg, #6d28d9) 100%);
+  border-radius: 1px;
+}
+
+.agha-cup-connector-label {
+  font-size: 0.68rem;
+  font-weight: var(--apl-weight-bold, 700);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--apl-text-muted, #64748b);
+}
+
+/* ── Match card ── */
+.agha-cup-match {
+  width: 100%;
+  max-width: 100%;
+  padding: var(--apl-space-4, 1rem);
+  border-radius: var(--apl-radius-lg, 16px);
+  border: 1px solid var(--apl-border-subtle, #e2e8f0);
+  background: var(--apl-surface-base, #fff);
+  box-shadow: var(--apl-shadow-md);
+  box-sizing: border-box;
+  transition:
+    box-shadow var(--apl-transition-base, 0.18s ease),
+    border-color var(--apl-transition-fast, 0.15s ease);
+}
+
+.agha-cup-match--scheduled {
+  border-color: #c4b5fd;
+  background: linear-gradient(135deg, rgba(237, 233, 254, 0.35) 0%, var(--white) 100%);
+}
+
+.agha-cup-match--live {
+  border-color: #93c5fd;
+  box-shadow: 0 4px 16px rgba(37, 99, 235, 0.15);
+}
+
+.agha-cup-match--ft {
+  border-color: #86efac;
+  background: linear-gradient(135deg, rgba(34, 197, 94, 0.05) 0%, var(--white) 100%);
+}
+
+.agha-cup-match--void {
+  border-color: #d1d5db;
+  opacity: 0.9;
+}
+
+.agha-cup-match--final {
+  border-width: 2px;
+  border-color: var(--primary-red-lighter, #fca5a5);
+  background: linear-gradient(135deg, rgba(254, 242, 242, 0.5) 0%, var(--white) 100%);
+  box-shadow: var(--apl-shadow-hover);
+}
+
+.agha-cup-match--placeholder {
+  border-style: dashed;
+  border-color: var(--apl-border-muted, #cbd5e1);
+  background: var(--apl-surface-muted, #f8fafc);
+  opacity: 0.92;
+}
+
+.agha-cup-match-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--apl-space-2, 0.5rem);
+  margin-bottom: var(--apl-space-3, 0.75rem);
+  padding-bottom: var(--apl-space-2, 0.5rem);
+  border-bottom: 1px solid var(--apl-border-subtle, #e2e8f0);
+}
+
+.agha-cup-match-label {
+  font-size: 0.72rem;
+  font-weight: var(--apl-weight-bold, 700);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--apl-comp-cup-fg, #6d28d9);
+}
+
+.agha-cup-match--final .agha-cup-match-label {
+  color: var(--primary-red-dark, #b91c1c);
+}
+
+.agha-cup-match-meta .status-badge {
+  font-size: 0.62rem;
+  padding: 0.22rem 0.45rem;
+  border-radius: var(--apl-radius-pill, 999px);
+}
+
+/* ── Teams inside match ── */
+.agha-cup-teams {
+  display: flex;
+  flex-direction: column;
+  gap: var(--apl-space-2, 0.5rem);
+}
+
+.agha-cup-team {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--apl-space-3, 0.75rem);
+  padding: 0.6rem 0.75rem;
+  border-radius: var(--apl-radius-md, 12px);
+  background: var(--apl-surface-muted, #f8fafc);
+  border: 1px solid transparent;
+  min-width: 0;
+}
+
+.agha-cup-team--winner {
+  background: linear-gradient(90deg, #ecfdf5 0%, #f0fdf4 100%);
+  border-color: #86efac;
+}
+
+.agha-cup-team-main {
+  display: flex;
+  align-items: center;
+  gap: var(--apl-space-3, 0.75rem);
+  min-width: 0;
+  flex: 1;
+}
+
+/* Context-specific logos — does NOT change global .team-logo */
+.agha-cup-bracket .agha-cup-team-main .team-logo,
+.agha-cup-bracket .agha-cup-team-main img {
+  width: 44px;
+  height: 44px;
+  max-width: 44px;
+  max-height: 44px;
+  object-fit: contain;
+  flex-shrink: 0;
+  padding: 2px;
+  box-sizing: border-box;
+  border-radius: var(--apl-radius-sm, 8px);
+  background: var(--apl-surface-base, #fff);
+  border: 1px solid var(--apl-border-subtle, #e2e8f0);
+}
+
+.agha-cup-bracket .agha-cup-team-main .falcons-logo {
+  width: 40px;
+  height: 40px;
+  max-width: 40px;
+  max-height: 40px;
+  object-fit: contain;
+  border-radius: 50%;
+  padding: 3px;
+}
+
+.agha-cup-team-name {
+  font-size: 0.95rem;
+  font-weight: var(--apl-weight-bold, 700);
+  color: var(--apl-text-body, #1e293b);
+  line-height: 1.25;
+  word-break: break-word;
+}
+
+.agha-cup-match--placeholder .agha-cup-team-name {
+  font-style: italic;
+  color: var(--apl-text-muted, #64748b);
+  font-weight: var(--apl-weight-semibold, 600);
+}
+
+.agha-cup-team-score {
+  flex-shrink: 0;
+  min-width: 2rem;
+  padding: 0.35rem 0.6rem;
+  border-radius: var(--apl-radius-sm, 8px);
+  background: var(--apl-comp-cup-bg, #ede9fe);
+  color: var(--apl-comp-cup-fg, #6d28d9);
+  font-size: 1.15rem;
+  font-weight: var(--apl-weight-extrabold, 800);
+  text-align: center;
+  line-height: 1;
+}
+
+.agha-cup-match--final .agha-cup-team-score {
+  background: var(--primary-red-lightest, #fee2e2);
+  color: var(--primary-red-dark, #b91c1c);
+  font-size: 1.25rem;
+}
+
+.agha-cup-vs {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.15rem 0;
+  font-size: 0.72rem;
+  font-weight: var(--apl-weight-bold, 700);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--apl-text-muted, #64748b);
+}
+
+.agha-cup-match-info {
+  margin-top: var(--apl-space-3, 0.75rem);
+  padding-top: var(--apl-space-2, 0.5rem);
+  border-top: 1px dashed var(--apl-border-subtle, #e2e8f0);
+  text-align: center;
+  font-size: 0.78rem;
+  color: var(--apl-text-muted, #64748b);
+}
+
+.agha-cup-match-info small {
+  font-size: inherit;
+}
+
+.agha-cup-pens {
+  display: block;
+  margin-top: 0.2rem;
+  font-size: 0.72rem;
+  font-style: italic;
+}
+
+/* ── Desktop tournament layout ── */
+@media (min-width: 768px) {
+  .agha-cup-bracket {
+    padding: var(--apl-space-4, 1rem) var(--apl-space-2, 0.5rem) var(--apl-space-2, 0.5rem);
+  }
+
+  .agha-cup-semis-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--apl-space-5, 1.25rem);
+    max-width: 760px;
+    margin: 0 auto;
+    width: 100%;
+  }
+
+  .agha-cup-round--final {
+    max-width: 440px;
+    margin: 0 auto;
+    width: 100%;
+  }
+
+  .agha-cup-connector {
+    flex-direction: row;
+    justify-content: center;
+    gap: var(--apl-space-4, 1rem);
+    padding: 0.5rem 0;
+  }
+
+  .agha-cup-connector-line {
+    width: 80px;
+    height: 2px;
+    background: linear-gradient(90deg, var(--apl-comp-cup-fg, #6d28d9) 0%, var(--primary-red, #dc2626) 100%);
+  }
+
+  .agha-cup-team-main .team-logo,
+  .agha-cup-team-main img {
+    width: 48px;
+    height: 48px;
+    max-width: 48px;
+    max-height: 48px;
+  }
+
+  .agha-cup-bracket .agha-cup-team-main .falcons-logo {
+    width: 44px;
+    height: 44px;
+    max-width: 44px;
+    max-height: 44px;
+  }
+}
+
+/* ── Mobile: override legacy bracket min-width / horizontal scroll rules ── */
+@media (max-width: 768px) {
+  .agha-cup-bracket .agha-cup-round,
+  .agha-cup-bracket .agha-cup-match {
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .agha-cup-bracket .agha-cup-team-main .team-logo,
+  .agha-cup-bracket .agha-cup-team-main img {
+    width: 42px !important;
+    height: 42px !important;
+    max-width: 42px !important;
+    max-height: 42px !important;
+  }
+
+  .agha-cup-bracket .agha-cup-team-main .falcons-logo {
+    width: 38px !important;
+    height: 38px !important;
+    max-width: 38px !important;
+    max-height: 38px !important;
+  }
+
+  .agha-cup-team-name {
+    font-size: 0.88rem;
+  }
+
+  .agha-cup-team-score {
+    font-size: 1.05rem;
+    padding: 0.3rem 0.5rem;
+    min-width: 1.75rem;
+  }
+
+  .agha-cup-bracket {
+    overflow-x: hidden;
+    max-width: 100%;
+  }
+
+  .agha-cup-team-main {
+    min-width: 0;
+    overflow: hidden;
+  }
+
+  .agha-cup-team-name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+  }
+}
+
+@media screen and (max-width: 640px) {
+  .agha-cup-bracket .agha-cup-team-main .team-logo,
+  .agha-cup-bracket .agha-cup-team-main img {
+    width: 40px !important;
+    height: 40px !important;
+    max-width: 40px !important;
+    max-height: 40px !important;
+  }
+
+  .agha-cup-match {
+    padding: 0.85rem;
+  }
+}
+
+@media screen and (max-width: 390px) {
+  .agha-cup-team-name {
+    font-size: 0.82rem;
+  }
+}

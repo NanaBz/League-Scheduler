@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Trophy, Star, BarChart3, Calendar, ChevronsDown, ChevronDown } from 'lucide-react';
+import { Trophy, Star, BarChart3, Calendar, ChevronsDown, ChevronDown, Award } from 'lucide-react';
 import api from '../utils/api';
 import { getTeamColors } from '../utils/teamBrandColors';
 import FixtureFilterControl from './FixtureFilterControl';
@@ -15,6 +15,7 @@ import {
   desktopFixtureBadgeLabel,
 } from '../utils/matchDisplayState';
 import { canExpandFixtureDetails, FixtureMatchStatsExpanded } from './FixtureMatchStatsPanel';
+import SuperCupShowcase from './SuperCupShowcase';
 
 // Helper function to get team logo CSS class
 const getTeamLogoClass = (teamName) => {
@@ -22,6 +23,77 @@ const getTeamLogoClass = (teamName) => {
   const teamClass = `${teamName.toLowerCase()}-logo`;
   return `${baseClass} ${teamClass}`;
 };
+
+/** Visual-only: highlight knockout winner from existing scores/penalties */
+function aghaCupTeamIsWinner(match, side) {
+  if (!match || !showFixtureScores(match)) return false;
+  const h = Number(match.homeScore);
+  const a = Number(match.awayScore);
+  if (Number.isFinite(h) && Number.isFinite(a) && h !== a) {
+    return side === 'home' ? h > a : a > h;
+  }
+  if (shouldShowMatchPenalties(match)) {
+    const hp = Number(match.homePenalties);
+    const ap = Number(match.awayPenalties);
+    if (Number.isFinite(hp) && Number.isFinite(ap) && hp !== ap) {
+      return side === 'home' ? hp > ap : ap > hp;
+    }
+  }
+  return false;
+}
+
+function AghaCupBracketMatch({ match, label, isFinal, formatDate }) {
+  const phase = userFixturePhase(match);
+  return (
+    <div className={`agha-cup-match agha-cup-match--${phase}${isFinal ? ' agha-cup-match--final' : ''}`}>
+      <div className="agha-cup-match-meta">
+        {label ? <span className="agha-cup-match-label">{label}</span> : <span />}
+        <span className={statusBadgeClass(phase)}>{statusBadgeLabel(phase)}</span>
+      </div>
+      <div className="agha-cup-teams">
+        <div className={`agha-cup-team${aghaCupTeamIsWinner(match, 'home') ? ' agha-cup-team--winner' : ''}`}>
+          <div className="agha-cup-team-main">
+            {match.homeTeam.logo && (
+              <img
+                src={match.homeTeam.logo}
+                alt={match.homeTeam.name}
+                className={getTeamLogoClass(match.homeTeam.name)}
+              />
+            )}
+            <span className="agha-cup-team-name">{match.homeTeam.name}</span>
+          </div>
+          {showFixtureScores(match) && (
+            <span className="agha-cup-team-score">{match.homeScore}</span>
+          )}
+        </div>
+        <div className="agha-cup-vs" aria-hidden="true">vs</div>
+        <div className={`agha-cup-team${aghaCupTeamIsWinner(match, 'away') ? ' agha-cup-team--winner' : ''}`}>
+          <div className="agha-cup-team-main">
+            {match.awayTeam.logo && (
+              <img
+                src={match.awayTeam.logo}
+                alt={match.awayTeam.name}
+                className={getTeamLogoClass(match.awayTeam.name)}
+              />
+            )}
+            <span className="agha-cup-team-name">{match.awayTeam.name}</span>
+          </div>
+          {showFixtureScores(match) && (
+            <span className="agha-cup-team-score">{match.awayScore}</span>
+          )}
+        </div>
+      </div>
+      <div className="agha-cup-match-info">
+        <small>{formatDate(match.date)} at {match.time}</small>
+        {shouldShowMatchPenalties(match) && (
+          <span className="agha-cup-pens">
+            ({match.homePenalties} - {match.awayPenalties} pens)
+          </span>
+        )}
+      </div>
+    </div>
+  );
+}
 
 const renderForm = (form) => {
   console.log('Rendering form:', form); // Debug log
@@ -645,168 +717,89 @@ const UserView = ({ competitions, selectedCompetition, refreshKey, onCompetition
 
   {selectedCompetition === 'cup' && (
         <>
-          {/* Cup Tournament Bracket */}
           <div className="card" id="cup">
-            <h2><BarChart3 size={18} /> Agha Cup Tournament</h2>
-            <div className="cup-bracket">
-              <div className="bracket-round">
-                <h3>Semi-Finals</h3>
-                <div className="bracket-matches">
-                  {matches.filter(m => m && m.homeTeam && m.awayTeam && m.stage === 'semi-final').map(match => (
-                    <div key={match._id} className="bracket-match">
-                      <div className="bracket-team">
-                        <div className="team-info">
-                          {match.homeTeam.logo && (
-                            <img 
-                              src={match.homeTeam.logo} 
-                              alt={match.homeTeam.name} 
-                              className={getTeamLogoClass(match.homeTeam.name)}
-                            />
-                          )}
-                          <span className="team-name">{match.homeTeam.name}</span>
-                        </div>
-                        {showFixtureScores(match) && <span className="team-score">{match.homeScore}</span>}
-                      </div>
-                      <div className="bracket-vs">vs</div>
-                      <div className="bracket-team">
-                        <div className="team-info">
-                          {match.awayTeam.logo && (
-                            <img 
-                              src={match.awayTeam.logo} 
-                              alt={match.awayTeam.name} 
-                              className={getTeamLogoClass(match.awayTeam.name)}
-                            />
-                          )}
-                          <span className="team-name">{match.awayTeam.name}</span>
-                        </div>
-                        {showFixtureScores(match) && <span className="team-score">{match.awayScore}</span>}
-                      </div>
-                      <div className="match-info">
-                        <small>{formatDate(match.date)} at {match.time}</small>
-                      </div>
-                    </div>
-                  ))}
+            <div className="agha-cup-bracket-header">
+              <h2><BarChart3 size={18} /> Agha Cup Tournament</h2>
+              <p className="agha-cup-bracket-sub">
+                Top 4 school teams from the previous season · Semi-Finals → Final
+              </p>
+            </div>
+            <div className="agha-cup-bracket">
+              <section className="agha-cup-round agha-cup-round--semis" aria-label="Semi-Finals">
+                <h3 className="agha-cup-round-title">
+                  <span className="agha-cup-round-icon" aria-hidden="true"><Award size={16} /></span>
+                  Semi-Finals
+                </h3>
+                <div className="agha-cup-semis-grid">
+                  {matches
+                    .filter((m) => m && m.homeTeam && m.awayTeam && m.stage === 'semi-final')
+                    .map((match, idx) => (
+                      <AghaCupBracketMatch
+                        key={match._id}
+                        match={match}
+                        label={`Semi-Final ${idx + 1}`}
+                        formatDate={formatDate}
+                      />
+                    ))}
                 </div>
+              </section>
+
+              <div className="agha-cup-connector" aria-hidden="true">
+                <div className="agha-cup-connector-line" />
+                <ChevronsDown size={20} />
+                <span className="agha-cup-connector-label">Final</span>
+                <div className="agha-cup-connector-line" />
               </div>
-              
-              <div className="bracket-arrow"><ChevronsDown size={18} /></div>
-              
-              <div className="bracket-round">
-                <h3>Final</h3>
-                <div className="bracket-matches">
-                  {matches.filter(m => m && m.homeTeam && m.awayTeam && m.stage === 'final').length > 0 ? (
-                    matches.filter(m => m && m.homeTeam && m.awayTeam && m.stage === 'final').map(match => (
-                      <div key={match._id} className="bracket-match final-match">
-                        <div className="bracket-team">
-                          <div className="team-info">
-                            {match.homeTeam.logo && (
-                              <img 
-                                src={match.homeTeam.logo} 
-                                alt={match.homeTeam.name} 
-                                className={getTeamLogoClass(match.homeTeam.name)}
-                              />
-                            )}
-                            <span className="team-name">{match.homeTeam.name}</span>
-                          </div>
-                          {showFixtureScores(match) && <span className="team-score">{match.homeScore}</span>}
-                        </div>
-                        <div className="bracket-vs">vs</div>
-                        <div className="bracket-team">
-                          <div className="team-info">
-                            {match.awayTeam.logo && (
-                              <img 
-                                src={match.awayTeam.logo} 
-                                alt={match.awayTeam.name} 
-                                className={getTeamLogoClass(match.awayTeam.name)}
-                              />
-                            )}
-                            <span className="team-name">{match.awayTeam.name}</span>
-                          </div>
-                          {showFixtureScores(match) && <span className="team-score">{match.awayScore}</span>}
-                        </div>
-                        <div className="match-info">
-                          <small>{formatDate(match.date)} at {match.time}</small>
-                        </div>
-                      </div>
+
+              <section className="agha-cup-round agha-cup-round--final" aria-label="Final">
+                <h3 className="agha-cup-round-title">
+                  <span className="agha-cup-round-icon" aria-hidden="true"><Trophy size={16} /></span>
+                  Final
+                </h3>
+                {matches.filter((m) => m && m.homeTeam && m.awayTeam && m.stage === 'final').length > 0 ? (
+                  matches
+                    .filter((m) => m && m.homeTeam && m.awayTeam && m.stage === 'final')
+                    .map((match) => (
+                      <AghaCupBracketMatch
+                        key={match._id}
+                        match={match}
+                        label="Agha Cup Final"
+                        isFinal
+                        formatDate={formatDate}
+                      />
                     ))
-                  ) : (
-                    <div className="bracket-match final-match placeholder">
-                      <div className="bracket-team">
-                        <span className="team-name">Winner of Semi-Final 1</span>
+                ) : (
+                  <div className="agha-cup-match agha-cup-match--placeholder agha-cup-match--final">
+                    <div className="agha-cup-match-meta">
+                      <span className="agha-cup-match-label">Agha Cup Final</span>
+                    </div>
+                    <div className="agha-cup-teams">
+                      <div className="agha-cup-team">
+                        <span className="agha-cup-team-name">Winner of Semi-Final 1</span>
                       </div>
-                      <div className="bracket-vs">vs</div>
-                      <div className="bracket-team">
-                        <span className="team-name">Winner of Semi-Final 2</span>
-                      </div>
-                      <div className="match-info">
-                        <small>Final will be scheduled after semi-finals</small>
+                      <div className="agha-cup-vs" aria-hidden="true">vs</div>
+                      <div className="agha-cup-team">
+                        <span className="agha-cup-team-name">Winner of Semi-Final 2</span>
                       </div>
                     </div>
-                  )}
-                </div>
-              </div>
+                    <div className="agha-cup-match-info">
+                      <small>Final will be scheduled after semi-finals</small>
+                    </div>
+                  </div>
+                )}
+              </section>
             </div>
           </div>
         </>
       )}
 
-  {selectedCompetition === 'super-cup' && matches.length > 0 && matches.filter(m => m && m.homeTeam && m.awayTeam).map(match => (
-    <div key={match._id} className="super-cup-responsive">
-      <div className="super-cup-header-responsive">
-        <div className="trophy-icon"><Trophy size={18} /></div>
-        <h3>The Ultimate Showdown</h3>
-        <p>League Champion vs Cup Winner</p>
-        {match.originalDoubleWinnerId && (
-          <div style={{color:'#dc3545',fontWeight:'bold',marginTop:'8px'}}>
-            Note: {match.homeTeam._id === match.originalDoubleWinnerId
-              ? `${match.homeTeam.name} won both League and Cup. ${match.awayTeam.name} (League Runner-up) plays as runner-up in Super Cup.`
-              : `${match.awayTeam.name} won both League and Cup. ${match.homeTeam.name} (League Runner-up) plays as runner-up in Super Cup.`}
-          </div>
-        )}
-      </div>
-      <div className="super-cup-match-responsive">
-        <div className="super-cup-team-responsive">
-          {match.homeTeam.logo && (
-            <img 
-              src={match.homeTeam.logo} 
-              alt={match.homeTeam.name} 
-              className={getTeamLogoClass(match.homeTeam.name)}
-            />
-          )}
-          <h4>{match.homeTeam.name}</h4>
-          <small>{match.originalDoubleWinnerId && match.homeTeam._id === match.originalDoubleWinnerId ? 'LEAGUE CHAMPION (Double Winner)' : 'LEAGUE CHAMPION'}</small>
-          {showFixtureScores(match) && (
-            <div className="super-cup-score-responsive">{match.homeScore}</div>
-          )}
-        </div>
-        <div className="super-cup-vs-responsive">
-          {showFixtureScores(match) && (
-            <div className="match-result">
-              {match.homeScore > match.awayScore 
-                ? `${match.homeTeam.name} Wins!` 
-                : match.awayScore > match.homeScore 
-                ? `${match.awayTeam.name} Wins!` 
-                : 'Draw!'}
-            </div>
-          )}
-        </div>
-        <div className="super-cup-team-responsive">
-          {match.awayTeam.logo && (
-            <img 
-              src={match.awayTeam.logo} 
-              alt={match.awayTeam.name} 
-              className={getTeamLogoClass(match.awayTeam.name)}
-            />
-          )}
-          <h4>{match.awayTeam.name}</h4>
-          <small>{match.originalDoubleWinnerId && match.awayTeam._id !== match.originalDoubleWinnerId ? 'LEAGUE RUNNER-UP' : 'CUP WINNER'}</small>
-          {showFixtureScores(match) && (
-            <div className="super-cup-score-responsive">{match.awayScore}</div>
-          )}
-        </div>
-      </div>
-    </div>
-  ))}
+  {selectedCompetition === 'super-cup' &&
+    matches.length > 0 &&
+    matches
+      .filter((m) => m && m.homeTeam && m.awayTeam)
+      .map((match) => (
+        <SuperCupShowcase key={match._id} match={match} formatDate={formatDate} />
+      ))}
       {/* Fixtures/Results */}
   <div className="card" id="fixtures">
   <h2><Calendar size={18} /> Fixtures & Results</h2>
@@ -976,7 +969,6 @@ const UserView = ({ competitions, selectedCompetition, refreshKey, onCompetition
                                     src={match.homeTeam.logo} 
                                     alt={match.homeTeam.name} 
                                     className={getTeamLogoClass(match.homeTeam.name)}
-                                    style={{ width: '20px', height: '20px' }}
                                   />
                                 )}
                                 <strong>{match.homeTeam.name}</strong>
@@ -996,7 +988,6 @@ const UserView = ({ competitions, selectedCompetition, refreshKey, onCompetition
                                     src={match.awayTeam.logo} 
                                     alt={match.awayTeam.name} 
                                     className={getTeamLogoClass(match.awayTeam.name)}
-                                    style={{ width: '20px', height: '20px' }}
                                   />
                                 )}
                                 <strong>{match.awayTeam.name}</strong>
@@ -1016,15 +1007,7 @@ const UserView = ({ competitions, selectedCompetition, refreshKey, onCompetition
 
                           {/* Click hint */}
                           {canExpandFixtureDetails(match) && (
-                            <div style={{
-                              fontSize: '11px',
-                              color: '#999',
-                              paddingLeft: '20px',
-                              paddingTop: '4px',
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: '4px'
-                            }}>
+                            <div className="fixture-expand-hint fixture-expand-hint--desktop">
                               {expandedMatches.has(match._id) ? (
                                 <>
                                   <span>^</span>
@@ -1073,7 +1056,6 @@ const UserView = ({ competitions, selectedCompetition, refreshKey, onCompetition
                                 src={match.homeTeam.logo} 
                                 alt={match.homeTeam.name} 
                                 className={getTeamLogoClass(match.homeTeam.name)}
-                                style={{ width: '20px', height: '20px' }}
                               />
                             )}
                             <strong>{match.homeTeam.name}</strong>
@@ -1100,7 +1082,6 @@ const UserView = ({ competitions, selectedCompetition, refreshKey, onCompetition
                                 src={match.awayTeam.logo} 
                                 alt={match.awayTeam.name} 
                                 className={getTeamLogoClass(match.awayTeam.name)}
-                                style={{ width: '20px', height: '20px' }}
                               />
                             )}
                             <strong>{match.awayTeam.name}</strong>
@@ -1121,15 +1102,7 @@ const UserView = ({ competitions, selectedCompetition, refreshKey, onCompetition
 
                       {/* Click hint */}
                       {canExpandFixtureDetails(match) && (
-                        <div style={{
-                          fontSize: '11px',
-                          color: '#999',
-                          paddingLeft: '20px',
-                          paddingTop: '4px',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '4px'
-                        }}>
+                        <div className="fixture-expand-hint fixture-expand-hint--desktop">
                           {expandedMatches.has(match._id) ? (
                             <>
                               <span>^</span>
@@ -1173,7 +1146,6 @@ const UserView = ({ competitions, selectedCompetition, refreshKey, onCompetition
                               src={match.homeTeam.logo} 
                               alt={match.homeTeam.name} 
                               className={getTeamLogoClass(match.homeTeam.name)}
-                              style={{ width: '20px', height: '20px' }}
                             />
                           )}
                           <strong>{match.homeTeam.name}</strong>
@@ -1200,7 +1172,6 @@ const UserView = ({ competitions, selectedCompetition, refreshKey, onCompetition
                               src={match.awayTeam.logo} 
                               alt={match.awayTeam.name} 
                               className={getTeamLogoClass(match.awayTeam.name)}
-                              style={{ width: '20px', height: '20px' }}
                             />
                           )}
                           <strong>{match.awayTeam.name}</strong>
@@ -1221,15 +1192,7 @@ const UserView = ({ competitions, selectedCompetition, refreshKey, onCompetition
 
                     {/* Click hint */}
                     {canExpandFixtureDetails(match) && (
-                      <div style={{
-                        fontSize: '11px',
-                        color: '#999',
-                        paddingLeft: '20px',
-                        paddingTop: '4px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '4px'
-                      }}>
+                      <div className="fixture-expand-hint fixture-expand-hint--desktop">
                         {expandedMatches.has(match._id) ? (
                           <>
                             <span>^</span>
@@ -1277,7 +1240,6 @@ const UserView = ({ competitions, selectedCompetition, refreshKey, onCompetition
                             src={match.homeTeam.logo} 
                             alt={match.homeTeam.name} 
                             className={getTeamLogoClass(match.homeTeam.name)}
-                            style={{ width: '20px', height: '20px' }}
                           />
                         )}
                         <strong>{match.homeTeam.name}</strong>
@@ -1299,7 +1261,6 @@ const UserView = ({ competitions, selectedCompetition, refreshKey, onCompetition
                             src={match.awayTeam.logo} 
                             alt={match.awayTeam.name} 
                             className={getTeamLogoClass(match.awayTeam.name)}
-                            style={{ width: '20px', height: '20px' }}
                           />
                         )}
                         <strong>{match.awayTeam.name}</strong>
@@ -1320,15 +1281,7 @@ const UserView = ({ competitions, selectedCompetition, refreshKey, onCompetition
 
                   {/* Click hint */}
                   {canExpandFixtureDetails(match) && (
-                    <div style={{
-                      fontSize: '11px',
-                      color: '#999',
-                      paddingLeft: '20px',
-                      paddingTop: '4px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '4px'
-                    }}>
+                    <div className="fixture-expand-hint fixture-expand-hint--desktop">
                       {expandedMatches.has(match._id) ? (
                         <>
                           <span>^</span>
@@ -1360,7 +1313,6 @@ const UserView = ({ competitions, selectedCompetition, refreshKey, onCompetition
                         src={match.homeTeam.logo} 
                         alt={match.homeTeam.name} 
                         className={getTeamLogoClass(match.homeTeam.name)}
-                        style={{ width: '20px', height: '20px' }}
                       />
                     )}
                     <strong>{match.homeTeam.name}</strong>
@@ -1387,7 +1339,6 @@ const UserView = ({ competitions, selectedCompetition, refreshKey, onCompetition
                         src={match.awayTeam.logo} 
                         alt={match.awayTeam.name} 
                         className={getTeamLogoClass(match.awayTeam.name)}
-                        style={{ width: '20px', height: '20px' }}
                       />
                     )}
                     <strong>{match.awayTeam.name}</strong>
@@ -1435,11 +1386,10 @@ const UserView = ({ competitions, selectedCompetition, refreshKey, onCompetition
                               onClick={() => (canExpandFixtureDetails(match)) && toggleMatchDetails(match._id)}
                               style={{ cursor: (canExpandFixtureDetails(match)) ? 'pointer' : 'default' }}
                             >
-                              <div className="fixture-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                {/* Date+Time at the left, match status at the right */}
-                                <div className="fixture-datetime" style={{ background: '#dc2626', border: '2px solid #dc2626', borderRadius: 14, padding: '1.5px 8px', display: 'inline-block', minWidth: 0 }}>
-                                  <span className="fixture-date" style={{ fontSize: '0.82rem', fontWeight: 400, color: '#fff', letterSpacing: '0.2px', textShadow: 'none' }}>{formatDate(match.date)}</span>
-                                  <span className="fixture-time" style={{ fontSize: '0.82rem', fontWeight: 400, color: '#fff', marginLeft: 6, textShadow: 'none' }}>{match.time}</span>
+                              <div className="fixture-header">
+                                <div className="fixture-datetime">
+                                  <span className="fixture-date">{formatDate(match.date)}</span>
+                                  <span className="fixture-time">{match.time}</span>
                                 </div>
                                 <div className="fixture-status">
                                   <span className={statusBadgeClass(userFixturePhase(match))}>
@@ -1471,7 +1421,7 @@ const UserView = ({ competitions, selectedCompetition, refreshKey, onCompetition
                                       <span className="score-display">{match.homeScore} - {match.awayScore}</span>
                                       {/* Penalties: cup / knockout only */}
                                       {shouldShowMatchPenalties(match) && (
-                                        <div className="penalties-display-mobile" style={{ fontSize: '0.85em', color: '#666', marginTop: 2 }}>
+                                        <div className="penalties-display-mobile">
                                           ({match.homePenalties} - {match.awayPenalties} pens)
                                         </div>
                                       )}
@@ -1505,14 +1455,7 @@ const UserView = ({ competitions, selectedCompetition, refreshKey, onCompetition
 
                               {/* Mobile click hint */}
                               {canExpandFixtureDetails(match) && (
-                                <div style={{
-                                  fontSize: '11px',
-                                  color: '#999',
-                                  paddingTop: '4px',
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  gap: '4px'
-                                }}>
+                                <div className="fixture-expand-hint">
                                   {expandedMatches.has(match._id) ? (
                                     <>
                                       <span>^</span>
@@ -1601,7 +1544,7 @@ const UserView = ({ competitions, selectedCompetition, refreshKey, onCompetition
                                       <span className="score-display">{match.homeScore} - {match.awayScore}</span>
                                       {/* Penalties: cup / knockout only */}
                                       {shouldShowMatchPenalties(match) && (
-                                        <div className="penalties-display-mobile" style={{ fontSize: '0.85em', color: '#666', marginTop: 2 }}>
+                                        <div className="penalties-display-mobile">
                                           ({match.homePenalties} - {match.awayPenalties} pens)
                                         </div>
                                       )}
@@ -1635,14 +1578,7 @@ const UserView = ({ competitions, selectedCompetition, refreshKey, onCompetition
 
                               {/* Mobile click hint */}
                               {canExpandFixtureDetails(match) && (
-                                <div style={{
-                                  fontSize: '11px',
-                                  color: '#999',
-                                  paddingTop: '4px',
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  gap: '4px'
-                                }}>
+                                <div className="fixture-expand-hint">
                                   {expandedMatches.has(match._id) ? (
                                     <>
                                       <span>^</span>
@@ -1672,7 +1608,17 @@ const UserView = ({ competitions, selectedCompetition, refreshKey, onCompetition
               </>
             ) : selectedCompetition === 'acwpl' || selectedCompetition === 'girls-super-cup' ? (
               // ACWPL / Girls Super Cup (mobile cards)
-              <div className="matches-cards acwpl-fixtures-bg">
+              <div
+                className={`matchweek-section school-girls-section${selectedCompetition === 'girls-super-cup' ? ' school-girls-section--gsc' : ''}`}
+              >
+                <div className="matchweek-header-mobile">
+                  <h3>
+                    {selectedCompetition === 'acwpl'
+                      ? (acwplMwFilter ? `Matchweek ${acwplMwFilter}` : 'ACWPL Fixtures')
+                      : (girlsSuperCupMwFilter ? `Round ${girlsSuperCupMwFilter}` : 'Girls Super Cup Fixtures')}
+                  </h3>
+                </div>
+                <div className="matches-cards acwpl-fixtures-bg">
                 {matches
                   .filter((m) => m && m.homeTeam && m.awayTeam)
                   .filter((m) => {
@@ -1751,14 +1697,7 @@ const UserView = ({ competitions, selectedCompetition, refreshKey, onCompetition
 
                     {/* Mobile click hint */}
                     {canExpandFixtureDetails(match) && (
-                      <div style={{
-                        fontSize: '11px',
-                        color: '#999',
-                        paddingTop: '4px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '4px'
-                      }}>
+                      <div className="fixture-expand-hint">
                         {expandedMatches.has(match._id) ? (
                           <>
                             <span>^</span>
@@ -1774,6 +1713,7 @@ const UserView = ({ competitions, selectedCompetition, refreshKey, onCompetition
                     )}
                   </div>
                 ))}
+                </div>
               </div>
             ) : (
               // For other competitions, show simple cards
@@ -1820,7 +1760,7 @@ const UserView = ({ competitions, selectedCompetition, refreshKey, onCompetition
                             <span className="score-display">{match.homeScore} - {match.awayScore}</span>
                             {/* Penalties: cup / knockout only */}
                             {shouldShowMatchPenalties(match) && (
-                              <div className="penalties-display-mobile" style={{ fontSize: '0.85em', color: '#666', marginTop: 2 }}>
+                              <div className="penalties-display-mobile">
                                 ({match.homePenalties} - {match.awayPenalties} pens)
                               </div>
                             )}
@@ -1854,14 +1794,7 @@ const UserView = ({ competitions, selectedCompetition, refreshKey, onCompetition
 
                     {/* Mobile click hint */}
                     {canExpandFixtureDetails(match) && (
-                      <div style={{
-                        fontSize: '11px',
-                        color: '#999',
-                        paddingTop: '4px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '4px'
-                      }}>
+                      <div className="fixture-expand-hint">
                         {expandedMatches.has(match._id) ? (
                           <>
                             <span>^</span>

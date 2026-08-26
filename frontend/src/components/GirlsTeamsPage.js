@@ -1,9 +1,14 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { Users } from 'lucide-react';
 import api from '../utils/api';
 import TeamDetailHero from './TeamDetailHero';
+import TeamDetailBody from './TeamDetailBody';
 import { aggregatePlayerStatsAcrossCompetitions, topByMetric } from '../utils/aggregateTeamPlayerStats';
 import { acwplPosition, ordinal } from '../utils/teamTablePosition';
 
+function teamPickerLogoClass(teamName) {
+  return `team-picker-logo${teamName === 'Falcons' ? ' team-picker-logo--falcons' : ''}`;
+}
 
 export default function GirlsTeamsPage() {
   const [teams, setTeams] = useState([]);
@@ -14,7 +19,6 @@ export default function GirlsTeamsPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  // Fetch only Orion and Firestorm
   useEffect(() => {
     api.get('/teams')
       .then(({ data }) => setTeams(data.filter(t => ['Orion', 'Firestorm'].includes(t.name))))
@@ -71,37 +75,31 @@ export default function GirlsTeamsPage() {
   }, [selectedTeam, acwplMatches, teams]);
 
   return (
-    <div className="teams-page">
-
-      {/* Team Grid (hidden when a team is selected) */}
+    <div className="teams-page teams-page--girls">
       {!selectedTeam && (
-        <div className="team-cards">
-          {teams.map(t => (
-            <button
-              key={t._id}
-              className={`team-card`}
-              onClick={() => setSelectedTeam(t)}
-              style={{ padding: '10px 12px' }}
-            >
-              <img
-                src={t.logo}
-                alt={t.name}
-                style={{
-                  width: 80,
-                  height: 80,
-                  maxWidth: '26vw',
-                  maxHeight: '26vw',
-                  objectFit: 'contain',
-                  backgroundColor: t.name === 'Falcons' ? '#94a3b8' : 'transparent',
-                  padding: t.name === 'Falcons' ? '4px' : '0',
-                  borderRadius: '10px',
-                  boxSizing: 'border-box'
-                }}
-              />
-              <span style={{ marginTop: 8, fontWeight: 600 }}>{t.name}</span>
-            </button>
-          ))}
-        </div>
+        <>
+          <header className="teams-page-header">
+            <h1><Users size={22} aria-hidden="true" /> Girls Teams</h1>
+            <p>Orion and Firestorm — ACWPL squads, leadership, and player statistics.</p>
+          </header>
+          <div className="team-cards">
+            {teams.map(t => (
+              <button
+                key={t._id}
+                type="button"
+                className="team-card"
+                onClick={() => setSelectedTeam(t)}
+              >
+                <img
+                  src={t.logo}
+                  alt=""
+                  className={teamPickerLogoClass(t.name)}
+                />
+                <span className="team-card-name">{t.name}</span>
+              </button>
+            ))}
+          </div>
+        </>
       )}
 
       {selectedTeam && (
@@ -112,63 +110,17 @@ export default function GirlsTeamsPage() {
             subtitle={heroTableSubtitle}
             backLabel="Back to teams"
           />
-          <div className="team-detail-body">
-          {loading && <div className="loading-inline">Loading squad…</div>}
-          {error && <div className="error-inline">{error}</div>}
-          {!loading && !error && (
-            <>
-              {/* Team Info */}
-              <div style={{ marginBottom: 20, paddingBottom: 15, borderBottom: '1px solid #ddd' }}>
-                {selectedTeam.staff && selectedTeam.staff.length > 0 && (
-                  <div style={{ marginBottom: 10 }}>
-                    <strong>Coaches:</strong>
-                    <ul style={{ margin: '5px 0 0 20px', fontSize: '0.95em' }}>
-                      {selectedTeam.staff.map((s, idx) => (
-                        <li key={idx}>{s.name} ({s.role})</li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-                <div style={{ marginBottom: 10 }}>
-                  <strong>Captain:</strong> {captain ? captain.name : 'N/A'}
-                </div>
-                <div style={{ marginBottom: 10 }}>
-                  <strong>Vice Captain:</strong> {viceCaptain ? viceCaptain.name : 'N/A'}
-                </div>
-                <div style={{ marginBottom: 10 }}>
-                  <strong>Top Scorer:</strong> {topScorer ? `${topScorer.player?.name || 'Unknown'} (${topScorer.goals || 0})` : 'N/A'}
-                </div>
-                <div>
-                  <strong>Top Assister:</strong> {topAssister ? `${topAssister.player?.name || 'Unknown'} (${topAssister.assists || 0})` : 'N/A'}
-                </div>
-              </div>
-
-              {/* Squad List */}
-              <h4 style={{ marginTop: 20, marginBottom: 10 }}>Squad</h4>
-              <div className="squad-groups">
-                {['GK','DF','MF','ATT'].map(pos => (
-                  <div key={pos} className={`squad-group squad-${pos}`}>
-                    <div className="group-title">{pos}</div>
-                    <ul>
-                      {grouped[pos].map(p => (
-                        <li key={p._id} className="player-row" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                            <span className="shirt-number">{p.number ?? '-'}</span>
-                            <span className="player-name" style={{ color: '#1e293b', fontWeight: 500 }}>{p.name}</span>
-                          </div>
-                          <div style={{ fontSize: '0.85em', color: '#666' }}>
-                            {p.isCaptain && <span style={{ marginRight: 6, fontWeight: 'bold', color: '#d97706' }}>C</span>}
-                            {p.isViceCaptain && <span style={{ fontWeight: 'bold', color: '#059669' }}>VC</span>}
-                          </div>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                ))}
-              </div>
-            </>
-          )}
-          </div>
+          <TeamDetailBody
+            team={selectedTeam}
+            loading={loading}
+            error={error}
+            captain={captain}
+            viceCaptain={viceCaptain}
+            topScorer={topScorer}
+            topAssister={topAssister}
+            grouped={grouped}
+            variant="girls"
+          />
         </div>
       )}
     </div>

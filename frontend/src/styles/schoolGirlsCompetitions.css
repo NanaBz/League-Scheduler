@@ -1,0 +1,298 @@
+/**
+ * ACWPL & Girls Super Cup — school girls competitions (Orion vs Firestorm).
+ * Visual-only polish aligned with fixtures.css league design.
+ * Scoped to .acwpl-fixtures-bg and #acwpl-standings — not Agha Cup / Fantasy / ACFPL.
+ */
+
+/* ── Shared fixtures container (desktop + mobile list wrapper) ── */
+#fixtures .acwpl-fixtures-bg,
+.fixtures-mobile .acwpl-fixtures-bg {
+  background: var(--apl-surface-muted, #f8fafc);
+  border: 1px solid var(--apl-border-subtle, #e2e8f0);
+  border-radius: var(--apl-radius-md, 12px);
+  box-shadow: var(--apl-shadow-sm);
+}
+
+#fixtures .acwpl-fixtures-bg {
+  padding: var(--apl-space-4, 1rem);
+}
+
+#fixtures .acwpl-fixtures-bg .matchweek-header {
+  margin-bottom: var(--apl-space-3, 0.75rem);
+  border-radius: var(--apl-radius-md, 12px);
+  background: linear-gradient(135deg, #1e3a5f 0%, #2563eb 100%);
+  box-shadow: var(--apl-shadow-sm);
+}
+
+#fixtures .acwpl-fixtures-bg .matchweek-header h3 {
+  font-size: 1.05rem;
+  letter-spacing: 0.06em;
+}
+
+#fixtures .acwpl-fixtures-bg .match-row {
+  margin-left: 0;
+  border-left: none;
+  padding-left: 0.75rem;
+  background: transparent !important;
+  border-bottom: 1px solid var(--apl-border-subtle, #e2e8f0);
+  transition: background var(--apl-transition-fast, 0.15s ease);
+}
+
+#fixtures .acwpl-fixtures-bg .match-row:hover {
+  background: rgba(255, 255, 255, 0.65) !important;
+}
+
+#fixtures .acwpl-fixtures-bg .match-row .team-info {
+  gap: 0.65rem;
+  min-width: 0;
+}
+
+#fixtures .acwpl-fixtures-bg .match-row .team-info img,
+#fixtures .acwpl-fixtures-bg .match-row .team-logo {
+  width: 32px;
+  height: 32px;
+  max-width: 32px;
+  max-height: 32px;
+  object-fit: contain;
+  flex-shrink: 0;
+  padding: 2px;
+  box-sizing: border-box;
+  border-radius: var(--apl-radius-sm, 8px);
+  background: var(--apl-surface-base, #fff);
+  border: 1px solid var(--apl-border-subtle, #e2e8f0);
+}
+
+#fixtures .acwpl-fixtures-bg .match-row .team-info strong {
+  font-weight: var(--apl-weight-semibold, 600);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+#fixtures .acwpl-fixtures-bg .match-row .score-display {
+  font-size: 1.05rem;
+  font-weight: var(--apl-weight-bold, 700);
+  color: var(--primary-red);
+}
+
+/* Girls Super Cup mobile section header accent */
+.fixtures-mobile .school-girls-section--gsc .matchweek-header-mobile {
+  background: linear-gradient(135deg, #6b21a8 0%, #a21caf 100%);
+}
+
+/* ── ACWPL standings table ── */
+#acwpl-standings {
+  margin-bottom: var(--apl-space-4, 1rem);
+}
+
+#acwpl-standings .table .team-info {
+  gap: 0.65rem;
+}
+
+#acwpl-standings .table .team-info img,
+#acwpl-standings .table .team-logo {
+  width: 36px;
+  height: 36px;
+  max-width: 36px;
+  max-height: 36px;
+  object-fit: contain;
+  flex-shrink: 0;
+  padding: 2px;
+  box-sizing: border-box;
+  border-radius: var(--apl-radius-sm, 8px);
+  background: var(--apl-surface-base, #fff);
+  border: 1px solid var(--apl-border-subtle, #e2e8f0);
+}
+
+#acwpl-standings .league-card .team-info {
+  align-items: center;
+  gap: 0.75rem;
+}
+
+#acwpl-standings .league-card .team-details h3 {
+  font-size: 1.05rem;
+  white-space: normal;
+  overflow: visible;
+  text-overflow: unset;
+}
+
+/* ── Mobile fixture cards: Orion / Firestorm head-to-head ── */
+@media (max-width: 768px) {
+  .fixtures-mobile .acwpl-fixtures-bg {
+    display: flex;
+    flex-direction: column;
+    gap: var(--apl-space-3, 0.75rem);
+    padding: var(--apl-space-3, 0.75rem);
+    overflow-x: hidden;
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  .fixtures-mobile .acwpl-fixtures-bg .fixture-card {
+    overflow: hidden;
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+
+  .fixtures-mobile .acwpl-fixtures-bg .fixture-teams {
+    gap: 0.45rem;
+    align-items: stretch;
+    overflow: hidden;
+    max-width: 100%;
+  }
+
+  .fixtures-mobile .acwpl-fixtures-bg .fixture-card .team-section {
+    flex: 1 1 0;
+    min-width: 0;
+    max-width: none;
+  }
+
+  .fixtures-mobile .acwpl-fixtures-bg .fixture-card .team-info {
+    width: 100%;
+    gap: 0.45rem;
+  }
+
+  /* Larger logos — only two teams, short names, more horizontal room */
+  .fixtures-mobile .acwpl-fixtures-bg .fixture-card .team-info img,
+  .fixtures-mobile .acwpl-fixtures-bg .fixture-card .team-logo {
+    width: 52px !important;
+    height: 52px !important;
+    max-width: 52px !important;
+    max-height: 52px !important;
+    min-width: 52px !important;
+    min-height: 52px !important;
+    object-fit: contain !important;
+    box-sizing: border-box !important;
+    padding: 3px !important;
+    border-radius: var(--apl-radius-sm, 8px);
+    background: var(--apl-surface-base, #fff);
+    border: 1px solid var(--apl-border-subtle, #e2e8f0);
+    flex-shrink: 0;
+  }
+
+  .fixtures-mobile .acwpl-fixtures-bg .fixture-card .team-name {
+    font-size: 0.84rem;
+    font-weight: var(--apl-weight-semibold, 600);
+    line-height: 1.25;
+    max-width: 100%;
+    word-break: break-word;
+    hyphens: auto;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .fixtures-mobile .acwpl-fixtures-bg .vs-section {
+    flex: 0 0 auto;
+    min-width: 4rem;
+    max-width: 5.5rem;
+    padding: 0 0.15rem;
+  }
+
+  .fixtures-mobile .acwpl-fixtures-bg .score-display {
+    font-size: 1.08rem !important;
+    font-weight: var(--apl-weight-bold, 700) !important;
+    padding: 0.38rem 0.5rem !important;
+    white-space: nowrap;
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .fixtures-mobile .acwpl-fixtures-bg .fixture-card .team-score {
+    font-size: 1.3rem;
+    min-width: 2.1rem;
+  }
+
+  .fixtures-mobile .acwpl-fixtures-bg .vs-display {
+    width: 2.45rem;
+    height: 2.45rem;
+    font-size: 0.82rem;
+  }
+
+  /* ACWPL table mobile cards */
+  #acwpl-standings .league-card .team-info img,
+  #acwpl-standings .league-card .team-logo {
+    width: 48px !important;
+    height: 48px !important;
+    max-width: 48px !important;
+    max-height: 48px !important;
+    min-width: 48px !important;
+    min-height: 48px !important;
+    object-fit: contain !important;
+    flex-shrink: 0;
+    border-radius: var(--apl-radius-sm, 8px);
+    background: var(--apl-surface-base, #fff);
+    border: 1px solid var(--apl-border-subtle, #e2e8f0);
+    padding: 3px !important;
+    box-sizing: border-box !important;
+  }
+}
+
+/* 375px / 390px phones */
+@media screen and (max-width: 390px) {
+  .fixtures-mobile .acwpl-fixtures-bg {
+    padding: 0.65rem;
+  }
+
+  .fixtures-mobile .acwpl-fixtures-bg .fixture-card {
+    padding: 0.85rem 0.7rem;
+  }
+
+  .fixtures-mobile .acwpl-fixtures-bg .fixture-card .team-info img,
+  .fixtures-mobile .acwpl-fixtures-bg .fixture-card .team-logo {
+    width: 48px !important;
+    height: 48px !important;
+    max-width: 48px !important;
+    max-height: 48px !important;
+    min-width: 0 !important;
+    min-height: 48px !important;
+  }
+
+  .fixtures-mobile .acwpl-fixtures-bg .fixture-card .team-name {
+    font-size: 0.8rem;
+  }
+
+  .fixtures-mobile .acwpl-fixtures-bg .vs-section {
+    min-width: 3.25rem;
+    max-width: 4.75rem;
+  }
+
+  .fixtures-mobile .acwpl-fixtures-bg .score-display {
+    font-size: 1rem !important;
+    padding: 0.32rem 0.42rem !important;
+  }
+
+  #acwpl-standings .league-card .team-info img,
+  #acwpl-standings .league-card .team-logo {
+    width: 44px !important;
+    height: 44px !important;
+    max-width: 44px !important;
+    max-height: 44px !important;
+    min-width: 44px !important;
+    min-height: 44px !important;
+  }
+}
+
+/* Beat global 640px .team-logo shrink — only between 391–640px (390px rules take precedence) */
+@media screen and (min-width: 391px) and (max-width: 640px) {
+  .fixtures-mobile .acwpl-fixtures-bg .fixture-card .team-info img,
+  .fixtures-mobile .acwpl-fixtures-bg .fixture-card .team-logo {
+    width: 50px !important;
+    height: 50px !important;
+    max-width: 50px !important;
+    max-height: 50px !important;
+    min-width: 50px !important;
+    min-height: 50px !important;
+  }
+
+  #acwpl-standings .league-card .team-info img,
+  #acwpl-standings .league-card .team-logo {
+    width: 46px !important;
+    height: 46px !important;
+    max-width: 46px !important;
+    max-height: 46px !important;
+    min-width: 46px !important;
+    min-height: 46px !important;
+  }
+}

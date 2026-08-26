@@ -49,6 +49,31 @@
   flex-direction: column;
 }
 
+.fantasy-card .team-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.fantasy-motw-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+  color: #78350f;
+  border: 1px solid rgba(251, 191, 36, 0.55);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.22);
+  white-space: nowrap;
+  line-height: 1.2;
+}
+
 .fantasy-card .names .team {
   font-weight: 800;
   font-size: 1.05rem;
@@ -162,10 +187,11 @@
   text-overflow: ellipsis;
 }
 
-@media (max-width: 360px) {
+@media (max-width: 767px) {
   .fantasy-card .deadline-line {
-    font-size: 0.74rem;
     white-space: normal;
+    overflow: visible;
+    text-overflow: unset;
   }
 }
 
@@ -491,6 +517,7 @@
   border: none;
   border-radius: 999px;
   padding: 10px 14px;
+  min-height: 44px;
   font-size: 0.88rem;
   font-weight: 700;
   cursor: pointer;
