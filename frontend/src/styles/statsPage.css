@@ -1,0 +1,431 @@
+/**
+ * Statistics page — visual polish aligned with Archived Seasons.
+ * Scoped to .stats-page; shared archive classes (.stats-list, .stats-rank) unchanged globally.
+ */
+
+.stats-page {
+  max-width: var(--apl-page-max-narrow, 900px);
+  margin: 0 auto;
+  padding: 0 0 var(--apl-page-padding-bottom, 2rem);
+}
+
+.stats-page-header {
+  margin-bottom: var(--apl-space-5, 1.25rem);
+}
+
+.stats-page-header h1 {
+  margin: 0 0 var(--apl-space-2, 0.5rem);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: clamp(1.35rem, 3vw, 1.65rem);
+  font-weight: var(--apl-weight-bold, 700);
+  color: var(--apl-text-body, #1e293b);
+  letter-spacing: var(--apl-tracking-tight, -0.02em);
+}
+
+.stats-page-header p {
+  margin: 0;
+  color: var(--apl-text-muted, #64748b);
+  font-size: var(--apl-text-sm, 0.875rem);
+  line-height: 1.5;
+  max-width: 36rem;
+}
+
+/* Competition tabs */
+.stats-page .comp-tabs {
+  display: flex;
+  gap: var(--apl-space-2, 0.5rem);
+  margin-bottom: var(--apl-space-4, 1rem);
+  flex-wrap: wrap;
+  padding: 3px;
+  background: var(--apl-surface-muted, #f8fafc);
+  border-radius: var(--apl-radius-md, 12px);
+  border: 1px solid var(--apl-border-subtle, #e2e8f0);
+}
+
+.stats-page .comp-tab {
+  flex: 1 1 auto;
+  min-width: fit-content;
+  border: none;
+  box-shadow: none;
+  background: transparent;
+}
+
+.stats-page .comp-tab:hover {
+  background: rgba(255, 255, 255, 0.85);
+}
+
+.stats-page .comp-tab.active {
+  background: var(--apl-surface-base, #fff);
+  box-shadow: var(--apl-shadow-sm);
+  border: 1px solid var(--apl-border-subtle, #e2e8f0);
+}
+
+.stats-page .stats-season-hint {
+  margin: 0 0 var(--apl-space-4, 1rem);
+  padding: var(--apl-space-2, 0.5rem) var(--apl-space-3, 0.75rem);
+  font-size: var(--apl-text-sm, 0.875rem);
+  color: var(--apl-text-muted, #64748b);
+  background: var(--apl-surface-muted, #f8fafc);
+  border-radius: var(--apl-radius-sm, 8px);
+  display: inline-block;
+}
+
+.stats-page .loading-inline,
+.stats-page .error-inline {
+  margin-bottom: var(--apl-space-4, 1rem);
+}
+
+/* Metric grid */
+.stats-page .stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: var(--apl-space-4, 1rem);
+}
+
+/* Metric panel */
+.stats-page .stats-section {
+  background: var(--apl-surface-base, #fff);
+  border: 1px solid var(--apl-border-subtle, #e2e8f0);
+  border-radius: var(--apl-radius-md, 12px);
+  padding: var(--apl-space-4, 1rem);
+  box-shadow: var(--apl-shadow-sm);
+  transition:
+    box-shadow var(--apl-transition-base, 0.18s ease),
+    border-color var(--apl-transition-fast, 0.15s ease);
+}
+
+.stats-page .stats-section:hover {
+  box-shadow: var(--apl-shadow-md);
+}
+
+.stats-page .stats-section-expanded {
+  border-color: var(--apl-border-muted, #cbd5e1) !important;
+  border-width: 1px !important;
+  box-shadow: var(--apl-shadow-md) !important;
+  background: var(--apl-surface-base, #fff) !important;
+}
+
+.stats-page .stats-section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--apl-space-3, 0.75rem);
+  flex-wrap: wrap;
+  margin-bottom: var(--apl-space-3, 0.75rem);
+  padding-bottom: var(--apl-space-3, 0.75rem);
+  border-bottom: 1px solid var(--apl-border-subtle, #e2e8f0);
+}
+
+.stats-page .stats-section-title {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: var(--apl-text-lg, 1.05rem);
+  font-weight: var(--apl-weight-bold, 700);
+  color: var(--apl-text-body, #1e293b);
+}
+
+.stats-page .stats-section-title svg {
+  flex-shrink: 0;
+  color: var(--primary-red, #dc2626);
+  opacity: 0.9;
+}
+
+.stats-page .stats-section--cards-yellow .stats-section-title svg {
+  color: #ca8a04;
+}
+
+.stats-page .stats-section--cards-red .stats-section-title svg {
+  color: #dc2626;
+}
+
+/* Expand control */
+.stats-page .stats-expand-btn {
+  padding: 0.4rem 0.75rem;
+  font-size: var(--apl-text-xs, 0.75rem);
+  color: var(--primary-red-dark, #b91c1c);
+  background: var(--apl-surface-muted, #f8fafc);
+  border: 1px solid var(--apl-border-subtle, #e2e8f0);
+  border-radius: var(--apl-radius-pill, 999px);
+  cursor: pointer;
+  transition:
+    background var(--apl-transition-fast, 0.15s ease),
+    border-color var(--apl-transition-fast, 0.15s ease),
+    color var(--apl-transition-fast, 0.15s ease);
+  font-weight: var(--apl-weight-semibold, 600);
+  white-space: nowrap;
+  flex-shrink: 0;
+  min-height: var(--apl-touch-min, 44px);
+}
+
+.stats-page .stats-expand-btn:hover {
+  background: #f1f5f9;
+  border-color: var(--apl-border-muted, #cbd5e1);
+  color: var(--primary-red-dark, #b91c1c);
+  transform: none;
+}
+
+.stats-page .stats-expand-btn-active,
+.stats-page .stats-expand-btn-active:hover {
+  background: var(--apl-surface-active, #fef2f2) !important;
+  border-color: var(--primary-red-lighter, #fca5a5) !important;
+  color: var(--primary-red-dark, #b91c1c) !important;
+  font-weight: var(--apl-weight-bold, 700) !important;
+}
+
+.stats-page .stats-expand-btn:focus-visible {
+  outline: none;
+  box-shadow: var(--apl-focus-ring);
+}
+
+/* Leaderboard list */
+.stats-page .stats-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.stats-page .stats-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--apl-space-3, 0.75rem);
+  padding: 0.65rem 0.55rem;
+  border-radius: var(--apl-radius-sm, 8px);
+  transition: background var(--apl-transition-fast, 0.15s ease);
+}
+
+.stats-page .stats-item:nth-child(odd) {
+  background: transparent;
+}
+
+.stats-page .stats-item:hover {
+  background: var(--apl-surface-muted, #f8fafc);
+}
+
+.stats-page .stats-item--top-1 {
+  background: linear-gradient(90deg, rgba(254, 243, 199, 0.45) 0%, transparent 100%);
+}
+
+.stats-page .stats-item--top-1:hover {
+  background: linear-gradient(90deg, rgba(254, 243, 199, 0.65) 0%, #f8fafc 100%);
+}
+
+.stats-page .stats-item--top-2:hover,
+.stats-page .stats-item--top-3:hover {
+  background: #f1f5f9;
+}
+
+.stats-page .stats-player {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  min-width: 0;
+  flex: 1;
+}
+
+.stats-page .stats-rank {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.625rem;
+  height: 1.625rem;
+  border-radius: var(--apl-radius-pill, 999px);
+  background: #f1f5f9;
+  color: #475569;
+  font-size: 0.72rem;
+  font-weight: var(--apl-weight-bold, 700);
+  flex-shrink: 0;
+}
+
+.stats-page .stats-item--top-1 .stats-rank {
+  background: #fef3c7;
+  color: #b45309;
+}
+
+.stats-page .stats-item--top-2 .stats-rank {
+  background: #e2e8f0;
+  color: #475569;
+}
+
+.stats-page .stats-item--top-3 .stats-rank {
+  background: #ffedd5;
+  color: #c2410c;
+}
+
+.stats-page .stats-player-logos {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  flex-shrink: 0;
+}
+
+.stats-page .stats-team-logo {
+  width: 26px;
+  height: 26px;
+  object-fit: contain;
+  border-radius: var(--apl-radius-sm, 8px);
+  flex-shrink: 0;
+  background: var(--apl-surface-base, #fff);
+  border: 1px solid var(--apl-border-subtle, #e2e8f0);
+  padding: 2px;
+  box-sizing: border-box;
+}
+
+.stats-page .stats-team-logo--falcons {
+  background-color: #94a3b8;
+  padding: 4px;
+  border-radius: 8px;
+}
+
+.stats-page .stats-player-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 0.12rem;
+  min-width: 0;
+}
+
+.stats-page .stats-name {
+  font-weight: var(--apl-weight-semibold, 600);
+  font-size: var(--apl-text-sm, 0.875rem);
+  color: var(--apl-text-body, #1e293b);
+  line-height: 1.25;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.stats-page .stats-team {
+  color: var(--apl-text-muted, #64748b);
+  font-size: var(--apl-text-xs, 0.75rem);
+  margin-left: 0;
+  line-height: 1.3;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.stats-page .stats-value {
+  font-weight: var(--apl-weight-extrabold, 800);
+  font-size: 1.05rem;
+  color: var(--primary-red-dark, #b91c1c);
+  flex-shrink: 0;
+  min-width: 2rem;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.stats-page .stats-empty {
+  margin: 0;
+  padding: var(--apl-space-4, 1rem) var(--apl-space-2, 0.5rem);
+  color: var(--apl-text-muted, #64748b);
+  font-size: var(--apl-text-sm, 0.875rem);
+  font-style: italic;
+  text-align: center;
+}
+
+/* Card metric icon fills */
+.stats-page .stats-metric-icon--yellow {
+  fill: #facc15;
+  stroke: #ca8a04;
+}
+
+.stats-page .stats-metric-icon--red {
+  fill: #f87171;
+  stroke: #dc2626;
+}
+
+/* Mobile */
+@media (max-width: 768px) {
+  .stats-page .stats-grid {
+    grid-template-columns: 1fr;
+    gap: var(--apl-space-3, 0.75rem);
+  }
+
+  .stats-page .comp-tabs {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+
+  .stats-page .comp-tabs::-webkit-scrollbar {
+    display: none;
+  }
+
+  .stats-page .comp-tab {
+    flex: 0 0 auto;
+    white-space: nowrap;
+    font-size: var(--apl-text-sm, 0.875rem);
+    padding: var(--apl-space-2, 0.5rem) var(--apl-space-3, 0.75rem);
+  }
+
+  .stats-page .stats-section {
+    padding: var(--apl-space-3, 0.75rem);
+  }
+
+  .stats-page .stats-item {
+    padding: 0.55rem 0.35rem;
+    gap: 0.5rem;
+  }
+
+  .stats-page .stats-team-logo {
+    width: 28px;
+    height: 28px;
+  }
+
+  .stats-page .stats-name {
+    white-space: normal;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .stats-page .stats-team {
+    white-space: normal;
+    display: -webkit-box;
+    -webkit-line-clamp: 1;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .stats-page .stats-value {
+    font-size: 1.1rem;
+  }
+}
+
+@media screen and (max-width: 390px) {
+  .stats-page .stats-section-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .stats-page .stats-expand-btn {
+    align-self: flex-end;
+  }
+
+  .stats-page .stats-player {
+    gap: 0.45rem;
+  }
+
+  .stats-page .stats-rank {
+    width: 1.5rem;
+    height: 1.5rem;
+    font-size: 0.68rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .stats-page .stats-section,
+  .stats-page .stats-item,
+  .stats-page .stats-expand-btn {
+    transition: none;
+  }
+}

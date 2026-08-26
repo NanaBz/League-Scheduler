@@ -1,0 +1,778 @@
+/**
+ * ACFPL Fantasy UI refresh — visual/layout only.
+ * Reduces nested cards, improves mobile readability, aligns pitch/modals.
+ * Does NOT change FPL logic, scoring, or data flows.
+ */
+
+/* ── Shell: drop extra card wrapper on logged-in dashboard ── */
+.fantasy-auth-container:has(.fantasy-card) {
+  max-width: 640px;
+  background: transparent;
+  box-shadow: none;
+  padding: 0;
+  border-radius: 0;
+}
+
+.fantasy-auth-container:has(.fantasy-card) .fantasy-btn-secondary {
+  background: rgba(15, 23, 42, 0.06);
+  border: 1px solid #e2e8f0;
+}
+
+/* ── Dashboard card: flatter metrics, less vertical waste ── */
+.fantasy-card {
+  min-height: 0 !important;
+  padding: 14px 14px 16px !important;
+  border-radius: 14px !important;
+}
+
+.fantasy-card .divider {
+  margin: 10px 0;
+  opacity: 0.35;
+}
+
+.fantasy-card .gw-header {
+  font-size: 0.92rem;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.fantasy-card .metrics {
+  margin-top: 8px;
+  gap: 0;
+  padding: 4px;
+  border-radius: 12px;
+  background: rgba(0, 0, 0, 0.28);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.fantasy-card .metric {
+  background: transparent !important;
+  border: none !important;
+  border-radius: 0 !important;
+  padding: 10px 6px !important;
+  box-shadow: none !important;
+}
+
+.fantasy-card .metric:not(:last-child) {
+  border-right: 1px solid rgba(255, 255, 255, 0.12) !important;
+}
+
+.fantasy-card .metric .label {
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  opacity: 0.85;
+}
+
+.fantasy-card .metric .value {
+  font-size: 1.45rem;
+  line-height: 1.1;
+}
+
+.fantasy-card .deadline {
+  margin-top: 10px;
+  padding: 8px 10px;
+  background: rgba(0, 0, 0, 0.22);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.fantasy-card .actions {
+  margin-top: 12px;
+  gap: 8px;
+}
+
+.fantasy-card .btn-pill {
+  min-height: 46px;
+  padding: 12px 14px;
+}
+
+/* Upcoming fixtures — single list, less chrome */
+.fantasy-upcoming-fixtures {
+  margin-top: 12px;
+  padding: 0;
+}
+
+.fantasy-lc-section {
+  margin-top: 12px;
+}
+
+.fantasy-lc-cup-embed {
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+}
+
+.fantasy-oal-strip {
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+}
+
+/* ── Pick Team / Transfers pages — full-width, no double card ── */
+.pick-team-container.fantasy-section,
+.transfers-container.fantasy-section,
+.pick-team-container,
+.transfers-container {
+  min-height: 0;
+  background: transparent;
+  border-radius: 0;
+  padding: 0;
+  max-width: 640px;
+  margin: 0 auto;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.pick-team-header h2,
+.transfers-title {
+  font-size: clamp(1.15rem, 3vw, 1.35rem);
+}
+
+/* Chips — single band, less nested purple box */
+.pick-team-container .chips-section {
+  padding: 10px;
+  margin-bottom: 12px;
+  border-radius: 12px;
+}
+
+.pick-team-container .formation-display {
+  margin-bottom: 10px;
+  padding: 10px 12px;
+  background: #f8fafc;
+}
+
+/* Pick Team pitch — FPL-style frame + larger slots */
+.pick-team-pitch-wrap {
+  max-width: min(480px, 100%);
+  margin: 0 auto 16px;
+  padding: 10px 8px 12px;
+  border-radius: 16px;
+  background: linear-gradient(165deg, #3730a3 0%, #1e1b4b 55%, #172554 100%);
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.18);
+  box-sizing: border-box;
+}
+
+.pick-team-container .formation-pitch {
+  margin-bottom: 0;
+  min-height: 0;
+  padding: 16px 8px 18px;
+  border: 2px solid rgba(255, 255, 255, 0.28);
+  background-color: #14532d;
+  background-image:
+    repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.03) 0 8px, transparent 8px 16px),
+    linear-gradient(180deg, #166534 0%, #15803d 42%, #166534 100%);
+  box-shadow: inset 0 0 40px rgba(0, 0, 0, 0.15);
+}
+
+.pick-team-container .formation-row {
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
+  flex-wrap: nowrap;
+  gap: 8px;
+  width: 100%;
+}
+
+.pick-team-container .player-slot {
+  flex: 0 0 92px;
+  width: 92px;
+  min-width: 92px;
+  max-width: 92px;
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  padding: 0;
+  backdrop-filter: none;
+  gap: 4px;
+  align-items: stretch;
+  box-sizing: border-box;
+}
+
+.pick-team-container .player-slot:hover {
+  background: transparent;
+  transform: none;
+  box-shadow: none;
+}
+
+.pick-team-container .player-slot:hover .player-info {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.22);
+}
+
+.pick-team-container .player-slot > svg,
+.pick-team-container .player-slot .jersey-icon {
+  align-self: center;
+  margin: 0 auto 4px;
+  filter: drop-shadow(0 3px 5px rgba(0, 0, 0, 0.35));
+}
+
+.pick-team-container .player-info {
+  width: 100%;
+  min-height: 46px;
+  padding: 6px 4px 7px;
+  border-radius: 9px;
+  background: #fff;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.16);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.pick-team-container .player-name {
+  color: #0f172a;
+  text-shadow: none;
+  font-size: 0.68rem;
+  font-weight: 800;
+  line-height: 1.2;
+  white-space: normal;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  word-break: break-word;
+}
+
+.pick-team-container .player-opponent {
+  color: #64748b;
+  text-shadow: none;
+  font-size: 0.56rem;
+  font-weight: 600;
+  line-height: 1.15;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.pick-team-container .empty-slot {
+  min-height: 100px;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px dashed rgba(255, 255, 255, 0.45);
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.12);
+  color: rgba(255, 255, 255, 0.75);
+  font-size: 0.62rem;
+  padding: 8px 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.pick-team-container .role-chip {
+  top: 4px;
+  left: 4px;
+  z-index: 3;
+}
+
+/* Bench — cleaner tiles */
+.pick-team-container .bench-section h3 {
+  font-size: 1rem;
+  margin-bottom: 8px;
+}
+
+.pick-team-container .bench-players {
+  grid-template-columns: repeat(auto-fill, minmax(148px, 1fr));
+  gap: 8px;
+}
+
+.pick-team-container .bench-player {
+  padding: 10px 10px 10px 28px;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  background: #fff;
+  box-shadow: 0 1px 4px rgba(15, 23, 42, 0.06);
+}
+
+.pick-team-container .bench-name {
+  font-size: 0.82rem;
+  line-height: 1.25;
+  word-break: break-word;
+}
+
+/* ── Transfers summary — unified strip, readable mobile ── */
+.transfers-container .summary-bar {
+  gap: 6px;
+  margin-bottom: 10px;
+  padding: 4px;
+  border-radius: 12px;
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+}
+
+.transfers-container .summary-item {
+  background: transparent;
+  color: #0f172a;
+  border: none;
+  border-radius: 8px;
+  min-height: 52px;
+  padding: 6px 4px;
+}
+
+.transfers-container .summary-item .label {
+  font-size: 0.62rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #64748b;
+  opacity: 1;
+}
+
+.transfers-container .summary-item .value {
+  font-size: 0.95rem;
+  color: #0f172a;
+  margin-top: 2px;
+}
+
+.transfers-container .summary-item--active {
+  background: #ecfdf5;
+  box-shadow: inset 0 0 0 1px #6ee7b7;
+}
+
+.transfers-container .summary-item--chip-active {
+  background: #f5f3ff;
+  box-shadow: inset 0 0 0 1px #c4b5fd;
+}
+
+.transfers-container .summary-item--active .value,
+.transfers-container .summary-item--chip-active .value {
+  color: inherit;
+}
+
+.transfers-container .transfers-pitch-wrap {
+  max-width: min(480px, 100%);
+}
+
+.transfers-container .pitch {
+  --pitch-slot-max: 92px;
+}
+
+/* ── Player picker modal ── */
+.ppm-overlay {
+  padding: 0;
+  align-items: flex-end;
+}
+
+.ppm-modal {
+  width: 100%;
+  max-width: 720px;
+  max-height: 92vh;
+  border-radius: 16px 16px 0 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.ppm-header {
+  padding: 14px 16px;
+  flex-shrink: 0;
+}
+
+.ppm-controls {
+  padding: 10px 12px;
+  flex-shrink: 0;
+}
+
+.ppm-list {
+  flex: 1;
+  overflow-y: auto;
+  max-height: none;
+}
+
+.ppm-row-item {
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+  gap: 10px;
+  padding: 12px 14px;
+  align-items: start;
+}
+
+.ppm-player-main .ppm-name {
+  font-size: 0.92rem;
+  line-height: 1.25;
+  word-break: break-word;
+}
+
+.ppm-player-main .ppm-sub {
+  font-size: 0.78rem;
+  margin-top: 2px;
+}
+
+.ppm-meta {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px 8px;
+  align-items: start;
+}
+
+.ppm-price {
+  grid-column: 1 / -1;
+  font-size: 0.95rem;
+  color: #0f172a;
+}
+
+.ppm-stat {
+  font-size: 0.75rem;
+  color: #475569;
+}
+
+.ppm-next {
+  grid-column: 1 / -1;
+  margin-top: 2px;
+}
+
+.ppm-next-pill {
+  font-size: 0.68rem;
+}
+
+/* ── Pick team player modal ── */
+.ptpm-overlay {
+  padding: 0;
+  align-items: flex-end;
+}
+
+.ptpm-modal {
+  max-width: 480px;
+  max-height: 92vh;
+  border-radius: 16px 16px 0 0;
+}
+
+.ptpm-player {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 16px;
+}
+
+.ptpm-player-text {
+  width: 100%;
+}
+
+.ptpm-name {
+  font-size: 1.1rem;
+  line-height: 1.25;
+  word-break: break-word;
+}
+
+.ptpm-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  width: 100%;
+  margin-top: 10px;
+}
+
+.ptpm-stat-tile {
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+}
+
+.ptpm-stat-tile__label {
+  display: block;
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #64748b;
+  margin-bottom: 2px;
+}
+
+.ptpm-stat-tile__value {
+  font-size: 0.88rem;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.ptpm-swap-row {
+  padding: 12px;
+  gap: 10px;
+  align-items: flex-start;
+}
+
+.ptpm-swap-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.ptpm-swap-name {
+  word-break: break-word;
+  line-height: 1.25;
+}
+
+.ptpm-actions {
+  padding: 12px 16px 16px;
+  padding-bottom: max(16px, env(safe-area-inset-bottom));
+}
+
+.ptpm-btn {
+  min-height: 46px;
+}
+
+/* ── Manager profile — flatter stats ── */
+.fmp-panel {
+  max-width: 640px;
+  margin: 0 auto 12px;
+}
+
+.fmp-current {
+  border: 1px solid #e2e8f0;
+  box-shadow: none;
+  padding: 12px;
+}
+
+.fmp-current-grid {
+  gap: 8px;
+}
+
+.fmp-stat {
+  padding: 8px;
+  background: #f8fafc;
+}
+
+/* ── Leagues & Cups ── */
+.leagues-cups-container {
+  max-width: 640px;
+  min-height: 0;
+  background: transparent;
+  padding: 0;
+}
+
+.leagues-cups-header h2 {
+  font-size: clamp(1.15rem, 3vw, 1.4rem);
+}
+
+.lc-tabs {
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.lc-tab {
+  padding: 12px;
+  min-height: 46px;
+}
+
+/* ── Desktop ── */
+@media (min-width: 769px) {
+  .fantasy-auth-container:has(.fantasy-card) {
+    max-width: 720px;
+  }
+
+  .fantasy-card {
+    padding: 18px 20px 20px !important;
+  }
+
+  .fantasy-card .metric .value {
+    font-size: 1.65rem;
+  }
+
+  .ppm-overlay,
+  .ptpm-overlay {
+    align-items: center;
+    padding: 16px;
+  }
+
+  .ppm-modal,
+  .ptpm-modal {
+    border-radius: 14px;
+    max-height: 85vh;
+  }
+
+  .pick-team-pitch-wrap,
+  .transfers-container .transfers-pitch-wrap {
+    max-width: 520px;
+  }
+
+  .pick-team-container .player-slot {
+    flex: 0 0 100px;
+    width: 100px;
+    min-width: 100px;
+    max-width: 100px;
+  }
+}
+
+/* ── Mobile 375 / 390 ── */
+@media (max-width: 768px) {
+  .fantasy-card .metric .value {
+    font-size: 1.28rem;
+  }
+
+  .fantasy-card .metric .label {
+    font-size: 0.62rem;
+  }
+
+  .fantasy-fixture-name {
+    font-size: 0.82rem;
+  }
+
+  .fantasy-fixture-row .fantasy-fixture-side .team-logo {
+    width: 28px;
+    height: 28px;
+    max-width: 28px;
+    max-height: 28px;
+  }
+
+  .pick-team-container .player-slot {
+    flex: 0 0 92px;
+    width: 92px;
+    min-width: 92px;
+    max-width: 92px;
+    padding: 0;
+  }
+
+  .pick-team-container .formation-row {
+    justify-content: center;
+    gap: 6px;
+  }
+
+  /* 4–5 across: compact slots so the row stays inside the pitch frame */
+  .pick-team-container .formation-row[class*='-row-4'],
+  .pick-team-container .formation-row[class*='-row-5'] {
+    gap: 4px;
+  }
+
+  .pick-team-container .formation-row[class*='-row-4'] .player-slot {
+    flex: 0 0 76px;
+    width: 76px;
+    min-width: 76px;
+    max-width: 76px;
+  }
+
+  .pick-team-container .formation-row[class*='-row-5'] .player-slot {
+    flex: 0 0 62px;
+    width: 62px;
+    min-width: 62px;
+    max-width: 62px;
+  }
+
+  .pick-team-container .formation-row[class*='-row-4'] .player-slot > svg,
+  .pick-team-container .formation-row[class*='-row-5'] .player-slot > svg {
+    width: 34px;
+    height: 34px;
+  }
+
+  .pick-team-container .formation-row[class*='-row-5'] .player-slot > svg {
+    width: 30px;
+    height: 30px;
+  }
+
+  .pick-team-container .formation-row[class*='-row-4'] .player-info,
+  .pick-team-container .formation-row[class*='-row-5'] .player-info {
+    min-height: 40px;
+    padding: 5px 3px 6px;
+    border-radius: 8px;
+  }
+
+  .pick-team-container .formation-row[class*='-row-4'] .player-name,
+  .pick-team-container .formation-row[class*='-row-5'] .player-name {
+    font-size: 0.58rem;
+  }
+
+  .pick-team-container .formation-row[class*='-row-4'] .player-opponent,
+  .pick-team-container .formation-row[class*='-row-5'] .player-opponent {
+    font-size: 0.48rem;
+  }
+
+  .pick-team-container .formation-row[class*='-row-4'] .role-chip,
+  .pick-team-container .formation-row[class*='-row-5'] .role-chip {
+    width: 14px;
+    height: 14px;
+    font-size: 0.52rem;
+    top: 2px;
+    left: 2px;
+  }
+
+  .pick-team-container .player-name {
+    font-size: 0.62rem;
+  }
+
+  .pick-team-container .player-opponent {
+    font-size: 0.52rem;
+  }
+
+  .transfers-container .summary-bar {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .transfers-container .summary-item:nth-child(4),
+  .transfers-container .summary-item:nth-child(5) {
+    grid-column: span 1;
+  }
+
+  .transfers-container .pitch {
+    --pitch-gap: 5px;
+    --pitch-slot-max: 86px;
+    padding: 12px 6px 14px;
+  }
+
+  .transfers-container .pitch-player-name {
+    font-size: 0.64rem;
+  }
+
+  .ppm-filter-btn {
+    min-height: 36px;
+    padding: 6px 10px;
+  }
+
+  .ppm-row-item {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .ppm-meta {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .ppm-price {
+    grid-column: auto;
+  }
+
+  .ppm-next {
+    grid-column: 1 / -1;
+  }
+}
+
+@media screen and (max-width: 390px) {
+  .pick-team-pitch-wrap {
+    padding: 8px 6px 10px;
+  }
+
+  .pick-team-container .formation-pitch {
+    padding: 12px 4px 14px;
+  }
+
+  .pick-team-container .formation-row {
+    gap: 4px;
+  }
+
+  /* Tighter on narrow phones — row-4/5 rules above still apply */
+  .pick-team-container .formation-row[class*='-row-4'] .player-slot {
+    flex: 0 0 74px;
+    width: 74px;
+    min-width: 74px;
+    max-width: 74px;
+  }
+
+  .pick-team-container .formation-row[class*='-row-5'] .player-slot {
+    flex: 0 0 56px;
+    width: 56px;
+    min-width: 56px;
+    max-width: 56px;
+  }
+
+  .pick-team-container .formation-row[class*='-row-5'] .player-slot > svg {
+    width: 28px;
+    height: 28px;
+  }
+
+  .pick-team-container .bench-players {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .transfers-container .pitch {
+    --pitch-slot-max: 78px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pick-team-container .player-slot:hover .player-info,
+  .fantasy-card .btn-pill {
+    transition: none;
+  }
+}
