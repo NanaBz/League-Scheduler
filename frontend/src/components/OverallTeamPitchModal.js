@@ -30,21 +30,19 @@ function displayToLineupShape(display) {
 function PitchPlayer({ player, showPoints = true }) {
   if (!player) return null;
   return (
-    <div
-      className="pv-player-slot"
-      data-captain={player.isCaptain ? 'true' : undefined}
-      data-vice={player.isViceCaptain ? 'true' : undefined}
-    >
-      {player.isCaptain ? <span className="pv-role-chip">C</span> : null}
+    <div className="player-slot pick-team-player-card pick-team-player-card--readonly">
+      {player.isCaptain ? <span className="role-chip">C</span> : null}
       {player.isViceCaptain && !player.isCaptain ? (
-        <span className="pv-role-chip pv-role-chip-vc">V</span>
+        <span className="role-chip role-chip-vc">V</span>
       ) : null}
+      {player.autoSubIn ? <span className="role-chip role-chip-autosub">AS</span> : null}
       <JerseyIcon size={40} {...kitColors(getTeamCode(player), player.position)} />
-      <div className="pv-player-info">
-        <span className="pv-player-name">{player.name || '—'}</span>
+      <div className="player-info">
+        <span className="player-name">{player.name || '—'}</span>
         {showPoints ? (
-          <span className="pv-player-points">{player.points ?? 0} pts</span>
+          <span className="player-opponent">{player.points ?? 0} pts</span>
         ) : null}
+        {player.autoSubIn ? <span className="player-opponent player-opponent--autosub">Auto Sub</span> : null}
       </div>
     </div>
   );
@@ -53,17 +51,22 @@ function PitchPlayer({ player, showPoints = true }) {
 function BenchPlayer({ player, benchBoost }) {
   if (!player) {
     return (
-      <div className="pv-bench-card pv-bench-card--empty">
-        <span className="pv-bench-name">—</span>
+      <div className="bench-player bench-player--empty">
+        <span className="bench-name">—</span>
       </div>
     );
   }
   return (
-    <div className={`pv-bench-card${benchBoost ? ' pv-bench-card--boost' : ''}`}>
+    <div
+      className={`bench-player bench-player--readonly${benchBoost ? ' bench-player--boost' : ''}${player.autoSubOut ? ' bench-player--autosub-out' : ''}`}
+    >
       <JerseyIcon size={32} {...kitColors(getTeamCode(player), player.position)} />
-      <div className="pv-bench-info">
-        <span className="pv-bench-name">{player.name || '—'}</span>
-        <span className="pv-bench-points">{(player.rawPoints ?? player.points ?? 0)} pts</span>
+      <div className="bench-player-info">
+        <span className="bench-name">{player.name || '—'}</span>
+        <span className="bench-pos">{(player.rawPoints ?? player.points ?? 0)} pts</span>
+        {player.autoSubOut ? (
+          <span className="bench-pos bench-pos--autosub">Subbed out</span>
+        ) : null}
       </div>
     </div>
   );
@@ -174,47 +177,49 @@ export default function OverallTeamPitchModal({ team, onClose, latestCompletedGa
               "This manager's team is hidden until the gameweek has finished."}
           </p>
         ) : (
-          <>
-            <div className="pv-formation-display">
-              <span className="pv-formation-label">Formation</span>
-              <span className="pv-formation-value">{formation.label}</span>
+          <div className="pick-team-container pv-pitch-view">
+            <div className="formation-display" aria-live="polite">
+              <span className="formation-display__label">Formation</span>
+              <span className="formation-display__value">{formation.label}</span>
             </div>
 
-            <div className="pv-formation-pitch" aria-label="Starting 9">
-              <div className="pv-formation-row">
-                {(displayLineup?.gk || []).map((p, idx) => (
-                  <PitchPlayer key={p._id || idx} player={p} />
-                ))}
-              </div>
-              <div className={`pv-formation-row df-row-${formation.def}`}>
-                {(displayLineup?.def || []).map((p, idx) => (
-                  <PitchPlayer key={p._id || idx} player={p} />
-                ))}
-              </div>
-              <div className={`pv-formation-row mf-row-${formation.mid}`}>
-                {(displayLineup?.mid || []).map((p, idx) => (
-                  <PitchPlayer key={p._id || idx} player={p} />
-                ))}
-              </div>
-              <div className={`pv-formation-row att-row-${formation.att}`}>
-                {(displayLineup?.fwd || []).map((p, idx) => (
-                  <PitchPlayer key={p._id || idx} player={p} />
-                ))}
+            <div className="pick-team-pitch-wrap">
+              <div className="formation-pitch" aria-label="Starting 9">
+                <div className="formation-row">
+                  {(displayLineup?.gk || []).map((p, idx) => (
+                    <PitchPlayer key={p._id || idx} player={p} />
+                  ))}
+                </div>
+                <div className={`formation-row df-row-${formation.def}`}>
+                  {(displayLineup?.def || []).map((p, idx) => (
+                    <PitchPlayer key={p._id || idx} player={p} />
+                  ))}
+                </div>
+                <div className={`formation-row mf-row-${formation.mid}`}>
+                  {(displayLineup?.mid || []).map((p, idx) => (
+                    <PitchPlayer key={p._id || idx} player={p} />
+                  ))}
+                </div>
+                <div className={`formation-row att-row-${formation.att}`}>
+                  {(displayLineup?.fwd || []).map((p, idx) => (
+                    <PitchPlayer key={p._id || idx} player={p} />
+                  ))}
+                </div>
               </div>
             </div>
 
-            <section className="pv-bench-section" aria-label="Bench">
+            <section className="bench-section" aria-label="Bench">
               <div className="pv-bench-header">
-                <h4>Bench</h4>
+                <h3>Bench</h3>
                 <span className="pv-bench-total">{benchTotal} pts</span>
               </div>
-              <div className="pv-bench-players">
+              <div className="bench-players">
                 {benchPlayers.map((p, idx) => (
                   <BenchPlayer key={p?._id || `bench-${idx}`} player={p} benchBoost={benchBoost} />
                 ))}
               </div>
             </section>
-          </>
+          </div>
         )}
       </div>
     </div>

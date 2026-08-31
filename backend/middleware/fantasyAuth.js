@@ -3,7 +3,15 @@ const FantasyUser = require('../models/FantasyUser');
 const { validatePasswordStrength } = require('./auth');
 
 const getFantasySecret = () => {
-  const secret = process.env.FANTASY_JWT_SECRET || process.env.JWT_SECRET || process.env.ADMIN_JWT_SECRET;
+  const fantasySecret = process.env.FANTASY_JWT_SECRET;
+  if (process.env.NODE_ENV === 'production') {
+    if (!fantasySecret?.trim()) {
+      throw new Error('FANTASY_JWT_SECRET is required in production');
+    }
+    return fantasySecret;
+  }
+
+  const secret = fantasySecret || process.env.JWT_SECRET || process.env.ADMIN_JWT_SECRET;
   if (!secret) {
     throw new Error('Fantasy JWT secret is not configured');
   }

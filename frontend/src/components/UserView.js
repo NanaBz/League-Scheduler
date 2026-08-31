@@ -15,7 +15,11 @@ import {
   desktopFixtureBadgeLabel,
 } from '../utils/matchDisplayState';
 import { canExpandFixtureDetails, FixtureMatchStatsExpanded } from './FixtureMatchStatsPanel';
+import FixtureDesktopMatchup, { FixtureDesktopTableHeader } from './FixtureDesktopMatchup';
 import SuperCupShowcase from './SuperCupShowcase';
+import GirlsSuperCupBracket from './GirlsSuperCupBracket';
+import { sortLeagueTeams, buildAcwplTableFromMatches } from '../utils/teamTablePosition';
+import { buildGirlsSuperCupSeries } from '../utils/girlsSuperCupSeries';
 
 // Helper function to get team logo CSS class
 const getTeamLogoClass = (teamName) => {
@@ -143,50 +147,8 @@ const UserView = ({ competitions, selectedCompetition, refreshKey, onCompetition
   const acwplTeams = teams.filter(team => team && team.competition === 'acwpl');
   // If teams are not tagged, fallback to name check
   const acwplTeamsStrict = acwplTeams.length === 2 ? acwplTeams : teams.filter(team => team && ['Orion','Firestorm'].includes(team.name));
-  // Calculate stats from matches
   function getAcwplTable() {
-    // Start with base stats
-    const base = acwplTeamsStrict.filter(team => team).map(team => ({
-      ...team,
-      played: 0, won: 0, drawn: 0, lost: 0, goalsFor: 0, goalsAgainst: 0, goalDifference: 0, points: 0, form: []
-    }));
-    // Only use ACWPL matches
-    const acwplMatches = matches.filter(
-      (m) =>
-        m &&
-        m.competition === 'acwpl' &&
-        m.homeTeam &&
-        m.awayTeam &&
-        ['Orion', 'Firestorm'].includes(m.homeTeam.name) &&
-        ['Orion', 'Firestorm'].includes(m.awayTeam.name)
-    );
-    for (const match of acwplMatches) {
-      if (!match.isPlayed || match.isVoided) continue;
-      const home = base.find(t => t.name === match.homeTeam.name);
-      const away = base.find(t => t.name === match.awayTeam.name);
-      if (!home || !away) continue;
-      home.played++;
-      away.played++;
-      home.goalsFor += match.homeScore;
-      home.goalsAgainst += match.awayScore;
-      away.goalsFor += match.awayScore;
-      away.goalsAgainst += match.homeScore;
-      home.goalDifference = home.goalsFor - home.goalsAgainst;
-      away.goalDifference = away.goalsFor - away.goalsAgainst;
-      if (match.homeScore > match.awayScore) {
-        home.won++; home.points += 3; home.form.unshift('W');
-        away.lost++; away.form.unshift('L');
-      } else if (match.homeScore < match.awayScore) {
-        away.won++; away.points += 3; away.form.unshift('W');
-        home.lost++; home.form.unshift('L');
-      } else {
-        home.drawn++; away.drawn++;
-        home.points += 1; away.points += 1;
-        home.form.unshift('D'); away.form.unshift('D');
-      }
-    }
-    // Sort by points, then GD, then GF
-    return base.sort((a, b) => b.points - a.points || b.goalDifference - a.goalDifference || b.goalsFor - a.goalsFor);
+    return buildAcwplTableFromMatches(matches, acwplTeamsStrict);
   }
   // ACWPL winner detection (clinched as soon as mathematically uncatchable)
   const acwplTable = getAcwplTable();
@@ -203,32 +165,8 @@ const UserView = ({ competitions, selectedCompetition, refreshKey, onCompetition
     }
   }
 
-  let girlsSuperCupWinner = null;
-  const gscSeries = matches.filter(
-    (m) =>
-      m &&
-      m.competition === 'girls-super-cup' &&
-      m.homeTeam &&
-      m.awayTeam &&
-      m.isPlayed &&
-      !m.isVoided
-  );
-  const gscWins = {};
-  for (const m of gscSeries) {
-    const h = m.homeScore;
-    const a = m.awayScore;
-    let name = null;
-    if (typeof h === 'number' && typeof a === 'number') {
-      if (h > a) name = m.homeTeam.name;
-      else if (a > h) name = m.awayTeam.name;
-      else if (m.homePenalties != null && m.awayPenalties != null && m.homePenalties !== m.awayPenalties) {
-        name = m.homePenalties > m.awayPenalties ? m.homeTeam.name : m.awayTeam.name;
-      }
-    }
-    if (name) gscWins[name] = (gscWins[name] || 0) + 1;
-  }
-  if ((gscWins.Orion || 0) >= 2) girlsSuperCupWinner = 'Orion';
-  else if ((gscWins.Firestorm || 0) >= 2) girlsSuperCupWinner = 'Firestorm';
+  const gscSeriesState = buildGirlsSuperCupSeries(matches);
+  const girlsSuperCupWinner = gscSeriesState.champion;
 
   const fetchTeams = async () => {
     try {
@@ -279,7 +217,7 @@ const UserView = ({ competitions, selectedCompetition, refreshKey, onCompetition
 
   const checkWinners = async () => {
     try {
-      const response = await api.post('/competitions/check-winners');
+      const response = await api.get('/competitions/winners');
       setWinners(response.data.results || {});
     } catch (error) {
       console.error('Error checking winners:', error);
@@ -423,36 +361,7 @@ const UserView = ({ competitions, selectedCompetition, refreshKey, onCompetition
 
       {!loading && teams && teams.length > 0 && (
       <>
-      {/* Only render the empty bar when there is no ACWPL inline info card */}
-      {selectedCompetition !== 'acwpl' && (
-        <div style={{height: 48, background: 'rgba(255,255,255,0.95)', borderRadius: 16, margin: '0 0 18px 0'}}></div>
-      )}
-      {selectedCompetition === 'acwpl' && (
-        <div style={{
-          background: 'rgba(231,76,60,0.08)',
-          borderRadius: '15px',
-          padding: '18px 18px 10px 18px',
-          margin: '0 0 18px 0',
-          textAlign: 'center',
-          boxShadow: '0 2px 8px rgba(231,76,60,0.08)'
-        }}>
-          <div style={{
-            color: '#e74c3c',
-            fontWeight: 700,
-            fontSize: '1.35rem',
-            marginBottom: 6
-          }}>
-            ACWPL (Girls League)
-          </div>
-          <div style={{
-            color: '#222',
-            fontSize: '1.05rem',
-            fontWeight: 400
-          }}>
-            The ACWPL is a best-of-5 series between Orion and Firestorm. A team is crowned champion immediately after 3 wins or once they are mathematically uncatchable on points. Any remaining fixtures are marked null/void.
-          </div>
-        </div>
-  )}
+      <div style={{height: 48, background: 'rgba(255,255,255,0.95)', borderRadius: 16, margin: '0 0 18px 0'}}></div>
       {/* Mobile competition picker (fixtures); desktop uses top nav */}
       <div className="mobile-only" style={{ marginBottom: 12 }}>
         <CompetitionFilterControl
@@ -595,7 +504,7 @@ const UserView = ({ competitions, selectedCompetition, refreshKey, onCompetition
                   </tr>
                 </thead>
                 <tbody>
-                  {teams.filter(team => team && team.competition === 'league').map((team, index) => {
+                  {sortLeagueTeams(teams).map((team, index) => {
                     const position = index + 1;
                     let rowClass = '';
                     // Add position-based styling
@@ -638,7 +547,7 @@ const UserView = ({ competitions, selectedCompetition, refreshKey, onCompetition
             {/* Mobile Card View */}
             <div className="mobile-only">
               <div className="league-cards">
-                {teams.filter(team => team && team.competition === 'league').map((team, index) => {
+                {sortLeagueTeams(teams).map((team, index) => {
                   const position = index + 1;
                   let cardClass = 'league-card';
                   // Add position-based styling
@@ -800,6 +709,11 @@ const UserView = ({ competitions, selectedCompetition, refreshKey, onCompetition
       .map((match) => (
         <SuperCupShowcase key={match._id} match={match} formatDate={formatDate} />
       ))}
+
+  {selectedCompetition === 'girls-super-cup' && (
+    <GirlsSuperCupBracket matches={matches} formatDate={formatDate} />
+  )}
+
       {/* Fixtures/Results */}
   <div className="card" id="fixtures">
   <h2><Calendar size={18} /> Fixtures & Results</h2>
@@ -929,16 +843,7 @@ const UserView = ({ competitions, selectedCompetition, refreshKey, onCompetition
           </div>
         )}
         <div className="desktop-only">
-          {/* Table header */}
-          <div className="match-header">
-            <div>Date</div>
-            <div>Time</div>
-            <div>Home Team</div>
-            <div>Score</div>
-            <div>Away Team</div>
-            <div>Stage</div>
-            <div>Status</div>
-          </div>
+          <FixtureDesktopTableHeader />
 
         <div className="fixtures-container">
           {selectedCompetition === 'league' ? (
@@ -962,37 +867,7 @@ const UserView = ({ competitions, selectedCompetition, refreshKey, onCompetition
                           >
                             <div>{formatDate(match.date)}</div>
                             <div>{match.time}</div>
-                            <div>
-                              <div className="team-info">
-                                {match.homeTeam.logo && (
-                                  <img 
-                                    src={match.homeTeam.logo} 
-                                    alt={match.homeTeam.name} 
-                                    className={getTeamLogoClass(match.homeTeam.name)}
-                                  />
-                                )}
-                                <strong>{match.homeTeam.name}</strong>
-                              </div>
-                            </div>
-                            <div className="score-display">
-                              {showFixtureScores(match) ? (
-                                <span><strong>{match.homeScore} - {match.awayScore}</strong></span>
-                              ) : (
-                                <span>vs</span>
-                              )}
-                            </div>
-                            <div>
-                              <div className="team-info">
-                                {match.awayTeam.logo && (
-                                  <img 
-                                    src={match.awayTeam.logo} 
-                                    alt={match.awayTeam.name} 
-                                    className={getTeamLogoClass(match.awayTeam.name)}
-                                  />
-                                )}
-                                <strong>{match.awayTeam.name}</strong>
-                              </div>
-                            </div>
+                            <FixtureDesktopMatchup match={match} getTeamLogoClass={getTeamLogoClass} />
                             <div>{formatStage(match.stage, selectedCompetition) || 'Regular'}</div>
                             <div>
                               <span className={`badge ${desktopFixtureBadgeClass(match)}`}>
@@ -1049,44 +924,7 @@ const UserView = ({ competitions, selectedCompetition, refreshKey, onCompetition
                       >
                         <div>{formatDate(match.date)}</div>
                         <div>{match.time}</div>
-                        <div>
-                          <div className="team-info">
-                            {match.homeTeam.logo && (
-                              <img 
-                                src={match.homeTeam.logo} 
-                                alt={match.homeTeam.name} 
-                                className={getTeamLogoClass(match.homeTeam.name)}
-                              />
-                            )}
-                            <strong>{match.homeTeam.name}</strong>
-                          </div>
-                        </div>
-                        <div className="score-display">
-                          {showFixtureScores(match) ? (
-                            <div>
-                              <span><strong>{match.homeScore} - {match.awayScore}</strong></span>
-                              {shouldShowMatchPenalties(match) && (
-                                <div style={{ fontSize: '0.8em', color: '#666' }}>
-                                  ({match.homePenalties} - {match.awayPenalties} pens)
-                                </div>
-                              )}
-                            </div>
-                          ) : (
-                            <span>vs</span>
-                          )}
-                        </div>
-                        <div>
-                          <div className="team-info">
-                            {match.awayTeam.logo && (
-                              <img 
-                                src={match.awayTeam.logo} 
-                                alt={match.awayTeam.name} 
-                                className={getTeamLogoClass(match.awayTeam.name)}
-                              />
-                            )}
-                            <strong>{match.awayTeam.name}</strong>
-                          </div>
-                        </div>
+                        <FixtureDesktopMatchup match={match} getTeamLogoClass={getTeamLogoClass} />
                         <div>{formatStage(match.stage, selectedCompetition) || 'Regular'}</div>
                         <div>
                           <span className={`badge ${desktopFixtureBadgeClass(match)}`}>
@@ -1139,44 +977,7 @@ const UserView = ({ competitions, selectedCompetition, refreshKey, onCompetition
                     >
                       <div>{formatDate(match.date)}</div>
                       <div>{match.time}</div>
-                      <div>
-                        <div className="team-info">
-                          {match.homeTeam.logo && (
-                            <img 
-                              src={match.homeTeam.logo} 
-                              alt={match.homeTeam.name} 
-                              className={getTeamLogoClass(match.homeTeam.name)}
-                            />
-                          )}
-                          <strong>{match.homeTeam.name}</strong>
-                        </div>
-                      </div>
-                      <div className="score-display">
-                        {showFixtureScores(match) ? (
-                          <div>
-                            <span><strong>{match.homeScore} - {match.awayScore}</strong></span>
-                            {shouldShowMatchPenalties(match) && (
-                              <div style={{ fontSize: '0.8em', color: '#666' }}>
-                                ({match.homePenalties} - {match.awayPenalties} pens)
-                              </div>
-                            )}
-                          </div>
-                        ) : (
-                          <span>vs</span>
-                        )}
-                      </div>
-                      <div>
-                        <div className="team-info">
-                          {match.awayTeam.logo && (
-                            <img 
-                              src={match.awayTeam.logo} 
-                              alt={match.awayTeam.name} 
-                              className={getTeamLogoClass(match.awayTeam.name)}
-                            />
-                          )}
-                          <strong>{match.awayTeam.name}</strong>
-                        </div>
-                      </div>
+                      <FixtureDesktopMatchup match={match} getTeamLogoClass={getTeamLogoClass} />
                       <div>{formatStage(match.stage, selectedCompetition) || 'Final'}</div>
                       <div>
                         <span className={`badge ${desktopFixtureBadgeClass(match)}`}>
@@ -1233,39 +1034,7 @@ const UserView = ({ competitions, selectedCompetition, refreshKey, onCompetition
                   >
                     <div>{formatDate(match.date)}</div>
                     <div>{match.time}</div>
-                    <div>
-                      <div className="team-info">
-                        {match.homeTeam.logo && (
-                          <img 
-                            src={match.homeTeam.logo} 
-                            alt={match.homeTeam.name} 
-                            className={getTeamLogoClass(match.homeTeam.name)}
-                          />
-                        )}
-                        <strong>{match.homeTeam.name}</strong>
-                      </div>
-                    </div>
-                    <div className="score-display">
-                      {match.isVoided ? (
-                        <span><strong>VOID</strong></span>
-                      ) : showFixtureScores(match) ? (
-                        <span><strong>{match.homeScore} - {match.awayScore}</strong></span>
-                      ) : (
-                        <span>vs</span>
-                      )}
-                    </div>
-                    <div>
-                      <div className="team-info">
-                        {match.awayTeam.logo && (
-                          <img 
-                            src={match.awayTeam.logo} 
-                            alt={match.awayTeam.name} 
-                            className={getTeamLogoClass(match.awayTeam.name)}
-                          />
-                        )}
-                        <strong>{match.awayTeam.name}</strong>
-                      </div>
-                    </div>
+                    <FixtureDesktopMatchup match={match} getTeamLogoClass={getTeamLogoClass} />
                     <div>Fixture</div>
                     <div>
                       <span className={`badge ${desktopFixtureBadgeClass(match)}`}>
@@ -1306,44 +1075,7 @@ const UserView = ({ competitions, selectedCompetition, refreshKey, onCompetition
               <div key={match._id} className="match-row">
                 <div>{formatDate(match.date)}</div>
                 <div>{match.time}</div>
-                <div>
-                  <div className="team-info">
-                    {match.homeTeam.logo && (
-                      <img 
-                        src={match.homeTeam.logo} 
-                        alt={match.homeTeam.name} 
-                        className={getTeamLogoClass(match.homeTeam.name)}
-                      />
-                    )}
-                    <strong>{match.homeTeam.name}</strong>
-                  </div>
-                </div>
-                <div className="score-display">
-                  {showFixtureScores(match) ? (
-                    <div>
-                      <span><strong>{match.homeScore} - {match.awayScore}</strong></span>
-                      {shouldShowMatchPenalties(match) && (
-                        <div style={{ fontSize: '0.8em', color: '#666' }}>
-                          ({match.homePenalties} - {match.awayPenalties} pens)
-                        </div>
-                      )}
-                    </div>
-                  ) : (
-                    <span>vs</span>
-                  )}
-                </div>
-                <div>
-                  <div className="team-info">
-                    {match.awayTeam.logo && (
-                      <img 
-                        src={match.awayTeam.logo} 
-                        alt={match.awayTeam.name} 
-                        className={getTeamLogoClass(match.awayTeam.name)}
-                      />
-                    )}
-                    <strong>{match.awayTeam.name}</strong>
-                  </div>
-                </div>
+                <FixtureDesktopMatchup match={match} getTeamLogoClass={getTeamLogoClass} />
                 <div>{formatStage(match.stage, selectedCompetition) || 'Regular'}</div>
                 <div>
                   <span className={`badge ${desktopFixtureBadgeClass(match)}`}>

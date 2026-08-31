@@ -3,6 +3,9 @@ const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
 const helmet = require('helmet');
+const { validateProductionStartup } = require('./utils/startupValidation');
+
+validateProductionStartup();
 
 // Always load backend/.env (not cwd). In non-production, .env overrides pre-set vars so a
 // stale Windows/shell MONGODB_URI cannot silently beat the file you are editing.
@@ -40,7 +43,10 @@ console.log('TRUSTED_ORIGINS at startup:', TRUSTED_ORIGINS);
 
 let corsOptions;
 if (TRUSTED_ORIGINS.length === 0) {
-  // Allow all origins if no CORS_ORIGINS is set
+  if (process.env.NODE_ENV === 'production') {
+    throw new Error('CORS_ORIGINS must be set in production (comma-separated frontend origins)');
+  }
+  // Development: allow all origins when CORS_ORIGINS is unset
   corsOptions = {};
 } else {
   corsOptions = {
@@ -113,6 +119,7 @@ app.use('/api/players', require('./routes/players'));
 app.use('/api/matches', require('./routes/matches'));
 app.use('/api/competitions', require('./routes/competitions'));
 app.use('/api/seasons', require('./routes/seasons'));
+app.use('/api/admin/activity', require('./routes/adminActivity'));
 app.use('/api/stats', require('./routes/stats'));
 app.use('/api/fantasy', require('./routes/fantasy'));
 // app.use('/api/fantasy/leagues', require('./routes/fantasyLeagues'));

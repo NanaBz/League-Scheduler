@@ -7,6 +7,15 @@ const {
   generateToken,
   authenticateAdmin 
 } = require('../middleware/auth');
+const { sendPasswordResetEmail } = require('../utils/mailer');
+const {
+  generateResetToken,
+  hashResetToken,
+  isResetTokenValid,
+  resetTokenExpiry,
+  buildResetUrl,
+  GENERIC_FORGOT_MESSAGE,
+} = require('../utils/passwordReset');
 
 // Check if email is whitelisted and if admin exists
 router.post('/check-email', async (req, res) => {
@@ -309,6 +318,101 @@ router.post('/logout', authenticateAdmin, async (req, res) => {
       success: false,
       message: 'Server error. Please try again.'
     });
+  }
+});
+
+router.post('/forgot-password', async (req, res) => {
+  try {
+    const { email } = req.body;
+    if (!email) {
+      return res.status(400).json({ success: false, message: 'Email is required' });
+    }
+
+    const normalizedEmail = email.trim().toLowerCase();
+
+    if (isWhitelistedEmail(normalizedEmail)) {
+      const admin = await Admin.findOne({ email: normalizedEmail });
+      if (admin && !admin.isFirstLogin) {
+        const token = generateResetToken();
+        admin.passwordResetTokenHash = await hashResetToken(token);
+        admin.passwordResetTokenExpires = resetTokenExpiry(
+          Number(process.env.PASSWORD_RESET_TTL_MINUTES) || 60
+        );
+        await admin.save();
+
+        const resetUrl = buildResetUrl('/', token);
+        const adminResetUrl = resetUrl.includes('?')
+          ? `${resetUrl}&adminReset=1`
+          : `${resetUrl}?adminReset=1`;
+        await sendPasswordResetEmail(normalizedEmail, adminResetUrl, { audience: 'Admin' });
+      }
+    }
+
+    return res.json({ success: true, message: GENERIC_FORGOT_MESSAGE });
+  } catch (error) {
+    console.error('Admin forgot-password error:', error.message);
+    return res.status(500).json({ success: false, message: 'Server error. Please try again.' });
+  }
+});
+
+router.post('/reset-password', async (req, res) => {
+  try {
+    const { token, password, confirmPassword } = req.body;
+    if (!token || !password || !confirmPassword) {
+      return res.status(400).json({
+        success: false,
+        message: 'Reset token, new password, and confirmation are required',
+      });
+    }
+    if (password !== confirmPassword) {
+      return res.status(400).json({ success: false, message: 'Passwords do not match' });
+    }
+
+    const passwordValidation = validatePasswordStrength(password);
+    if (!passwordValidation.isValid) {
+      return res.status(400).json({
+        success: false,
+        message: 'Password does not meet security requirements',
+        errors: passwordValidation.errors,
+      });
+    }
+
+    const candidates = await Admin.find({
+      passwordResetTokenExpires: { $gt: new Date() },
+      passwordResetTokenHash: { $ne: null },
+    });
+
+    let matchedAdmin = null;
+    for (const admin of candidates) {
+      const valid = await isResetTokenValid(
+        token,
+        admin.passwordResetTokenHash,
+        admin.passwordResetTokenExpires
+      );
+      if (valid) {
+        matchedAdmin = admin;
+        break;
+      }
+    }
+
+    if (!matchedAdmin) {
+      return res.status(400).json({
+        success: false,
+        message: 'This reset link is invalid or has expired. Please request a new one.',
+      });
+    }
+
+    matchedAdmin.password = password;
+    matchedAdmin.clearPasswordResetToken();
+    await matchedAdmin.save();
+
+    return res.json({
+      success: true,
+      message: 'Password updated successfully. You can now sign in with your new password.',
+    });
+  } catch (error) {
+    console.error('Admin reset-password error:', error.message);
+    return res.status(500).json({ success: false, message: 'Server error. Please try again.' });
   }
 });
 

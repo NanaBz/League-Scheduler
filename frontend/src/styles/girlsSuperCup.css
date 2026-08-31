@@ -1,0 +1,373 @@
+/**
+ * Girls Super Cup — best-of-3 series bracket (Orion vs Firestorm).
+ * Purple / fuchsia theme; first-to-2-wins series tracker + round cards.
+ */
+
+.gsc-bracket {
+  margin: 0 0 var(--apl-space-5, 1.25rem);
+  border-radius: var(--apl-radius-lg, 16px);
+  overflow: hidden;
+  background: linear-gradient(145deg, #faf5ff 0%, #fdf4ff 38%, #fff 100%);
+  border: 1px solid rgba(162, 28, 175, 0.18);
+  box-shadow:
+    0 8px 28px rgba(107, 33, 168, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9);
+}
+
+.gsc-bracket__hero {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: var(--apl-space-3, 0.75rem);
+  padding: var(--apl-space-5, 1.25rem);
+  background: linear-gradient(135deg, #581c87 0%, #7e22ce 42%, #a21caf 100%);
+  color: #fff;
+}
+
+.gsc-bracket__hero-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
+  background: rgba(250, 232, 255, 0.18);
+  color: #f5d0fe;
+  flex-shrink: 0;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.14);
+}
+
+.gsc-bracket__hero-text {
+  flex: 1 1 160px;
+  min-width: 0;
+}
+
+.gsc-bracket__eyebrow {
+  margin: 0 0 0.25rem;
+  font-size: 0.68rem;
+  font-weight: var(--apl-weight-bold, 700);
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: rgba(250, 232, 255, 0.88);
+}
+
+.gsc-bracket__title {
+  margin: 0 0 0.2rem;
+  font-size: clamp(1.25rem, 3vw, 1.55rem);
+  font-weight: var(--apl-weight-bold, 700);
+  letter-spacing: var(--apl-tracking-tight, -0.02em);
+  line-height: 1.15;
+}
+
+.gsc-bracket__tagline {
+  margin: 0;
+  font-size: var(--apl-text-sm, 0.875rem);
+  color: rgba(253, 244, 255, 0.88);
+}
+
+.gsc-bracket__rule-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.35rem 0.65rem;
+  border-radius: var(--apl-radius-pill, 999px);
+  background: rgba(0, 0, 0, 0.18);
+  border: 1px solid rgba(250, 232, 255, 0.25);
+  font-size: 0.72rem;
+  font-weight: var(--apl-weight-semibold, 600);
+  color: #fdf4ff;
+  flex-shrink: 0;
+}
+
+/* ── Series scoreboard ── */
+.gsc-bracket__scoreboard {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: var(--apl-space-3, 0.75rem);
+  padding: var(--apl-space-4, 1rem) var(--apl-space-5, 1.25rem);
+  border-bottom: 1px dashed rgba(162, 28, 175, 0.16);
+}
+
+.gsc-bracket__score-team {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.45rem;
+  text-align: center;
+  min-width: 0;
+}
+
+.gsc-bracket__score-team--champion .gsc-bracket__score-name {
+  color: #6b21a8;
+}
+
+.gsc-bracket__score-main {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.gsc-bracket__score-main img {
+  width: 44px;
+  height: 44px;
+  object-fit: contain;
+}
+
+.gsc-bracket__score-name {
+  font-size: 0.9rem;
+  font-weight: var(--apl-weight-bold, 700);
+  color: #1e293b;
+}
+
+.gsc-bracket__score-center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  padding: 0.5rem 0.85rem;
+  border-radius: var(--apl-radius-md, 12px);
+  background: var(--apl-comp-girls-super-cup-bg, #fae8ff);
+  border: 1px solid rgba(162, 28, 175, 0.22);
+  box-shadow: 0 2px 8px rgba(107, 33, 168, 0.08);
+}
+
+.gsc-bracket__score-digit {
+  font-size: 1.65rem;
+  font-weight: var(--apl-weight-extrabold, 800);
+  color: var(--apl-comp-girls-super-cup-fg, #a21caf);
+  line-height: 1;
+  min-width: 1.1rem;
+  text-align: center;
+}
+
+.gsc-bracket__score-sep {
+  font-size: 1.1rem;
+  font-weight: var(--apl-weight-bold, 700);
+  color: #94a3b8;
+}
+
+.gsc-bracket__pips {
+  display: flex;
+  gap: 0.35rem;
+}
+
+.gsc-bracket__pip {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #e9d5ff;
+  border: 1.5px solid #c084fc;
+  box-sizing: border-box;
+}
+
+.gsc-bracket__pip--won {
+  background: linear-gradient(135deg, #a855f7 0%, #c026d3 100%);
+  border-color: #7e22ce;
+  box-shadow: 0 1px 4px rgba(126, 34, 206, 0.35);
+}
+
+.gsc-bracket__pip--clinched {
+  background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+  border-color: #d97706;
+}
+
+.gsc-bracket__clinch {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  margin: 0 var(--apl-space-5, 1.25rem);
+  padding: 0.55rem 0.75rem;
+  border-radius: var(--apl-radius-md, 12px);
+  background: linear-gradient(90deg, #fef3c7 0%, #fde68a 100%);
+  border: 1px solid #fcd34d;
+  font-size: 0.82rem;
+  font-weight: var(--apl-weight-semibold, 600);
+  color: #92400e;
+}
+
+.gsc-bracket__progress {
+  margin: 0;
+  padding: 0 var(--apl-space-5, 1.25rem) var(--apl-space-3, 0.75rem);
+  text-align: center;
+  font-size: 0.82rem;
+  font-weight: var(--apl-weight-semibold, 600);
+  color: var(--apl-comp-girls-super-cup-fg, #a21caf);
+}
+
+/* ── Round cards ── */
+.gsc-bracket__rounds {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--apl-space-3, 0.75rem);
+  padding: var(--apl-space-4, 1rem) var(--apl-space-5, 1.25rem) var(--apl-space-5, 1.25rem);
+}
+
+.gsc-bracket__round {
+  display: flex;
+  flex-direction: column;
+  gap: var(--apl-space-2, 0.5rem);
+  padding: 0.75rem;
+  border-radius: var(--apl-radius-md, 12px);
+  background: #fff;
+  border: 1px solid var(--apl-border-subtle, #e2e8f0);
+  box-shadow: var(--apl-shadow-sm, 0 1px 4px rgba(15, 23, 42, 0.06));
+  min-width: 0;
+}
+
+.gsc-bracket__round--ft {
+  border-color: rgba(162, 28, 175, 0.28);
+  background: linear-gradient(180deg, #fdf4ff 0%, #fff 100%);
+}
+
+.gsc-bracket__round--live {
+  border-color: #22c55e;
+  box-shadow: 0 0 0 2px rgba(34, 197, 94, 0.12);
+}
+
+.gsc-bracket__round--void,
+.gsc-bracket__round--voided {
+  opacity: 0.72;
+  background: #f8fafc;
+  border-style: dashed;
+}
+
+.gsc-bracket__round--empty {
+  opacity: 0.55;
+}
+
+.gsc-bracket__round-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.35rem;
+}
+
+.gsc-bracket__round-label {
+  font-size: 0.72rem;
+  font-weight: var(--apl-weight-bold, 700);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--apl-comp-girls-super-cup-fg, #a21caf);
+}
+
+.gsc-bracket__round-head .status-badge {
+  font-size: 0.58rem;
+  padding: 0.18rem 0.4rem;
+}
+
+.gsc-bracket__round-match {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.gsc-bracket__round-team {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.4rem 0.5rem;
+  border-radius: var(--apl-radius-sm, 8px);
+  background: var(--apl-surface-muted, #f8fafc);
+  min-width: 0;
+}
+
+.gsc-bracket__round-team--winner {
+  background: linear-gradient(90deg, #f3e8ff 0%, #faf5ff 100%);
+  border: 1px solid #d8b4fe;
+}
+
+.gsc-bracket__round-team img {
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
+.gsc-bracket__round-name {
+  flex: 1;
+  font-size: 0.82rem;
+  font-weight: var(--apl-weight-semibold, 600);
+  color: #1e293b;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.gsc-bracket__round-score {
+  font-size: 1rem;
+  font-weight: var(--apl-weight-extrabold, 800);
+  color: var(--apl-comp-girls-super-cup-fg, #a21caf);
+  flex-shrink: 0;
+}
+
+.gsc-bracket__round-vs {
+  align-self: center;
+  font-size: 0.65rem;
+  font-weight: var(--apl-weight-bold, 700);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #94a3b8;
+}
+
+.gsc-bracket__round-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  font-size: 0.68rem;
+  color: #64748b;
+  text-align: center;
+}
+
+.gsc-bracket__round-pens {
+  font-style: italic;
+  color: #475569;
+}
+
+.gsc-bracket__round-void-note {
+  color: #94a3b8;
+  font-style: italic;
+}
+
+.gsc-bracket__round-placeholder {
+  margin: auto;
+  font-size: 0.8rem;
+  color: #94a3b8;
+  font-style: italic;
+  text-align: center;
+  padding: 0.5rem 0;
+}
+
+@media (max-width: 768px) {
+  .gsc-bracket__scoreboard {
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: auto auto auto;
+  }
+
+  .gsc-bracket__score-center {
+    grid-column: 1 / -1;
+    width: fit-content;
+    margin: 0 auto var(--apl-space-2, 0.5rem);
+  }
+
+  .gsc-bracket__rounds {
+    grid-template-columns: 1fr;
+  }
+
+  .gsc-bracket__hero {
+    flex-direction: column;
+  }
+
+  .gsc-bracket__rule-badge {
+    align-self: flex-start;
+  }
+}
+
+@media (max-width: 390px) {
+  .gsc-bracket__score-main img {
+    width: 38px;
+    height: 38px;
+  }
+}

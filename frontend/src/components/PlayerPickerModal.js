@@ -1,6 +1,7 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import api from '../utils/api';
 import { displaySelectionPercentage, displayTotalPoints } from '../utils/fantasyPlayerStatsDisplay';
+import { acityPriceAriaLabel, formatAcityPrice } from '../utils/formatAcityPrice';
 import './PlayerPickerModal.css';
 
 const POSITION_OPTIONS = [
@@ -12,19 +13,31 @@ const POSITION_OPTIONS = [
 ];
 const BUDGET_RANGES = [
   { label: 'Unlimited', min: null, max: null },
-  { label: '≤ 4.5m', min: null, max: 4.5 },
-  { label: '≤ 5.0m', min: null, max: 5.0 },
-  { label: '≤ 5.5m', min: null, max: 5.5 },
-  { label: '≤ 6.0m', min: null, max: 6.0 },
-  { label: '≤ 7.0m', min: null, max: 7.0 },
+  { label: '≤ AC 4.5m', min: null, max: 4.5 },
+  { label: '≤ AC 5.0m', min: null, max: 5.0 },
+  { label: '≤ AC 5.5m', min: null, max: 5.5 },
+  { label: '≤ AC 6.0m', min: null, max: 6.0 },
+  { label: '≤ AC 7.0m', min: null, max: 7.0 },
+];
+const SORT_OPTIONS = [
+  { value: 'price', label: 'Price (high)' },
+  { value: 'points', label: 'Points (high)' },
 ];
 
-export default function PlayerPickerModal({ lockedPosition, selectedIds = [], onClose, onSelect }) {
+export default function PlayerPickerModal({
+  lockedPosition,
+  selectedIds = [],
+  canAffordPlayer,
+  onClose,
+  onSelect,
+}) {
   const [search, setSearch] = useState('');
   const [position, setPosition] = useState(lockedPosition || 'ALL');
   const [budgetLabel, setBudgetLabel] = useState('Unlimited');
   const [minPrice, setMinPrice] = useState(null);
   const [maxPrice, setMaxPrice] = useState(null);
+  const [sortBy, setSortBy] = useState('price');
+  const [sortLabel, setSortLabel] = useState('Price (high)');
   const [teams, setTeams] = useState([]);
   const [selectedTeams, setSelectedTeams] = useState([]);
   const [clubLabel, setClubLabel] = useState('All Clubs');
@@ -36,6 +49,17 @@ export default function PlayerPickerModal({ lockedPosition, selectedIds = [], on
   const toggleFilter = (key) => {
     setOpenFilter((prev) => (prev === key ? null : key));
   };
+
+  useEffect(() => {
+    if (!openFilter) return undefined;
+    const closeOnOutside = (event) => {
+      if (!event.target.closest('.ppm-filter-group')) {
+        setOpenFilter(null);
+      }
+    };
+    document.addEventListener('mousedown', closeOnOutside);
+    return () => document.removeEventListener('mousedown', closeOnOutside);
+  }, [openFilter]);
 
   useEffect(() => { if (lockedPosition) setPosition(lockedPosition); }, [lockedPosition]);
 
@@ -99,6 +123,20 @@ export default function PlayerPickerModal({ lockedPosition, selectedIds = [], on
     setOpenFilter(null);
   };
 
+  const handleSortSelect = (option) => {
+    setSortBy(option.value);
+    setSortLabel(option.label);
+    setOpenFilter(null);
+  };
+
+  const sortedPlayers = useMemo(() => {
+    const list = [...players];
+    if (sortBy === 'points') {
+      return list.sort((a, b) => (Number(b.totalPoints) || 0) - (Number(a.totalPoints) || 0));
+    }
+    return list.sort((a, b) => (Number(b.fantasyPrice) || 0) - (Number(a.fantasyPrice) || 0));
+  }, [players, sortBy]);
+
   return (
     <div className="ppm-overlay" onClick={onClose}>
       <div className="ppm-modal" onClick={e => e.stopPropagation()}>
@@ -109,7 +147,7 @@ export default function PlayerPickerModal({ lockedPosition, selectedIds = [], on
         <div className="ppm-controls">
           <input className="ppm-search" placeholder="Search by name" value={search} onChange={e => setSearch(e.target.value)} />
           <div className="ppm-filters">
-            <div className={`ppm-filter-group${openFilter === 'position' ? ' is-open' : ''}`}>
+            <div className={`ppm-filter-group${openFilter === 'position' ? ' is-open' : ''}`} onClick={(e) => e.stopPropagation()}>
               <button
                 type="button"
                 className="ppm-filter-btn"
@@ -133,7 +171,7 @@ export default function PlayerPickerModal({ lockedPosition, selectedIds = [], on
                 ))}
               </div>
             </div>
-            <div className={`ppm-filter-group${openFilter === 'budget' ? ' is-open' : ''}`}>
+            <div className={`ppm-filter-group${openFilter === 'budget' ? ' is-open' : ''}`} onClick={(e) => e.stopPropagation()}>
               <button
                 type="button"
                 className="ppm-filter-btn"
@@ -150,7 +188,28 @@ export default function PlayerPickerModal({ lockedPosition, selectedIds = [], on
                 ))}
               </div>
             </div>
-            <div className={`ppm-filter-group${openFilter === 'club' ? ' is-open' : ''}`}>
+            <div className={`ppm-filter-group${openFilter === 'sort' ? ' is-open' : ''}`} onClick={(e) => e.stopPropagation()}>
+              <button
+                type="button"
+                className="ppm-filter-btn"
+                aria-expanded={openFilter === 'sort'}
+                onClick={() => toggleFilter('sort')}
+              >
+                {sortLabel}
+              </button>
+              <div className="ppm-filter-dropdown">
+                {SORT_OPTIONS.map(option => (
+                  <button
+                    key={option.value}
+                    className={`ppm-filter-item ${sortBy === option.value ? 'active' : ''}`}
+                    onClick={() => handleSortSelect(option)}
+                  >
+                    {option.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className={`ppm-filter-group ppm-filter-group--club${openFilter === 'club' ? ' is-open' : ''}`} onClick={(e) => e.stopPropagation()}>
               <button
                 type="button"
                 className="ppm-filter-btn"
@@ -175,23 +234,29 @@ export default function PlayerPickerModal({ lockedPosition, selectedIds = [], on
             <div className="ppm-loading">Loading…</div>
           ) : loadError ? (
             <div className="ppm-empty ppm-empty--error">{loadError}</div>
-          ) : players.length === 0 ? (
+          ) : sortedPlayers.length === 0 ? (
             <div className="ppm-empty">No players found</div>
           ) : (
-              players.map(p => {
+              sortedPlayers.map(p => {
                 const isTaken = selectedIds.includes(p._id);
+                const unaffordable = !isTaken && typeof canAffordPlayer === 'function' && !canAffordPlayer(p);
+                const disabled = isTaken || unaffordable;
                 return (
                   <div
                     key={p._id}
-                    className={`ppm-row-item ${isTaken ? 'disabled' : ''}`}
-                    onClick={() => { if (!isTaken) onSelect(p); }}
+                    className={`ppm-row-item ${disabled ? 'disabled' : ''}${unaffordable ? ' ppm-row-item--unaffordable' : ''}`}
+                    onClick={() => { if (!disabled) onSelect(p); }}
+                    title={unaffordable ? 'Insufficient bank for this transfer' : undefined}
                   >
                     <div className="ppm-player-main">
                       <div className="ppm-name">{p.name}</div>
                       <div className="ppm-sub">{p.team?.name} • {p.position}</div>
                     </div>
                     <div className="ppm-meta">
-                      <div className="ppm-price">{(p.fantasyPrice || 0).toFixed(1)}m</div>
+                      <div className="ppm-price-block">
+                        <span className="ppm-price-label">Current</span>
+                        <div className="ppm-price" aria-label={acityPriceAriaLabel(p.fantasyPrice)}>{formatAcityPrice(p.fantasyPrice)}</div>
+                      </div>
                       <div className="ppm-stat">Sel: {displaySelectionPercentage(p.selectionPercentage)}%</div>
                       <div className="ppm-stat">Pts: {displayTotalPoints(p.totalPoints)}</div>
                       <div className="ppm-next">

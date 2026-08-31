@@ -104,7 +104,7 @@ export default function SeasonResetWorkflow({ open, onClose, onComplete, busy, s
           detail: data.displayName || `${data.academicYear} · ${semesterLabel(data.semester)}`,
         });
       }
-      onComplete();
+      onComplete({ fplSeasonReset: resetType !== 'testing' });
     } catch (e) {
       const msg = e.response?.data?.message || e.message || 'Operation failed.';
       setResult({

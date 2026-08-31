@@ -1,11 +1,12 @@
 import React from 'react';
-import { ListChecks, Users, Trophy, Eye } from 'lucide-react';
+import { ListChecks, Users, Trophy, Eye, ScrollText } from 'lucide-react';
 import './AdminNav.css';
 
 const SECTIONS = [
   { id: 'fixtures-mgmt', label: 'Fixture Management', shortLabel: 'Fixtures', icon: ListChecks },
   { id: 'players-mgmt', label: 'Player Management', shortLabel: 'Players', icon: Users },
   { id: 'fantasy-mgmt', label: 'Fantasy Management', shortLabel: 'Fantasy', icon: Trophy },
+  { id: 'activity-log', label: 'Activity Log', shortLabel: 'Activity', icon: ScrollText },
 ];
 
 export default function AdminNav({ activeSection, onSelect, onSwitchToUser }) {

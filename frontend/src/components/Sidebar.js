@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { ListChecks, BarChart3, Users, Trophy, Archive, SidebarOpen, SidebarClose } from 'lucide-react';
+import { ListChecks, BarChart3, Users, Trophy, Archive, SidebarOpen, SidebarClose, Cog } from 'lucide-react';
 
-export default function Sidebar({ activeSection, onSelect }) {
+export default function Sidebar({ activeSection, onSelect, showAdminPanel, onAdminPanelClick }) {
   const [collapsed, setCollapsed] = useState(false);
 
   const Item = ({ id, icon, label }) => (
@@ -34,6 +34,20 @@ export default function Sidebar({ activeSection, onSelect }) {
       <Item id="teams" icon={<Users size={18} />} label="Teams" />
       <Item id="fantasy" icon={<Trophy size={18} />} label="Fantasy" />
       <Item id="archived" icon={<Archive size={18} />} label="Archived" />
+      {showAdminPanel && (
+        <>
+          <hr className="ls-sidebar-divider ls-sidebar-divider--admin" aria-hidden="true" />
+          <button
+            type="button"
+            className="ls-sidebar-item ls-sidebar-item--admin-panel"
+            onClick={() => onAdminPanelClick && onAdminPanelClick()}
+            title="Admin panel"
+          >
+            <Cog size={18} aria-hidden="true" />
+            {!collapsed && <span>Admin panel</span>}
+          </button>
+        </>
+      )}
     </aside>
   );
 }

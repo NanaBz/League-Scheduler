@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Trophy, Award, RefreshCcw, Edit3, Save, FileDown, FileBarChart2, ClipboardList, Settings, ListChecks, Target, BarChart3 } from 'lucide-react';
 import PropTypes from 'prop-types';
-import api from '../utils/api';
+import api, { parseApiErrorMessage } from '../utils/api';
 import './AdminPanel.css';
 import '../styles/adminFixtureMgmt.css';
 import { matchEventsToGoalscorerForm, resizeGoalsToScores } from '../utils/matchEventsForm';
@@ -11,6 +11,7 @@ import TeamSelection from './TeamSelection';
 import { userFixturePhase, desktopFixtureBadgeClass, desktopFixtureBadgeLabel } from '../utils/matchDisplayState';
 import { clearFantasyClientSeasonKeys } from '../utils/fantasyGameweek';
 import SeasonResetWorkflow from './SeasonResetWorkflow';
+import { sortLeagueTeams } from '../utils/teamTablePosition';
 
 const ADMIN_GETTING_STARTED_STEPS = [
   'Initialize Teams to create the six league teams.',
@@ -27,6 +28,30 @@ const ADMIN_COMPETITION_OPTIONS = [
   { value: 'acwpl', label: 'ACWPL' },
   { value: 'girls-super-cup', label: 'Girls Super Cup' },
 ];
+
+function renderPenaltyShootoutInput(match, side, getMatchValue, handleMatchEdit, disabled) {
+  const field = side === 'home' ? 'homePenalties' : 'awayPenalties';
+  const raw = getMatchValue(match, field);
+  const value = raw === null || raw === undefined || raw === '' ? '' : String(raw);
+
+  return (
+    <div className="admin-penalty-shootout">
+      <span className="admin-penalty-shootout__label">Pens</span>
+      <input
+        type="number"
+        min="0"
+        max="10"
+        value={value}
+        onChange={(e) => handleMatchEdit(match._id, field, e.target.value)}
+        className="admin-penalty-shootout__input"
+        placeholder="–"
+        title="Penalty shootout score"
+        disabled={disabled}
+        aria-label={`${side === 'home' ? 'Home' : 'Away'} penalty shootout score`}
+      />
+    </div>
+  );
+}
 
 const COMPETITION_LABELS = Object.fromEntries(
   ADMIN_COMPETITION_OPTIONS.map((option) => [option.value, option.label])
@@ -246,6 +271,12 @@ const AdminPanel = ({ onDataChange, isAdmin }) => {
     setLoading(false);
   };
 
+  const boysLeagueTeamCount = useMemo(
+    () => teams.filter((t) => t.category === 'boys' || !t.category).length,
+    [teams]
+  );
+  const leagueTeamsReady = boysLeagueTeamCount >= 6;
+
   const fetchTeams = async () => {
     try {
       const response = await api.get('/teams');
@@ -306,11 +337,11 @@ const AdminPanel = ({ onDataChange, isAdmin }) => {
   const initializeTeams = async () => {
     setLoading(true);
     try {
-      await api.post('/teams/initialize');
+      const { data } = await api.post('/teams/initialize');
       await fetchTeams();
-      alert('Teams initialized successfully!');
+      alert(data?.message || 'Teams initialized successfully!');
     } catch (error) {
-      alert('Error initializing teams: ' + error.message);
+      alert('Error initializing teams: ' + parseApiErrorMessage(error, 'Could not initialize teams.'));
     }
     setLoading(false);
   };
@@ -322,7 +353,7 @@ const AdminPanel = ({ onDataChange, isAdmin }) => {
       await fetchMatches();
       alert('League fixtures generated successfully!');
     } catch (error) {
-      alert('Error generating league fixtures: ' + error.message);
+      alert('Error generating league fixtures: ' + parseApiErrorMessage(error, 'Could not generate league fixtures.'));
     }
     setLoading(false);
   };
@@ -411,7 +442,10 @@ const AdminPanel = ({ onDataChange, isAdmin }) => {
     });
   };
 
-  const handleSeasonResetComplete = async () => {
+  const handleSeasonResetComplete = async ({ fplSeasonReset = false } = {}) => {
+    if (fplSeasonReset) {
+      clearFantasyClientSeasonKeys();
+    }
     await fetchTeams();
     await fetchMatches();
     onDataChange();
@@ -1006,15 +1040,17 @@ const AdminPanel = ({ onDataChange, isAdmin }) => {
             type="button"
             className="btn btn-primary admin-controls-btn" 
             onClick={initializeTeams}
-            disabled={loading}
+            disabled={loading || leagueTeamsReady}
+            title={leagueTeamsReady ? 'Six boys league teams are already set up' : undefined}
           >
-            Initialize Teams
+            {leagueTeamsReady ? 'Teams Ready' : 'Initialize Teams'}
           </button>
           <button 
             type="button"
             className="btn btn-success admin-controls-btn" 
             onClick={generateLeagueFixtures}
-            disabled={loading}
+            disabled={loading || !leagueTeamsReady}
+            title={!leagueTeamsReady ? 'Initialize six boys league teams first' : undefined}
           >
             Set League Fixtures
           </button>
@@ -1380,12 +1416,12 @@ const AdminPanel = ({ onDataChange, isAdmin }) => {
               leagueWinnerId && cupWinnerId && (
                 <div className="super-cup-preview">
                   <h4>Super Cup Final Preview:</h4>
-                  <div className="fixture-preview">
-                    <span className="league-winner">
+                  <div className="super-cup-preview__matchup">
+                    <span className="super-cup-preview__team">
                       {teams.find(t => t._id === leagueWinnerId)?.name} (League Winner)
                     </span>
-                    <span className="vs">VS</span>
-                    <span className="cup-winner">
+                    <span className="super-cup-preview__vs" aria-hidden="true">VS</span>
+                    <span className="super-cup-preview__team">
                       {teams.find(t => t._id === cupWinnerId)?.name} (Cup Winner)
                     </span>
                   </div>
@@ -1455,7 +1491,7 @@ const AdminPanel = ({ onDataChange, isAdmin }) => {
       )}
 
       {/* Match Editor */}
-      <div className={`card admin-edit-matches${selectedCompetition === 'league' ? ' admin-league-numbered' : ''}`}>
+      <div className={`card admin-edit-matches${selectedCompetition === 'league' ? ' admin-league-numbered' : ''}${['cup', 'super-cup', 'girls-super-cup'].includes(selectedCompetition) ? ' admin-edit-matches--knockout' : ''}`}>
         <h2><Edit3 size={20} aria-hidden="true" />Edit Matches</h2>
         <p className="admin-edit-context">
           Editing <strong>{COMPETITION_LABELS[selectedCompetition] || selectedCompetition}</strong>
@@ -1535,7 +1571,7 @@ const AdminPanel = ({ onDataChange, isAdmin }) => {
 
         {matchesForEditList.map((match, leagueFixtureIdx) => (
           <div className="admin-fixture-wrap" key={match._id}>
-            <div className={`match-row admin-match-row ${hasUnsavedChanges(match._id) ? 'match-row-edited' : ''}`}>
+            <div className={`match-row admin-match-row ${hasUnsavedChanges(match._id) ? 'match-row-edited' : ''}${shouldShowPenalties(match) ? ' admin-match-row--has-penalties' : ''}`}>
             {selectedCompetition === 'league' && (
               <div data-label="Fixture #">
                 <span className="admin-league-fixture-num">{leagueFixtureIdx + 1}</span>
@@ -1571,27 +1607,14 @@ const AdminPanel = ({ onDataChange, isAdmin }) => {
                 placeholder="Enter score"
                 disabled={isLockedVoidedAcwplMatch(match)}
               />
-              {shouldShowPenalties(match) && (
-                <>
-                  <input
-                    type="number"
-                    min="0"
-                    max="10"
-                    value={
-                      getMatchValue(match, 'homePenalties') === null || getMatchValue(match, 'homePenalties') === undefined || getMatchValue(match, 'homePenalties') === ''
-                        ? ''
-                        : String(getMatchValue(match, 'homePenalties'))
-                    }
-                    onChange={(e) => handleMatchEdit(match._id, 'homePenalties', e.target.value)}
-                    className="input penalty-input"
-                    placeholder="P"
-                    style={{ width: '40px', marginLeft: '5px', border: '2px solid #dc2626', background: '#fff6f6', color: '#222', fontWeight: 600, textAlign: 'center' }}
-                    title="Penalty shootout score"
-                    disabled={isLockedVoidedAcwplMatch(match)}
-                  />
-                  <span style={{ marginLeft: 2, color: '#dc2626', fontWeight: 600, fontSize: '0.95em' }}>P</span>
-                </>
-              )}
+              {shouldShowPenalties(match) &&
+                renderPenaltyShootoutInput(
+                  match,
+                  'home',
+                  getMatchValue,
+                  handleMatchEdit,
+                  isLockedVoidedAcwplMatch(match)
+                )}
             </div>
             <div data-label="Away score" className="admin-score-cell">
               <input
@@ -1604,27 +1627,14 @@ const AdminPanel = ({ onDataChange, isAdmin }) => {
                 placeholder="Enter score"
                 disabled={isLockedVoidedAcwplMatch(match)}
               />
-              {shouldShowPenalties(match) && (
-                <>
-                  <input
-                    type="number"
-                    min="0"
-                    max="10"
-                    value={
-                      getMatchValue(match, 'awayPenalties') === null || getMatchValue(match, 'awayPenalties') === undefined || getMatchValue(match, 'awayPenalties') === ''
-                        ? ''
-                        : String(getMatchValue(match, 'awayPenalties'))
-                    }
-                    onChange={(e) => handleMatchEdit(match._id, 'awayPenalties', e.target.value)}
-                    className="input penalty-input"
-                    placeholder="P"
-                    style={{ width: '40px', marginLeft: '5px', border: '2px solid #dc2626', background: '#fff6f6', color: '#222', fontWeight: 600, textAlign: 'center' }}
-                    title="Penalty shootout score"
-                    disabled={isLockedVoidedAcwplMatch(match)}
-                  />
-                  <span style={{ marginLeft: 2, color: '#dc2626', fontWeight: 600, fontSize: '0.95em' }}>P</span>
-                </>
-              )}
+              {shouldShowPenalties(match) &&
+                renderPenaltyShootoutInput(
+                  match,
+                  'away',
+                  getMatchValue,
+                  handleMatchEdit,
+                  isLockedVoidedAcwplMatch(match)
+                )}
             </div>
             <div data-label="Away"><strong>{match.awayTeam.name}</strong></div>
             <div data-label={selectedCompetition === 'girls-super-cup' ? 'Round' : 'MW'}>{match.matchweek}</div>
@@ -1792,7 +1802,7 @@ const AdminPanel = ({ onDataChange, isAdmin }) => {
             </tr>
           </thead>
           <tbody>
-            {teams?.filter(team => team && team.competition === 'league').map((team, index) => (
+            {sortLeagueTeams(teams).map((team, index) => (
               <tr key={team?._id}>
                 <td>{index + 1}</td>
                 <td><strong>{team?.name || 'Unknown'}</strong></td>

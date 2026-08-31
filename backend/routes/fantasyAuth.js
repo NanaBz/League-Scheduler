@@ -2,27 +2,39 @@ const express = require('express');
 const router = express.Router();
 const FantasyUser = require('../models/FantasyUser');
 const { generateFantasyToken, authenticateFantasyUser, validatePasswordStrength } = require('../middleware/fantasyAuth');
-const { sendVerificationEmail } = require('../utils/mailer');
+const { sendVerificationEmail, sendPasswordResetEmail } = require('../utils/mailer');
+const {
+  generateResetToken,
+  hashResetToken,
+  isResetTokenValid,
+  resetTokenExpiry,
+  buildResetUrl,
+  GENERIC_FORGOT_MESSAGE,
+} = require('../utils/passwordReset');
+const { fantasyEmailVerifyBypassEnabled } = require('../utils/startupValidation');
 
 const normalizeEmail = (email) => (email || '').trim().toLowerCase();
 const generateCode = () => `${Math.floor(100000 + Math.random() * 900000)}`;
 
-/** When true, skip email codes: register/login issue tokens; verify accepts without a valid code. Remove for production. */
+/** When true, skip email codes: register/login issue tokens; verify accepts without a valid code. Dev/test only. */
 function fantasyEmailVerifyBypass() {
-  const v = process.env.FANTASY_BYPASS_EMAIL_VERIFY;
-  if (v == null || v === '') return false;
-  const s = String(v).trim().toLowerCase();
-  return s === 'true' || s === '1' || s === 'yes';
+  if (process.env.NODE_ENV === 'production' && fantasyEmailVerifyBypassEnabled()) {
+    throw new Error('FANTASY_BYPASS_EMAIL_VERIFY must not be enabled in production');
+  }
+  return fantasyEmailVerifyBypassEnabled();
 }
 
 router.post('/register', async (req, res) => {
   try {
-    const { email, password, teamName, managerName } = req.body;
-    if (!email || !password || !teamName || !managerName) {
-      return res.status(400).json({ success: false, message: 'Email, password, team name, and manager name are required.' });
+    const { email, password, confirmPassword, teamName, managerName } = req.body;
+    if (!email || !password || !confirmPassword || !teamName || !managerName) {
+      return res.status(400).json({ success: false, message: 'Email, password, confirm password, team name, and manager name are required.' });
     }
 
     const normalizedEmail = normalizeEmail(email);
+    if (password !== confirmPassword) {
+      return res.status(400).json({ success: false, message: 'Passwords do not match.' });
+    }
     const passwordValidation = validatePasswordStrength(password);
     if (!passwordValidation.isValid) {
       return res.status(400).json({ success: false, message: 'Password is too weak.', errors: passwordValidation.errors });
@@ -270,6 +282,96 @@ router.get('/me', authenticateFantasyUser, async (req, res) => {
       lastLogin: user.lastLogin
     }
   });
+});
+
+router.post('/forgot-password', async (req, res) => {
+  try {
+    const { email } = req.body;
+    if (!email) {
+      return res.status(400).json({ success: false, message: 'Email is required.' });
+    }
+
+    const normalizedEmail = normalizeEmail(email);
+    const user = await FantasyUser.findOne({ email: normalizedEmail });
+
+    if (user && user.isVerified) {
+      const token = generateResetToken();
+      user.passwordResetTokenHash = await hashResetToken(token);
+      user.passwordResetTokenExpires = resetTokenExpiry(
+        Number(process.env.PASSWORD_RESET_TTL_MINUTES) || 60
+      );
+      await user.save();
+
+      const resetUrl = buildResetUrl('/fantasy', token);
+      await sendPasswordResetEmail(normalizedEmail, resetUrl, { audience: 'ACFPL Fantasy' });
+    }
+
+    return res.json({ success: true, message: GENERIC_FORGOT_MESSAGE });
+  } catch (err) {
+    console.error('Fantasy forgot-password error:', err.message);
+    return res.status(500).json({ success: false, message: 'Server error. Please try again.' });
+  }
+});
+
+router.post('/reset-password', async (req, res) => {
+  try {
+    const { token, password, confirmPassword } = req.body;
+    if (!token || !password || !confirmPassword) {
+      return res.status(400).json({
+        success: false,
+        message: 'Reset token, new password, and confirmation are required.',
+      });
+    }
+    if (password !== confirmPassword) {
+      return res.status(400).json({ success: false, message: 'Passwords do not match.' });
+    }
+
+    const passwordValidation = validatePasswordStrength(password);
+    if (!passwordValidation.isValid) {
+      return res.status(400).json({
+        success: false,
+        message: 'Password is too weak.',
+        errors: passwordValidation.errors,
+      });
+    }
+
+    const candidates = await FantasyUser.find({
+      passwordResetTokenExpires: { $gt: new Date() },
+      passwordResetTokenHash: { $ne: null },
+    }).select('+passwordResetTokenHash +passwordResetTokenExpires');
+
+    let matchedUser = null;
+    for (const user of candidates) {
+      const valid = await isResetTokenValid(
+        token,
+        user.passwordResetTokenHash,
+        user.passwordResetTokenExpires
+      );
+      if (valid) {
+        matchedUser = user;
+        break;
+      }
+    }
+
+    if (!matchedUser) {
+      return res.status(400).json({
+        success: false,
+        message: 'This reset link is invalid or has expired. Please request a new one.',
+      });
+    }
+
+    matchedUser.password = password;
+    matchedUser.clearPasswordResetToken();
+    await matchedUser.save();
+
+    return res.json({
+      success: true,
+      message: 'Password updated successfully. You can now sign in with your new password.',
+    });
+  } catch (err) {
+    console.error('Fantasy reset-password error:', err.message);
+    return res.status(500).json({ success: false, message: 'Server error. Please try again.' });
+  }
 });
 
 module.exports = router;

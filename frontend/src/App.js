@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useLayoutEffect, useRef } from 'react';
+import React, { useState, useEffect, useLayoutEffect, useRef, useMemo } from 'react';
 import { Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { Trophy, Award, Star, Users, Zap, Cog, LogOut, Archive } from 'lucide-react';
 
@@ -14,7 +14,9 @@ import StatsPage from './components/StatsPage';
 import TeamsPage from './components/TeamsPage';
 import GirlsTeamsPage from './components/GirlsTeamsPage';
 import FantasyManagement from './components/FantasyManagement';
+import AdminActivityLog from './components/AdminActivityLog';
 import FantasyAuth from './components/FantasyAuth';
+import AdminFab from './components/AdminFab';
 import ArchivedSeasonsPage from './pages/ArchivedSeasonsPage';
 import ArchivedCompetitionPage from './pages/ArchivedCompetitionPage';
 import ArchivedTeamsPage from './pages/ArchivedTeamsPage';
@@ -25,16 +27,25 @@ import {
   SECTION_TO_PATH,
   savedSectionPath,
 } from './utils/userRoutes';
+import { scrollToPageTop } from './utils/scrollToPageTop';
+import {
+  markAdminSessionActive,
+  clearAdminSession,
+  hasAdminSession,
+} from './utils/adminSession';
 import './styles/designFoundation.css';
 import './styles/fixtures.css';
 import './styles/aghaCup.css';
 import './styles/superCup.css';
 import './index.css';
 import './styles/schoolGirlsCompetitions.css';
+import './styles/girlsSuperCup.css';
 import './styles/statsPage.css';
 import './styles/teamsPage.css';
 import './styles/fantasyUiRefresh.css';
 import './styles/adminUi.css';
+import './styles/mobileNav.css';
+import './styles/adminFab.css';
 
 const COMPETITION_IDS = ['league', 'cup', 'super-cup', 'acwpl', 'girls-super-cup'];
 
@@ -54,7 +65,7 @@ function TeamsSection({ girlsTeamsActive, setGirlsTeamsActive, dataRefreshKey })
           onClick={() => setGirlsTeamsActive(false)}
           disabled={!girlsTeamsActive}
         >
-          Boys Teams
+          Men&apos;s Teams
         </button>
         <button
           type="button"
@@ -63,7 +74,7 @@ function TeamsSection({ girlsTeamsActive, setGirlsTeamsActive, dataRefreshKey })
           onClick={() => setGirlsTeamsActive(true)}
           disabled={girlsTeamsActive}
         >
-          Girls Teams
+          Women&apos;s Teams
         </button>
       </div>
       </div>
@@ -80,6 +91,10 @@ function App() {
   const location = useLocation();
   const navigate = useNavigate();
   const activeSection = pathToSection(location.pathname) || 'fixtures';
+
+  useLayoutEffect(() => {
+    scrollToPageTop();
+  }, [location.pathname]);
 
   // Restore from localStorage if available
   const getInitial = (key, fallback) => {
@@ -106,6 +121,7 @@ function App() {
       setActiveTab('user');
       navigate(SECTION_TO_PATH[section || 'fixtures'] || '/fixtures');
       setSelectedCompetition(comp);
+      scrollToPageTop();
     };
     return () => { delete window.setSelectedCompetition; };
   }, [navigate]);
@@ -113,20 +129,52 @@ function App() {
   const goToSection = (id) => {
     setActiveTab('user');
     navigate(SECTION_TO_PATH[id] || '/fixtures');
+    scrollToPageTop();
+  };
+
+  const navigateFromFooter = (section) => {
+    setActiveTab('user');
+    if (section === 'fixtures') setSelectedCompetition('league');
+    navigate(SECTION_TO_PATH[section] || '/fixtures');
+    scrollToPageTop();
+  };
+
+  const goToAdminPanel = () => {
+    setActiveTab('admin');
+    setAdminSection('fixtures-mgmt');
+    scrollToPageTop();
   };
   const [isAdmin, setIsAdmin] = useState(false);
   const [adminToken, setAdminToken] = useState(null);
+  const [adminSessionActive, setAdminSessionActive] = useState(() => hasAdminSession());
   // eslint-disable-next-line no-unused-vars
   const [adminData, setAdminData] = useState(null);
   const [showLogin, setShowLogin] = useState(false);
+  const adminResetToken = useMemo(() => {
+    const params = new URLSearchParams(location.search);
+    if (params.get('adminReset')) {
+      return params.get('reset') || '';
+    }
+    return '';
+  }, [location.search]);
+
+  useEffect(() => {
+    if (adminResetToken) {
+      setShowLogin(true);
+    }
+  }, [adminResetToken]);
   const [isLoading, setIsLoading] = useState(true);
   const [dataRefreshKey, setDataRefreshKey] = useState(0);
-  const [adminSection, setAdminSection] = useState('fixtures-mgmt'); // fixtures-mgmt | players-mgmt | fantasy-mgmt
+  const [adminSection, setAdminSection] = useState('fixtures-mgmt'); // fixtures-mgmt | players-mgmt | fantasy-mgmt | activity-log
   const [competitions] = useState({
     league: { name: 'League', description: 'Circle Method league' },
     cup: { name: 'Agha Cup', description: 'Knockout cup for top 4 teams' },
     'super-cup': { name: 'Super Cup', description: 'League winner vs Cup winner' },
-    acwpl: { name: 'ACWPL', description: 'Girls best-of-5 league (Orion vs Firestorm)' },
+    acwpl: {
+      name: 'ACWPL (Girls League)',
+      description:
+        'The ACWPL is a best-of-5 series between Orion and Firestorm. A team is crowned champion immediately after 3 wins or once they are mathematically uncatchable on points. Any remaining fixtures are marked null/void.',
+    },
     'girls-super-cup': {
       name: 'Girls Super Cup',
       description: 'Best-of-3 between Orion and Firestorm; first to two wins. Draws can go to penalties; remaining games are void once a side clinches.',
@@ -153,6 +201,8 @@ function App() {
             setIsAdmin(true);
             setAdminData(response.data.admin);
             setAdminToken(token);
+            markAdminSessionActive();
+            setAdminSessionActive(true);
           } else {
             localStorage.removeItem('adminToken');
           }
@@ -174,8 +224,12 @@ function App() {
     setIsAdmin(true);
     setAdminData(admin);
     setAdminToken(token);
+    markAdminSessionActive();
+    setAdminSessionActive(true);
     setShowLogin(false);
     setActiveTab('admin');
+    setAdminSection('fixtures-mgmt');
+    scrollToPageTop();
   };
 
   const handleLogout = async () => {
@@ -189,6 +243,8 @@ function App() {
       console.log('Logout error:', error);
     } finally {
       localStorage.removeItem('adminToken');
+      clearAdminSession();
+      setAdminSessionActive(false);
       setIsAdmin(false);
       setAdminData(null);
       setAdminToken(null);
@@ -239,11 +295,17 @@ function App() {
     }
   }, [isLoading, activeTab, isAdmin, selectedCompetition]);
 
+  const showAdminShortcut = isAdmin && adminSessionActive && activeTab === 'user';
+
   if (isLoading) {
     return (
       <div className="loading-screen">
           <div className="loading-content">
-          <div className="loading-spinner"></div>
+          <img
+            src="/logos/acity-sports-logo.jpg"
+            alt="Acity Sports"
+            className="loading-logo"
+          />
           <h2>Acity Premier League</h2>
           <p>Loading your football management system...</p>
           <div className="loading-bar">
@@ -314,6 +376,8 @@ function App() {
               <Sidebar
                 activeSection={activeSection}
                 onSelect={goToSection}
+                showAdminPanel={showAdminShortcut}
+                onAdminPanelClick={goToAdminPanel}
               />
             ) : isAdmin ? (
               <AdminSidebar
@@ -332,44 +396,49 @@ function App() {
           <div className="content-area">
 
         {/* Mobile Bottom Navigation */}
-        <nav className="mobile-nav">
+        <nav className="mobile-nav" aria-label="Mobile navigation">
           {/* App Sections on mobile */}
           {activeTab === 'user' && (
             <>
               <button
+                type="button"
                 className={`mobile-nav-item ${activeSection === 'fixtures' ? 'active' : ''}`}
                 onClick={() => goToSection('fixtures')}
               >
                 <div className="mobile-nav-icon"><Trophy size={20} /></div>
-                <div>Fixtures</div>
+                <span className="mobile-nav-label">Fixtures</span>
               </button>
               <button
+                type="button"
                 className={`mobile-nav-item ${activeSection === 'stats' ? 'active' : ''}`}
                 onClick={() => goToSection('stats')}
               >
                 <div className="mobile-nav-icon"><Zap size={20} /></div>
-                <div>Stats</div>
+                <span className="mobile-nav-label">Stats</span>
               </button>
               <button
+                type="button"
                 className={`mobile-nav-item ${activeSection === 'teams' ? 'active' : ''}`}
                 onClick={() => goToSection('teams')}
               >
                 <div className="mobile-nav-icon"><Users size={20} /></div>
-                <div>Teams</div>
+                <span className="mobile-nav-label">Teams</span>
               </button>
               <button
+                type="button"
                 className={`mobile-nav-item ${activeSection === 'fantasy' ? 'active' : ''}`}
                 onClick={() => goToSection('fantasy')}
               >
                 <div className="mobile-nav-icon"><Star size={20} /></div>
-                <div>Fantasy</div>
+                <span className="mobile-nav-label">Fantasy</span>
               </button>
               <button
+                type="button"
                 className={`mobile-nav-item ${activeSection === 'archived' ? 'active' : ''}`}
                 onClick={() => goToSection('archived')}
               >
                 <div className="mobile-nav-icon"><Archive size={20} /></div>
-                <div>Archived</div>
+                <span className="mobile-nav-label">Archived</span>
               </button>
             </>
           )}
@@ -378,37 +447,46 @@ function App() {
           {activeTab === 'admin' && isAdmin && (
             <>
               <button
+                type="button"
                 className="mobile-nav-item"
                 onClick={() => {
                   setActiveTab('user');
                   navigate(savedSectionPath());
                 }}
               >
-                <Trophy size={18} />
-                <div>League</div>
+                <div className="mobile-nav-icon"><Trophy size={20} /></div>
+                <span className="mobile-nav-label">League</span>
               </button>
               <button
+                type="button"
                 className="mobile-nav-item active"
+                aria-current="page"
               >
-                <Cog size={18} />
-                <div>Admin</div>
+                <div className="mobile-nav-icon"><Cog size={20} /></div>
+                <span className="mobile-nav-label">Admin</span>
               </button>
               <button
+                type="button"
                 className="mobile-nav-item"
                 onClick={handleLogout}
               >
-                <LogOut size={18} />
-                <div>Logout</div>
+                <div className="mobile-nav-icon"><LogOut size={20} /></div>
+                <span className="mobile-nav-label">Logout</span>
               </button>
             </>
           )}
         </nav>
+
+        {showAdminShortcut && (
+          <AdminFab onClick={goToAdminPanel} />
+        )}
 
         {/* Admin Authentication */}
         {showLogin && (
           <AdminAuth
             onLoginSuccess={handleAdminLogin}
             onCancel={() => setShowLogin(false)}
+            initialResetToken={adminResetToken}
           />
         )}
 
@@ -485,6 +563,8 @@ function App() {
                 <PlayerManagement onDataChange={handleDataChange} isAdmin={isAdmin} />
               ) : adminSection === 'fantasy-mgmt' ? (
                 <FantasyManagement isAdmin={isAdmin} />
+              ) : adminSection === 'activity-log' ? (
+                <AdminActivityLog />
               ) : null}
             </div>
           </div>
@@ -499,12 +579,14 @@ function App() {
         <Footer 
           isAdmin={isAdmin} 
           onLoginClick={() => setShowLogin(true)}
-          onAdminClick={() => setActiveTab('admin')}
+          onAdminClick={goToAdminPanel}
           onLogoutClick={handleLogout}
           onBackToLeagueClick={() => {
             setActiveTab('user');
             navigate(savedSectionPath());
+            scrollToPageTop();
           }}
+          onNavigateSection={navigateFromFooter}
           activeTab={activeTab}
         />
       </div>

@@ -58,14 +58,4 @@ export function deriveGameweekInfo(matches, { competition = 'league' } = {}) {
   return { week, deadline: new Date(earliest.dt.getTime() - 60 * 60 * 1000) };
 }
 
-export function clearFantasyClientSeasonKeys() {
-  try {
-    localStorage.removeItem('fantasyCurrentGameweek');
-    localStorage.removeItem('fantasyOverallRankingLive');
-    Object.keys(localStorage)
-      .filter((k) => k.startsWith('fantasySquad:'))
-      .forEach((k) => localStorage.removeItem(k));
-  } catch {
-    /* ignore */
-  }
-}
+export { clearFantasyClientSeasonKeys } from './fantasySquadStorage';

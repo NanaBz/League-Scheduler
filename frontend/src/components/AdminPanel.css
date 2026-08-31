@@ -165,3 +165,153 @@
   }
 }
 
+/* Penalty shootout inputs — scoped to admin fixture editing */
+.admin-edit-matches .admin-score-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  min-width: 0;
+}
+
+.admin-penalty-shootout {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  background: linear-gradient(180deg, #ffffff 0%, #fef2f2 100%);
+  border: 1px solid #fca5a5;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.85);
+  box-sizing: border-box;
+}
+
+.admin-penalty-shootout__label {
+  flex-shrink: 0;
+  font-size: 0.6875rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #991b1b;
+  white-space: nowrap;
+}
+
+.admin-edit-matches .admin-penalty-shootout__input {
+  flex: 0 0 auto;
+  width: 48px;
+  min-width: 48px;
+  max-width: 48px;
+  height: 36px;
+  min-height: 36px;
+  margin: 0;
+  padding: 0 4px;
+  border: 2px solid #dc2626;
+  border-radius: 6px;
+  background: #ffffff;
+  color: #0f172a;
+  -webkit-text-fill-color: #0f172a;
+  caret-color: #0f172a;
+  font-size: 1.0625rem;
+  font-weight: 800;
+  line-height: 1;
+  text-align: center;
+  box-sizing: border-box;
+  appearance: textfield;
+  -moz-appearance: textfield;
+}
+
+.admin-edit-matches .admin-penalty-shootout__input:focus,
+.admin-edit-matches .admin-penalty-shootout__input:focus-visible {
+  outline: none;
+  border-color: #991b1b;
+  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.18);
+}
+
+.admin-edit-matches .admin-penalty-shootout__input::placeholder {
+  color: #94a3b8;
+  font-weight: 600;
+  opacity: 1;
+}
+
+.admin-edit-matches .admin-penalty-shootout__input:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+.admin-edit-matches .admin-penalty-shootout__input::-webkit-outer-spin-button,
+.admin-edit-matches .admin-penalty-shootout__input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+/* Desktop: wider score columns + stacked penalty block that stays inside its cell */
+@media screen and (min-width: 1025px) {
+  .admin-edit-matches--knockout .admin-match-header.match-header,
+  .admin-edit-matches--knockout .match-row.admin-match-row {
+    grid-template-columns:
+      minmax(100px, 1fr)
+      minmax(76px, 0.72fr)
+      minmax(68px, 1fr)
+      minmax(96px, 0.92fr)
+      minmax(96px, 0.92fr)
+      minmax(68px, 1fr)
+      minmax(32px, 0.36fr)
+      minmax(80px, 0.82fr)
+      minmax(112px, 1.08fr);
+    align-items: start;
+  }
+
+  .admin-edit-matches .match-row.admin-match-row--has-penalties {
+    align-items: start;
+  }
+
+  .admin-edit-matches .match-row.admin-match-row--has-penalties > div:not([data-label='Actions']) {
+    padding-top: 6px;
+  }
+
+  .admin-edit-matches .admin-score-cell {
+    align-items: stretch;
+    gap: 6px;
+    width: 100%;
+  }
+
+  .admin-edit-matches .admin-score-cell > .input {
+    width: 100%;
+    max-width: none;
+    margin: 0;
+  }
+
+  .admin-penalty-shootout {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 4px;
+    width: 100%;
+    padding: 5px 6px 6px;
+  }
+
+  .admin-penalty-shootout__label {
+    text-align: center;
+    line-height: 1.1;
+  }
+
+  .admin-edit-matches .admin-penalty-shootout__input {
+    width: 100%;
+    min-width: 0;
+    max-width: none;
+    height: 34px;
+    min-height: 34px;
+  }
+}
+
+@media screen and (max-width: 1024px) {
+  .admin-edit-matches .admin-score-cell {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+
+  .admin-edit-matches .admin-penalty-shootout {
+    flex: 0 0 auto;
+  }
+}
+

@@ -228,6 +228,15 @@
   transform: translateY(0);
 }
 
+.fantasy-card .btn-pill--secondary {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.fantasy-card .btn-pill--secondary:hover {
+  background: rgba(255, 255, 255, 0.16);
+}
+
 /* Desktop tweaks */
 @media (min-width: 769px) {
   .fantasy-card {
@@ -235,7 +244,7 @@
     padding: 24px 28px;
   }
   .fantasy-card .actions {
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: repeat(3, 1fr);
   }
 }
 

@@ -73,7 +73,7 @@ function getTeamLogoClass(teamName) {
   return `${baseClass} ${teamClass}`;
 }
 
-export default function FantasyDashboardCard({ user, onPickTeam, onTransfers, onLeaguesCups, onProfileViewChange }) {
+export default function FantasyDashboardCard({ user, onPickTeam, onTransfers, onLeaguesCups, onRules, onProfileViewChange }) {
   const [matches, setMatches] = useState([]);
   const [loading, setLoading] = useState(false);
   const [serverSeasonInfo, setServerSeasonInfo] = useState(null);
@@ -331,6 +331,9 @@ export default function FantasyDashboardCard({ user, onPickTeam, onTransfers, on
       <div className="actions">
         <button type="button" className="btn-pill" onClick={onPickTeam}>Pick Team</button>
         <button type="button" className="btn-pill" onClick={onTransfers}>Transfers</button>
+        {onRules ? (
+          <button type="button" className="btn-pill btn-pill--secondary" onClick={onRules}>Rules</button>
+        ) : null}
       </div>
     </div>
     )}

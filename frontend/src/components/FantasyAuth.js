@@ -1,15 +1,19 @@
 import React, { useCallback, useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import api from '../utils/api';
 import FantasyDashboardCard from './FantasyDashboardCard';
 import FantasyLeagueCupSection from './FantasyLeagueCupSection';
 import FantasyTransfers from './FantasyTransfers';
 import PickTeam from './PickTeam';
 import LeaguesAndCups from './LeaguesAndCups';
+import FantasyInfoPage from './FantasyInfoPage';
 import './FantasyAuth.css';
 
 const TOKEN_KEY = 'fantasyToken';
 
 export default function FantasyAuth() {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const resetTokenFromUrl = searchParams.get('reset') || '';
   const [token, setToken] = useState(() => {
     try {
       return localStorage.getItem(TOKEN_KEY) || '';
@@ -19,8 +23,8 @@ export default function FantasyAuth() {
   });
   const [user, setUser] = useState(null);
   const [loadingMe, setLoadingMe] = useState(!!localStorage.getItem(TOKEN_KEY));
-  const [tab, setTab] = useState('login'); // login | register | verify
-  const [subView, setSubView] = useState(null); // null | pick | transfers | leagues
+  const [tab, setTab] = useState(() => (resetTokenFromUrl ? 'reset' : 'login')); // login | register | verify | forgot | reset
+  const [subView, setSubView] = useState(null); // null | pick | transfers | leagues | info
   const [managerProfileOpen, setManagerProfileOpen] = useState(false);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
@@ -30,11 +34,26 @@ export default function FantasyAuth() {
 
   const [regEmail, setRegEmail] = useState('');
   const [regPassword, setRegPassword] = useState('');
+  const [regConfirmPassword, setRegConfirmPassword] = useState('');
   const [regTeam, setRegTeam] = useState('');
   const [regManager, setRegManager] = useState('');
 
   const [verifyEmail, setVerifyEmail] = useState('');
   const [verifyCode, setVerifyCode] = useState('');
+
+  const [forgotEmail, setForgotEmail] = useState('');
+  const [forgotLoading, setForgotLoading] = useState(false);
+  const [resetToken, setResetToken] = useState(resetTokenFromUrl);
+  const [resetPassword, setResetPassword] = useState('');
+  const [resetConfirmPassword, setResetConfirmPassword] = useState('');
+  const [resetLoading, setResetLoading] = useState(false);
+
+  useEffect(() => {
+    if (resetTokenFromUrl) {
+      setResetToken(resetTokenFromUrl);
+      setTab('reset');
+    }
+  }, [resetTokenFromUrl]);
 
   const persistSession = useCallback((t, u) => {
     localStorage.setItem(TOKEN_KEY, t);
@@ -114,19 +133,27 @@ export default function FantasyAuth() {
     e.preventDefault();
     setError('');
     setMessage('');
+    if (regPassword !== regConfirmPassword) {
+      setError('Passwords do not match.');
+      return;
+    }
     try {
       const { data } = await api.post('/fantasy/auth/register', {
         email: regEmail.trim(),
         password: regPassword,
+        confirmPassword: regConfirmPassword,
         teamName: regTeam.trim(),
         managerName: regManager.trim(),
       });
       if (data?.success && data.token) {
         persistSession(data.token, data.user);
         setRegPassword('');
+        setRegConfirmPassword('');
         setMessage(data.message || 'Welcome!');
       } else if (data?.success) {
         setVerifyEmail(regEmail.trim());
+        setRegPassword('');
+        setRegConfirmPassword('');
         setTab('verify');
         setMessage(data.message || 'Check your email for the code.');
       } else {
@@ -168,6 +195,61 @@ export default function FantasyAuth() {
       setError(err.response?.data?.message || err.message || 'Could not resend code');
     }
   };
+
+  const handleForgotPassword = async (e) => {
+    e.preventDefault();
+    setError('');
+    setMessage('');
+    setForgotLoading(true);
+    try {
+      const { data } = await api.post('/fantasy/auth/forgot-password', { email: forgotEmail.trim() });
+      setMessage(data?.message || 'If an account exists for that email, a password reset link has been sent.');
+    } catch (err) {
+      setError(err.response?.data?.message || err.message || 'Could not send reset email.');
+    } finally {
+      setForgotLoading(false);
+    }
+  };
+
+  const handleResetPassword = async (e) => {
+    e.preventDefault();
+    setError('');
+    setMessage('');
+    if (resetPassword !== resetConfirmPassword) {
+      setError('Passwords do not match.');
+      return;
+    }
+    setResetLoading(true);
+    try {
+      const { data } = await api.post('/fantasy/auth/reset-password', {
+        token: resetToken.trim(),
+        password: resetPassword,
+        confirmPassword: resetConfirmPassword,
+      });
+      if (data?.success) {
+        setMessage(data.message || 'Password updated. You can sign in now.');
+        setResetPassword('');
+        setResetConfirmPassword('');
+        setResetToken('');
+        setSearchParams({});
+        setTab('login');
+      } else {
+        setError(data?.message || 'Could not reset password.');
+      }
+    } catch (err) {
+      setError(err.response?.data?.message || err.message || 'Could not reset password.');
+    } finally {
+      setResetLoading(false);
+    }
+  };
+
+  if (subView === 'info') {
+    return (
+      <div className="fantasy-auth-container fantasy-section">
+        <FantasyInfoPage onBack={() => setSubView(null)} />
+      </div>
+    );
+  }
 
   if (token && loadingMe) {
     return (
@@ -213,6 +295,7 @@ export default function FantasyAuth() {
           onPickTeam={() => setSubView('pick')}
           onTransfers={() => setSubView('transfers')}
           onLeaguesCups={() => setSubView('leagues')}
+          onRules={() => setSubView('info')}
           onProfileViewChange={setManagerProfileOpen}
         />
         {!managerProfileOpen ? <FantasyLeagueCupSection user={user} /> : null}
@@ -222,7 +305,7 @@ export default function FantasyAuth() {
 
   return (
     <div className="fantasy-auth-container fantasy-section">
-      {tab !== 'verify' && (
+      {tab !== 'verify' && tab !== 'forgot' && tab !== 'reset' && (
         <div className="fantasy-auth-tabs">
           <button type="button" className={`fantasy-tab ${tab === 'login' ? 'active' : ''}`} onClick={() => { setTab('login'); setError(''); setMessage(''); }}>
             Sign in
@@ -248,6 +331,49 @@ export default function FantasyAuth() {
           </div>
           <div className="fantasy-actions">
             <button type="submit" className="fantasy-btn fantasy-btn-primary">Sign in</button>
+            <button type="button" className="fantasy-btn fantasy-btn-text" onClick={() => { setTab('forgot'); setError(''); setMessage(''); }}>
+              Forgot password?
+            </button>
+          </div>
+        </form>
+      )}
+
+      {tab === 'forgot' && (
+        <form className="fantasy-form" onSubmit={handleForgotPassword}>
+          <p className="fantasy-form-lead">Enter your registered email and we&apos;ll send a reset link if an account exists.</p>
+          <div className="fantasy-form-group">
+            <label className="fantasy-label" htmlFor="fa-forgot-email">Email</label>
+            <input id="fa-forgot-email" className="fantasy-input" type="email" autoComplete="email" value={forgotEmail} onChange={(e) => setForgotEmail(e.target.value)} required />
+          </div>
+          <div className="fantasy-actions">
+            <button type="submit" className="fantasy-btn fantasy-btn-primary" disabled={forgotLoading}>
+              {forgotLoading ? 'Sending…' : 'Send reset link'}
+            </button>
+            <button type="button" className="fantasy-btn fantasy-btn-secondary" onClick={() => { setTab('login'); setError(''); setMessage(''); }}>
+              Back to sign in
+            </button>
+          </div>
+        </form>
+      )}
+
+      {tab === 'reset' && (
+        <form className="fantasy-form" onSubmit={handleResetPassword}>
+          <p className="fantasy-form-lead">Choose a new password for your fantasy account.</p>
+          <div className="fantasy-form-group">
+            <label className="fantasy-label" htmlFor="fa-reset-pass">New password</label>
+            <input id="fa-reset-pass" className="fantasy-input" type="password" autoComplete="new-password" value={resetPassword} onChange={(e) => setResetPassword(e.target.value)} required minLength={8} />
+          </div>
+          <div className="fantasy-form-group">
+            <label className="fantasy-label" htmlFor="fa-reset-confirm">Confirm new password</label>
+            <input id="fa-reset-confirm" className="fantasy-input" type="password" autoComplete="new-password" value={resetConfirmPassword} onChange={(e) => setResetConfirmPassword(e.target.value)} required minLength={8} />
+          </div>
+          <div className="fantasy-actions">
+            <button type="submit" className="fantasy-btn fantasy-btn-primary" disabled={resetLoading || !resetToken}>
+              {resetLoading ? 'Updating…' : 'Update password'}
+            </button>
+            <button type="button" className="fantasy-btn fantasy-btn-secondary" onClick={() => { setTab('login'); setSearchParams({}); setError(''); setMessage(''); }}>
+              Back to sign in
+            </button>
           </div>
         </form>
       )}
@@ -261,6 +387,10 @@ export default function FantasyAuth() {
           <div className="fantasy-form-group">
             <label className="fantasy-label" htmlFor="fa-reg-pass">Password</label>
             <input id="fa-reg-pass" className="fantasy-input" type="password" autoComplete="new-password" value={regPassword} onChange={(e) => setRegPassword(e.target.value)} required minLength={8} />
+          </div>
+          <div className="fantasy-form-group">
+            <label className="fantasy-label" htmlFor="fa-reg-confirm-pass">Confirm password</label>
+            <input id="fa-reg-confirm-pass" className="fantasy-input" type="password" autoComplete="new-password" value={regConfirmPassword} onChange={(e) => setRegConfirmPassword(e.target.value)} required minLength={8} />
           </div>
           <div className="fantasy-form-group">
             <label className="fantasy-label" htmlFor="fa-reg-team">Fantasy team name</label>

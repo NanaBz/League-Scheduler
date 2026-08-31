@@ -1,8 +1,15 @@
 const FantasyDraftSquad = require('../models/FantasyDraftSquad');
 const FantasySquad = require('../models/FantasySquad');
+const Player = require('../models/Player');
 const { isTransferChip, transferChipsAvailableForGameweek } = require('./fantasyChipsShared');
 const { isMatchweekComplete } = require('./fantasyMatchweek');
 const { upsertGameweekSnapshot } = require('./fantasyGameweekSnapshot');
+const { resolvePriorLineupForSquad } = require('./fantasyLineupRestore');
+const {
+  buildMarketPricesMap,
+  normalizePurchasePriceMap,
+  resolveFinancialState,
+} = require('./fantasySquadLedger');
 const {
   countSquadSlots,
   squadIdsFromSlots,
@@ -18,6 +25,29 @@ function cloneSlots(slots) {
   return JSON.parse(JSON.stringify(slots));
 }
 
+function clonePurchaseMap(map) {
+  if (!map || typeof map !== 'object') return {};
+  return normalizePurchasePriceMap(map);
+}
+
+async function loadMarketPricesForIds(playerIds) {
+  const ids = [...new Set((playerIds || []).filter(Boolean).map(String))];
+  if (!ids.length) return new Map();
+  const players = await Player.find({ _id: { $in: ids } }).select('_id fantasyPrice').lean();
+  return buildMarketPricesMap(players);
+}
+
+async function resolveDocFinancialState(doc, slots) {
+  const playerIds = squadIdsFromSlots(slots || doc?.slots);
+  const marketPricesById = await loadMarketPricesForIds(playerIds);
+  return resolveFinancialState({
+    bankBalance: doc?.bankBalance,
+    playerPurchasePrices: doc?.playerPurchasePrices,
+    playerIds,
+    marketPricesById,
+  });
+}
+
 function findFreeHitGameweekFromHistory(chipHistory, currentGameweek) {
   let latest = null;
   for (const [gw, chip] of Object.entries(chipHistory || {})) {
@@ -27,6 +57,17 @@ function findFreeHitGameweekFromHistory(chipHistory, currentGameweek) {
     }
   }
   return latest;
+}
+
+function buildFreeHitFinancialRestoreFromBaseline(doc) {
+  const updates = {};
+  if (doc?.freeHitBaselineBankBalance != null) {
+    updates.bankBalance = doc.freeHitBaselineBankBalance;
+  }
+  if (doc?.freeHitBaselinePurchasePrices) {
+    updates.playerPurchasePrices = clonePurchaseMap(doc.freeHitBaselinePurchasePrices);
+  }
+  return updates;
 }
 
 async function loadSnapshotForGameweek(fantasyUserId, matchweek) {
@@ -90,12 +131,16 @@ async function captureFreeHitBaseline(fantasyUserId, doc, currentGameweek) {
       ? cloneSlots(fromPrevGw)
       : cloneSlots(doc?.slots);
 
+  const financial = await resolveDocFinancialState(doc, slots);
+
   return {
     freeHitBaselineSlots: slots,
     freeHitGameweek: currentGameweek,
     freeHitBaselineTransferInOrder: doc?.transferInOrder?.length
       ? [...doc.transferInOrder]
       : null,
+    freeHitBaselineBankBalance: financial.bankBalance,
+    freeHitBaselinePurchasePrices: clonePurchaseMap(financial.playerPurchasePrices),
   };
 }
 
@@ -146,6 +191,8 @@ async function reconcileFreeHitState(doc, currentGameweek, fantasyUserId, matche
     freeHitGameweek: null,
     freeHitBaselineSlots: null,
     freeHitBaselineTransferInOrder: null,
+    freeHitBaselineBankBalance: null,
+    freeHitBaselinePurchasePrices: null,
     lineup: null,
     freeHitRevertedFrom: revert.source || null,
   };
@@ -155,10 +202,19 @@ async function reconcileFreeHitState(doc, currentGameweek, fantasyUserId, matche
     if (revert.transferInOrder?.length) {
       updates.transferInOrder = revert.transferInOrder;
     }
+
+    const restoredLineup = await resolvePriorLineupForSquad(uid, fhGw, revert.slots);
+    if (restoredLineup) {
+      updates.lineup = restoredLineup;
+    }
   } else {
     console.warn(
       `[fantasy] Free Hit revert found no squad for user ${uid} (FH GW${fhGw}, current GW${currentGameweek})`
     );
+  }
+
+  if (doc.freeHitBaselineBankBalance != null || doc.freeHitBaselinePurchasePrices) {
+    Object.assign(updates, buildFreeHitFinancialRestoreFromBaseline(doc));
   }
 
   if (doc.activeChip === 'FH' && doc.activeChipGameweek === fhGw) {
@@ -166,15 +222,30 @@ async function reconcileFreeHitState(doc, currentGameweek, fantasyUserId, matche
     updates.activeChipGameweek = null;
   }
 
-  if (doc.lineup?.chipUsed === 'FH') {
-    updates.lineup = null;
-  }
-
-  return FantasyDraftSquad.findOneAndUpdate(
+  const updated = await FantasyDraftSquad.findOneAndUpdate(
     { _id: doc._id },
     { $set: updates },
     { new: true }
   ).lean();
+
+  if (revert.slots) {
+    const existingGw = await FantasySquad.findOne({
+      fantasyUser: uid,
+      matchweek: Number(currentGameweek),
+    })
+      .select('lineup isLocked')
+      .lean();
+
+    if (!existingGw?.isLocked && !existingGw?.lineup) {
+      await upsertGameweekSnapshot(uid, currentGameweek, {
+        slots: revert.slots,
+        lineupPayload: updates.lineup || null,
+        chipUsed: null,
+      });
+    }
+  }
+
+  return updated;
 }
 
 async function loadChipHistory(fantasyUserId) {
@@ -329,9 +400,20 @@ async function setActiveChip(fantasyUserId, chipId, currentGameweek, matches = n
     if (!doc) return { ok: true, chipState: buildChipState(null, currentGameweek, refreshedHistory) };
     const update = { activeChip: null, activeChipGameweek: null };
     if (doc.activeChip === 'FH') {
+      if (doc.freeHitBaselineSlots) {
+        update.slots = cloneSlots(doc.freeHitBaselineSlots);
+      }
+      if (doc.freeHitBaselineTransferInOrder?.length) {
+        update.transferInOrder = [...doc.freeHitBaselineTransferInOrder];
+      }
+      if (doc.freeHitBaselineBankBalance != null || doc.freeHitBaselinePurchasePrices) {
+        Object.assign(update, buildFreeHitFinancialRestoreFromBaseline(doc));
+      }
       update.freeHitBaselineSlots = null;
       update.freeHitGameweek = null;
       update.freeHitBaselineTransferInOrder = null;
+      update.freeHitBaselineBankBalance = null;
+      update.freeHitBaselinePurchasePrices = null;
     }
     if (doc.lineup) {
       update.lineup = { ...doc.lineup, chipUsed: null };
@@ -398,6 +480,8 @@ async function setActiveChip(fantasyUserId, chipId, currentGameweek, matches = n
     update.freeHitBaselineSlots = null;
     update.freeHitGameweek = null;
     update.freeHitBaselineTransferInOrder = null;
+    update.freeHitBaselineBankBalance = null;
+    update.freeHitBaselinePurchasePrices = null;
   }
 
   if (doc?.lineup) {
@@ -469,4 +553,6 @@ module.exports = {
   buildChipState,
   chipUsedInSeason,
   buildUsedGameweek,
+  buildFreeHitFinancialRestoreFromBaseline,
+  clonePurchaseMap,
 };

@@ -1,5 +1,7 @@
 const FantasySquad = require('../models/FantasySquad');
 const FantasyDraftSquad = require('../models/FantasyDraftSquad');
+const { countSquadSlots } = require('./fantasySquadFromSnapshot');
+const { resolvePriorLineupForSquad } = require('./fantasyLineupRestore');
 
 /** Persist current pick-team selection for a gameweek (updated until GW is locked). */
 async function upsertGameweekSnapshot(fantasyUserId, matchweek, { slots, lineupPayload, chipUsed }) {
@@ -42,17 +44,23 @@ async function backfillMissingSnapshotsForGameweek(matchweek) {
     return 0;
   }
   
-  const drafts = await FantasyDraftSquad.find({ lineup: { $ne: null }, slots: { $ne: null } }).lean();
+  const drafts = await FantasyDraftSquad.find({ slots: { $ne: null } }).lean();
   let created = 0;
 
   for (const draft of drafts) {
     const existing = await FantasySquad.findOne({ fantasyUser: draft.fantasyUser, matchweek: mw }).lean();
     if (existing?.isLocked || existing?.lineup) continue;
 
+    let lineupPayload = draft.lineup;
+    if (!lineupPayload && countSquadSlots(draft.slots) === 13) {
+      lineupPayload = await resolvePriorLineupForSquad(draft.fantasyUser, mw, draft.slots);
+    }
+    if (!lineupPayload) continue;
+
     const result = await upsertGameweekSnapshot(draft.fantasyUser, mw, {
       slots: draft.slots,
-      lineupPayload: draft.lineup,
-      chipUsed: draft.lineup?.chipUsed || null,
+      lineupPayload,
+      chipUsed: lineupPayload?.chipUsed || null,
     });
     if (result.ok) created += 1;
   }

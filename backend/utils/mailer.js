@@ -50,4 +50,25 @@ const sendVerificationEmail = async (to, code) => {
   await transporter.sendMail({ from, to, subject, text, html });
 };
 
-module.exports = { sendVerificationEmail };
+const sendPasswordResetEmail = async (to, resetUrl, { audience = 'Fantasy' } = {}) => {
+  const transporter = buildTransport();
+
+  if (!transporter) {
+    console.log('\n📧 === PASSWORD RESET EMAIL (Dev Mode) ===');
+    console.log(`To: ${to}`);
+    console.log(`Audience: ${audience}`);
+    console.log(`Reset link: ${resetUrl}`);
+    console.log(`Expires: ${process.env.PASSWORD_RESET_TTL_MINUTES || 60} minutes`);
+    console.log('=========================================\n');
+    return;
+  }
+
+  const from = process.env.SMTP_FROM || process.env.SMTP_USER;
+  const subject = `${audience} password reset`;
+  const text = `You requested a password reset. Open this link to choose a new password (expires in one hour):\n\n${resetUrl}\n\nIf you did not request this, you can ignore this email.`;
+  const html = `<p>You requested a password reset for your ${audience} account.</p><p><a href="${resetUrl}">Reset your password</a></p><p>This link expires in one hour. If you did not request this, you can ignore this email.</p>`;
+
+  await transporter.sendMail({ from, to, subject, text, html });
+};
+
+module.exports = { sendVerificationEmail, sendPasswordResetEmail };

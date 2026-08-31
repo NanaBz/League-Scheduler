@@ -13,6 +13,14 @@ const STEPS = [
 
 const EMPTY_BONUS = { bp3: null, bp2: null, bp1: null };
 const EMPTY_SPECIAL = { playerId: '', points: 0, reason: '' };
+const FANTASY_MIN_MINUTES = 0;
+const FANTASY_MAX_MINUTES = 70;
+
+function clampFantasyMinutesInput(value) {
+  const n = Number(value);
+  if (!Number.isFinite(n)) return FANTASY_MIN_MINUTES;
+  return Math.min(FANTASY_MAX_MINUTES, Math.max(FANTASY_MIN_MINUTES, Math.trunc(n)));
+}
 
 function performanceMapFromMatchPlayers(matchPlayers) {
   const map = {};
@@ -88,7 +96,7 @@ function hasScoringEventStats(perf) {
 }
 
 function defaultMinutesForPerformance(row) {
-  const played = Number(row?.minutesPlayed) || 0;
+  const played = clampFantasyMinutesInput(Number(row?.minutesPlayed) || 0);
   if (played > 0) return played;
   if (hasScoringEventStats(row)) return 1;
   return 0;
@@ -226,8 +234,13 @@ export default function FantasyMatchweekEditor({ matchweeks, onBackToDashboard }
   };
 
   const handleMinutesChange = (playerId, value, perf) => {
-    let next = value === '' ? '' : Number(value);
-    if (next !== '' && hasScoringEventStats(perf) && next < 1) {
+    if (value === '') {
+      setPlayerMinutes((prev) => ({ ...prev, [playerId]: '' }));
+      setError('');
+      return;
+    }
+    let next = clampFantasyMinutesInput(value);
+    if (hasScoringEventStats(perf) && next < 1) {
       next = 1;
     }
     setPlayerMinutes((prev) => ({ ...prev, [playerId]: next }));
@@ -315,7 +328,7 @@ export default function FantasyMatchweekEditor({ matchweeks, onBackToDashboard }
     try {
       const playerMinutesArray = Object.entries(playerMinutes).map(([playerId, minutes]) => ({
         playerId,
-        minutes: Number(minutes) || 0,
+        minutes: minutes === '' ? 0 : clampFantasyMinutesInput(minutes),
       }));
       await api.post(`/fantasy/admin/matches/${selectedMatch._id}/minutes`, {
         matchweek: selectedMatchweek.number,
@@ -469,7 +482,8 @@ export default function FantasyMatchweekEditor({ matchweeks, onBackToDashboard }
                       type="number"
                       className="fme-input fme-input-min"
                       min={minMinutes}
-                      max="70"
+                      max={FANTASY_MAX_MINUTES}
+                      step="1"
                       value={playerMinutes[player._id] ?? ''}
                       onChange={(e) => handleMinutesChange(player._id, e.target.value, perf)}
                       aria-label={`Minutes for ${player.name}`}
@@ -515,7 +529,8 @@ export default function FantasyMatchweekEditor({ matchweeks, onBackToDashboard }
                     type="number"
                     className="fme-input"
                     min={minMinutes}
-                    max="70"
+                    max={FANTASY_MAX_MINUTES}
+                    step="1"
                     value={playerMinutes[player._id] ?? ''}
                     onChange={(e) => handleMinutesChange(player._id, e.target.value, perf)}
                   />
@@ -611,7 +626,7 @@ export default function FantasyMatchweekEditor({ matchweeks, onBackToDashboard }
           <h3 className="fme-step-title">Player performance</h3>
           <p className="fme-step-desc">
             Goals, assists, clean sheets, and cards are pulled from match events automatically.
-            Enter minutes and bonus below. Minutes: 1–44 = +1, 45+ = +2. Players with a goal, assist, card, or own goal must have at least 1 minute.
+            Enter minutes and bonus below. Minutes: 0–70 per player (1–44 = +1 appearance, 45+ = +2). Players with a goal, assist, card, or own goal must have at least 1 minute.
           </p>
           {renderPlayerRows(matchPlayers.homePlayers, matchPlayers.match.homeTeam.name)}
           {renderPlayerRows(matchPlayers.awayPlayers, matchPlayers.match.awayTeam.name)}

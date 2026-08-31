@@ -1,4 +1,5 @@
 const Match = require('../models/Match');
+const Player = require('../models/Player');
 const FantasyMatchPerformance = require('../models/FantasyMatchPerformance');
 const {
   recalcPerformanceTotalsForMatch,
@@ -18,6 +19,50 @@ function cleansheetPointsForPosition(position) {
   if (p === 'GK' || p === 'DF') return 4;
   if (p === 'MF') return 1;
   return 0;
+}
+
+/** Derive team clean-sheet flags from the match score (no schema changes). */
+function teamCleanSheetFlags(homeScore, awayScore) {
+  if (homeScore == null || awayScore == null) {
+    return { homeKeptCleanSheet: false, awayKeptCleanSheet: false };
+  }
+  const home = Number(homeScore);
+  const away = Number(awayScore);
+  const valid =
+    Number.isFinite(home) &&
+    Number.isFinite(away) &&
+    home >= 0 &&
+    away >= 0;
+  if (!valid) {
+    return { homeKeptCleanSheet: false, awayKeptCleanSheet: false };
+  }
+  return {
+    homeKeptCleanSheet: away === 0,
+    awayKeptCleanSheet: home === 0,
+  };
+}
+
+/**
+ * Fantasy clean-sheet points for one player — team CS + minutes + registered position.
+ * Fixture CLEAN_SHEET events are not used here.
+ */
+function fantasyCleanSheetForPlayer({ minutesPlayed, position, teamKeptCleanSheet }) {
+  const minutes = Number(minutesPlayed) || 0;
+  if (!teamKeptCleanSheet || minutes < 45) {
+    return { cleansheet: false, cleansheetPoints: 0 };
+  }
+  const cleansheetPoints = cleansheetPointsForPosition(position);
+  return {
+    cleansheet: cleansheetPoints > 0,
+    cleansheetPoints,
+  };
+}
+
+function teamKeptCleanSheetForPlayerTeam(playerTeamId, homeTeamId, awayTeamId, flags) {
+  const teamId = String(playerTeamId);
+  if (teamId === String(homeTeamId)) return flags.homeKeptCleanSheet;
+  if (teamId === String(awayTeamId)) return flags.awayKeptCleanSheet;
+  return false;
 }
 
 function emptyEventStats() {
@@ -60,10 +105,8 @@ function buildEventStatsByPlayer(events) {
       row.yellowCards += 1;
     } else if (ev.type === 'RED_CARD') {
       row.redCards += 1;
-    } else if (ev.type === 'CLEAN_SHEET') {
-      row.cleansheet = true;
-      row.cleansheetPoints = cleansheetPointsForPosition(pos);
     }
+    // CLEAN_SHEET events are for Fixture Management / PlayerStats only — not Fantasy CS.
 
     const aid = playerRefId(ev.assistPlayer);
     if (ev.type === 'GOAL' && !ev.ownGoal && aid) {
@@ -85,9 +128,40 @@ function hasEventActivity(stats) {
     (stats.ownGoals || 0) > 0 ||
     (stats.assists || 0) > 0 ||
     (stats.yellowCards || 0) > 0 ||
-    (stats.redCards || 0) > 0 ||
-    (stats.cleansheetPoints || 0) > 0
+    (stats.redCards || 0) > 0
   );
+}
+
+/** Recompute Fantasy clean-sheet fields for every performance row in a match. */
+async function applyFantasyCleanSheetPoints(matchId, match) {
+  const rows = await FantasyMatchPerformance.find({ match: matchId });
+  if (!rows.length) return 0;
+
+  const flags = teamCleanSheetFlags(match.homeScore, match.awayScore);
+  const homeTeamId = match.homeTeam?._id || match.homeTeam;
+  const awayTeamId = match.awayTeam?._id || match.awayTeam;
+
+  const playerIds = rows.map((row) => row.player);
+  const players = await Player.find({ _id: { $in: playerIds } }).select('position team').lean();
+  const playerById = new Map(players.map((p) => [String(p._id), p]));
+
+  let updated = 0;
+  for (const row of rows) {
+    const player = playerById.get(String(row.player));
+    const teamKeptCleanSheet = player
+      ? teamKeptCleanSheetForPlayerTeam(player.team, homeTeamId, awayTeamId, flags)
+      : false;
+    const cs = fantasyCleanSheetForPlayer({
+      minutesPlayed: row.minutesPlayed,
+      position: player?.position,
+      teamKeptCleanSheet,
+    });
+    row.cleansheet = cs.cleansheet;
+    row.cleansheetPoints = cs.cleansheetPoints;
+    await row.save();
+    updated += 1;
+  }
+  return updated;
 }
 
 /**
@@ -98,6 +172,7 @@ async function syncFantasyPerformanceFromMatchEvents(matchId) {
   const match = await Match.findById(matchId)
     .populate('events.player', 'position')
     .populate('events.assistPlayer', 'position')
+    .populate('homeTeam awayTeam')
     .lean();
 
   if (!match || match.competition !== FANTASY_MATCH_COMPETITION) {
@@ -126,8 +201,6 @@ async function syncFantasyPerformanceFromMatchEvents(matchId) {
       assists: stats.assists,
       yellowCards: stats.yellowCards,
       redCards: stats.redCards,
-      cleansheet: stats.cleansheet,
-      cleansheetPoints: stats.cleansheetPoints,
     };
 
     if (row) {
@@ -143,6 +216,8 @@ async function syncFantasyPerformanceFromMatchEvents(matchId) {
         bonusPoints: 0,
         specialPoints: 0,
         specialPointsReason: '',
+        cleansheet: false,
+        cleansheetPoints: 0,
         ...payload,
       });
       await doc.save();
@@ -150,6 +225,7 @@ async function syncFantasyPerformanceFromMatchEvents(matchId) {
     }
   }
 
+  await applyFantasyCleanSheetPoints(matchId, match);
   await recalcPerformanceTotalsForMatch(matchId);
 
   return { ok: true, playersUpdated: updated };
@@ -195,7 +271,11 @@ async function syncFantasyPerformanceForGameweek(matchweek) {
 
 module.exports = {
   cleansheetPointsForPosition,
+  teamCleanSheetFlags,
+  fantasyCleanSheetForPlayer,
+  teamKeptCleanSheetForPlayerTeam,
   buildEventStatsByPlayer,
+  applyFantasyCleanSheetPoints,
   syncFantasyPerformanceFromMatchEvents,
   syncFantasyPerformanceForGameweek,
   finalizeFantasyMatchScoring,

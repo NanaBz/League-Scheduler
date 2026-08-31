@@ -733,3 +733,81 @@
 .ls-sidebar--admin.collapsed .admin-sidebar-divider {
   margin: var(--apl-space-2, 0.5rem) 0;
 }
+
+/* User sidebar — admin panel shortcut (desktop, after footer login) */
+.ls-sidebar-divider--admin {
+  margin: var(--apl-space-2, 0.5rem) 0;
+  border: none;
+  border-top: 1px solid var(--apl-border-subtle, #e2e8f0);
+}
+
+.ls-sidebar-item--admin-panel {
+  background: var(--primary-red-lightest, #fee2e2);
+  border-color: var(--primary-red-lighter, #fca5a5);
+  color: var(--primary-red-dark, #b91c1c);
+}
+
+.ls-sidebar-item--admin-panel svg {
+  color: var(--primary-red, #dc2626);
+}
+
+.ls-sidebar-item--admin-panel:hover {
+  background: #fecaca;
+  border-color: var(--primary-red-lighter, #fca5a5);
+}
+
+.ls-sidebar.collapsed .ls-sidebar-item--admin-panel {
+  justify-content: center;
+}
+
+/* Super Cup configure modal — preview matchup */
+.super-cup-preview {
+  margin: var(--apl-space-4, 1rem) 0;
+  padding: var(--apl-space-3, 0.75rem) var(--apl-space-4, 1rem);
+  background: var(--apl-surface-muted, #f8fafc);
+  border: 1px solid var(--apl-border-subtle, #e2e8f0);
+  border-radius: var(--apl-radius-md, 12px);
+}
+
+.super-cup-preview h4 {
+  margin: 0 0 var(--apl-space-3, 0.75rem);
+  font-size: 0.875rem;
+  font-weight: var(--apl-weight-bold, 700);
+  color: var(--apl-text-body, #1e293b);
+}
+
+.super-cup-preview__matchup {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.65rem 0.85rem;
+  flex-wrap: wrap;
+  text-align: center;
+}
+
+.super-cup-preview__team {
+  flex: 1 1 8rem;
+  min-width: 0;
+  font-size: 0.8125rem;
+  font-weight: var(--apl-weight-semibold, 600);
+  color: var(--apl-text-body, #334155);
+  line-height: 1.35;
+}
+
+.super-cup-preview__vs {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  min-width: 2rem;
+  height: 1.625rem;
+  padding: 0 0.45rem;
+  font-size: 0.65rem;
+  font-weight: var(--apl-weight-bold, 700);
+  letter-spacing: 0.08em;
+  color: var(--primary-red, #dc2626);
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: var(--apl-radius-sm, 8px);
+  line-height: 1;
+}

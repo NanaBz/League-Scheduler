@@ -58,8 +58,8 @@
   padding: 2px;
   box-sizing: border-box;
   border-radius: var(--apl-radius-sm, 8px);
-  background: var(--apl-surface-base, #fff);
-  border: 1px solid var(--apl-border-subtle, #e2e8f0);
+  background: transparent;
+  border: none;
 }
 
 #fixtures .acwpl-fixtures-bg .match-row .team-info strong {
@@ -100,8 +100,8 @@
   padding: 2px;
   box-sizing: border-box;
   border-radius: var(--apl-radius-sm, 8px);
-  background: var(--apl-surface-base, #fff);
-  border: 1px solid var(--apl-border-subtle, #e2e8f0);
+  background: transparent;
+  border: none;
 }
 
 #acwpl-standings .league-card .team-info {
@@ -165,8 +165,8 @@
     box-sizing: border-box !important;
     padding: 3px !important;
     border-radius: var(--apl-radius-sm, 8px);
-    background: var(--apl-surface-base, #fff);
-    border: 1px solid var(--apl-border-subtle, #e2e8f0);
+    background: transparent;
+    border: none;
     flex-shrink: 0;
   }
 
@@ -222,8 +222,8 @@
     object-fit: contain !important;
     flex-shrink: 0;
     border-radius: var(--apl-radius-sm, 8px);
-    background: var(--apl-surface-base, #fff);
-    border: 1px solid var(--apl-border-subtle, #e2e8f0);
+    background: transparent;
+    border: none;
     padding: 3px !important;
     box-sizing: border-box !important;
   }

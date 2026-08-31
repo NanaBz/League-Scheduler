@@ -5,11 +5,18 @@ import {
   EMPTY_SQUAD,
   countSquadPlayers,
   fantasyUserId,
-  loadSquadFromLocalStorage,
   normalizeSquadShape,
   resolveSquadFromApiAndCache,
   saveSquadToLocalStorage,
+  saveFinancialToLocalStorage,
 } from '../utils/fantasySquadStorage';
+import {
+  applyPlayerToSlot,
+  createEmptyFinancialState,
+  mapLedgerErrorMessage,
+  parseFinancialFromApiResponse,
+  previewSquadFinancial,
+} from '../utils/fantasySquadLedger';
 import { deriveGameweekInfo } from '../utils/fantasyGameweek';
 import {
   freeTransfersDisplay,
@@ -26,6 +33,7 @@ import {
   formatPitchFixture,
   refreshSquadFixtures,
 } from '../utils/fantasyPlayerFixtures';
+import { acityPriceAriaLabel, formatAcityPrice } from '../utils/formatAcityPrice';
 import './FantasyTransfers.css';
 import JerseyIcon from './JerseyIcon';
 import { getTeamCode, kitColors } from '../utils/fantasyKitColors';
@@ -48,6 +56,7 @@ export default function FantasyTransfers({ user, onBack, onGoToPickTeam }) {
   const [chipState, setChipState] = useState(null);
   const [transferState, setTransferState] = useState(null);
   const [savedSquad, setSavedSquad] = useState(null);
+  const [savedFinancial, setSavedFinancial] = useState(() => createEmptyFinancialState());
   const [saveStatus, setSaveStatus] = useState('idle'); // idle | saving | saved | error
   const [saveError, setSaveError] = useState('');
   const [unsavedModalOpen, setUnsavedModalOpen] = useState(false);
@@ -73,7 +82,13 @@ export default function FantasyTransfers({ user, onBack, onGoToPickTeam }) {
       }
       if (data?.chipState) setChipState(data.chipState);
       if (data?.transferState) setTransferState(data.transferState);
-      setSavedSquad(normalizeSquadShape(nextSquad));
+      const normalized = normalizeSquadShape(data.squad || nextSquad);
+      const financial = parseFinancialFromApiResponse(data);
+      setSquad(normalized);
+      setSavedSquad(normalized);
+      setSavedFinancial(financial);
+      saveSquadToLocalStorage(userKey, normalized);
+      saveFinancialToLocalStorage(userKey, financial);
       setSaveStatus('saved');
       if (showFeedback) {
         setValidationError({
@@ -99,6 +114,7 @@ export default function FantasyTransfers({ user, onBack, onGoToPickTeam }) {
   useEffect(() => {
     if (!userId) {
       setSquad(normalizeSquadShape(EMPTY_SQUAD));
+      setSavedFinancial(createEmptyFinancialState());
       setSquadLoading(false);
       return undefined;
     }
@@ -116,40 +132,33 @@ export default function FantasyTransfers({ user, onBack, onGoToPickTeam }) {
           const serverCount =
             typeof data.squadPlayerCount === 'number' ? data.squadPlayerCount : apiHydratedCount;
           const preferApi = data.chipState?.freeHitExpired === true;
-          let resolved = resolveSquadFromApiAndCache(data.squad, userId, serverCount, { preferApi });
-          if (serverCount >= 13 && countSquadPlayers(resolved) < 13) {
-            const cached = loadSquadFromLocalStorage(userId);
-            if (countSquadPlayers(cached) === 13) {
-              resolved = normalizeSquadShape(cached);
-            }
-          }
+          const resolved = resolveSquadFromApiAndCache(data.squad, userId, serverCount, { preferApi });
           const normalized = normalizeSquadShape(resolved);
+          const financial = parseFinancialFromApiResponse(data);
           setSquad(normalized);
           setSavedSquad(normalized);
-          saveSquadToLocalStorage(userId, resolved);
+          setSavedFinancial(financial);
+          saveSquadToLocalStorage(userId, normalized);
+          saveFinancialToLocalStorage(userId, financial);
           if (data.chipState) setChipState(data.chipState);
           if (data.transferState) setTransferState(data.transferState);
           if (countSquadPlayers(resolved) === 13) {
             setSaveStatus(serverCount >= 13 ? 'saved' : 'idle');
-          }
-          if (userId && countSquadPlayers(resolved) === 13 && serverCount < 13) {
-            api.put('/fantasy/my-squad', { squad: resolved }).then(() => setSaveStatus('saved')).catch((err) => {
-              setSaveStatus('error');
-              setSaveError(err.response?.data?.message || 'Could not sync squad to server.');
-            });
+          } else {
+            setSaveStatus('idle');
           }
         } else {
-          const cached = loadSquadFromLocalStorage(userId);
-          const normalized = cached ? normalizeSquadShape(cached) : normalizeSquadShape(EMPTY_SQUAD);
+          const normalized = normalizeSquadShape(EMPTY_SQUAD);
           setSquad(normalized);
           setSavedSquad(normalized);
+          setSavedFinancial(createEmptyFinancialState());
         }
       } catch {
         if (!cancelled) {
-          const cached = loadSquadFromLocalStorage(userId);
-          const normalized = cached ? normalizeSquadShape(cached) : normalizeSquadShape(EMPTY_SQUAD);
+          const normalized = normalizeSquadShape(EMPTY_SQUAD);
           setSquad(normalized);
           setSavedSquad(normalized);
+          setSavedFinancial(createEmptyFinancialState());
         }
       } finally {
         if (!cancelled) {
@@ -186,8 +195,7 @@ export default function FantasyTransfers({ user, onBack, onGoToPickTeam }) {
     fetchSeasonInfo();
   }, []);
 
-  // Summary values
-  const totalBudget = 100.0;
+  // Summary values — bank comes from server + staged preview (see financialPreview)
 
   const pendingTransfers = useMemo(
     () => countPendingTransfers(savedSquad, squad),
@@ -282,15 +290,22 @@ export default function FantasyTransfers({ user, onBack, onGoToPickTeam }) {
   );
 
   const cost = transferSummary.transferCost;
-  
-  const totalSpent = useMemo(() => {
-    return Object.values(squad)
-      .flat()
-      .filter(Boolean)
-      .reduce((sum, p) => sum + (p.fantasyPrice || 0), 0);
-  }, [squad]);
-  
-  const budget = totalBudget - totalSpent;
+
+  const savedBaseline = savedSquad || normalizeSquadShape(EMPTY_SQUAD);
+
+  const financialPreview = useMemo(
+    () =>
+      previewSquadFinancial({
+        savedFinancial,
+        savedSquad: savedBaseline,
+        stagedSquad: squad,
+      }),
+    [savedFinancial, savedBaseline, squad]
+  );
+
+  const bankDisplay = financialPreview.bankBalance;
+  const squadValueDisplay = financialPreview.squadMarketValue;
+  const totalValueDisplay = financialPreview.totalTeamValue;
 
   const derivedGameweekInfo = useMemo(() => deriveGameweekInfo(matches), [matches]);
   const upcomingInfo = useMemo(() => {
@@ -322,20 +337,34 @@ export default function FantasyTransfers({ user, onBack, onGoToPickTeam }) {
     return `${day} ${date} ${month}, ${hours}:${mins}`;
   };
 
-  const validateBudget = (newSquad) => {
-    const totalSpent = Object.values(newSquad)
-      .flat()
-      .filter(Boolean)
-      .reduce((sum, p) => sum + (p.fantasyPrice || 0), 0);
-
-    if (totalSpent > totalBudget) {
+  const validateStagedFinancial = (newSquad) => {
+    const preview = previewSquadFinancial({
+      savedFinancial,
+      savedSquad: savedBaseline,
+      stagedSquad: newSquad,
+    });
+    if (!preview.ok) {
       return {
         valid: false,
-        message: `Budget exceeded. Your squad would cost ${totalSpent.toFixed(1)}m but your budget is ${totalBudget.toFixed(1)}m.`,
+        message: mapLedgerErrorMessage(preview.message || 'Squad exceeds available budget.'),
       };
     }
     return { valid: true };
   };
+
+  const canAffordPlayer = useCallback(
+    (player) => {
+      if (!pickerLock) return true;
+      const trialSquad = applyPlayerToSlot(squad, pickerLock, player);
+      const preview = previewSquadFinancial({
+        savedFinancial,
+        savedSquad: savedBaseline,
+        stagedSquad: trialSquad,
+      });
+      return preview.ok;
+    },
+    [pickerLock, squad, savedFinancial, savedBaseline]
+  );
 
   const assignPlayer = (player) => {
     if (!pickerLock) return;
@@ -358,9 +387,9 @@ export default function FantasyTransfers({ user, onBack, onGoToPickTeam }) {
       return;
     }
 
-    const budgetCheck = validateBudget(newSquad);
+    const budgetCheck = validateStagedFinancial(newSquad);
     if (!budgetCheck.valid) {
-      setValidationError({ title: 'Budget Exceeded', message: budgetCheck.message, type: 'error' });
+      setValidationError({ title: 'Insufficient Bank', message: budgetCheck.message, type: 'error' });
       return;
     }
 
@@ -518,13 +547,30 @@ export default function FantasyTransfers({ user, onBack, onGoToPickTeam }) {
         </div>
       ) : null}
 
+      <div className="summary-bar summary-bar--financial">
+        <div className="summary-item">
+          <div className="label">Bank</div>
+          <div className="value" aria-label={acityPriceAriaLabel(bankDisplay)}>{formatAcityPrice(bankDisplay)}</div>
+        </div>
+        <div className="summary-item">
+          <div className="label">Squad Value</div>
+          <div className="value" aria-label={acityPriceAriaLabel(squadValueDisplay)}>{formatAcityPrice(squadValueDisplay)}</div>
+        </div>
+        <div className="summary-item">
+          <div className="label">Team Value</div>
+          <div className="value" aria-label={acityPriceAriaLabel(totalValueDisplay)}>{formatAcityPrice(totalValueDisplay)}</div>
+        </div>
+      </div>
+
       <div className="summary-bar">
         <div className={`summary-item${unlimitedTransfers ? ' summary-item--active' : ''}`}>
           <div className="label">Free Transfers</div>
           <div className="value">{freeTransfersLabel}</div>
         </div>
-        <div className="summary-item"><div className="label">Cost</div><div className="value">{cost > 0 ? `-${cost}` : 0}</div></div>
-        <div className="summary-item"><div className="label">Budget</div><div className="value">{budget.toFixed(1)}m</div></div>
+        <div className="summary-item">
+          <div className="label">Transfer Hit</div>
+          <div className="value">{cost > 0 ? `-${cost} pts` : '0 pts'}</div>
+        </div>
         <div className={`summary-item${wildcardActive ? ' summary-item--chip-active' : ''}`}>
           <div className="label">Wildcard</div>
           <div className="value">{wildcardLabel}</div>
@@ -590,7 +636,7 @@ export default function FantasyTransfers({ user, onBack, onGoToPickTeam }) {
                       className="pitch-player-card"
                       onClick={() => openPlayerDetails(p, 'GK', idx)}
                     >
-                      <div className="pitch-player-price">{(p.fantasyPrice || 0).toFixed(1)}m</div>
+                      <div className="pitch-player-price" aria-label={acityPriceAriaLabel(p.fantasyPrice)}>{formatAcityPrice(p.fantasyPrice)}</div>
                       <div className="pitch-player-kit">
                         <JerseyIcon className="pitch-player-kit-svg" size={52} {...kitColors(getTeamCode(p), p.position)} />
                       </div>
@@ -613,7 +659,7 @@ export default function FantasyTransfers({ user, onBack, onGoToPickTeam }) {
                 <div className="pitch-slot" key={`DF-${idx}`}>
                   {p ? (
                     <button type="button" className="pitch-player-card" onClick={() => openPlayerDetails(p, 'DF', idx)}>
-                      <div className="pitch-player-price">{(p.fantasyPrice || 0).toFixed(1)}m</div>
+                      <div className="pitch-player-price" aria-label={acityPriceAriaLabel(p.fantasyPrice)}>{formatAcityPrice(p.fantasyPrice)}</div>
                       <div className="pitch-player-kit">
                         <JerseyIcon className="pitch-player-kit-svg" size={52} {...kitColors(getTeamCode(p), p.position)} />
                       </div>
@@ -636,7 +682,7 @@ export default function FantasyTransfers({ user, onBack, onGoToPickTeam }) {
                 <div className="pitch-slot" key={`MF-${idx}`}>
                   {p ? (
                     <button type="button" className="pitch-player-card" onClick={() => openPlayerDetails(p, 'MF', idx)}>
-                      <div className="pitch-player-price">{(p.fantasyPrice || 0).toFixed(1)}m</div>
+                      <div className="pitch-player-price" aria-label={acityPriceAriaLabel(p.fantasyPrice)}>{formatAcityPrice(p.fantasyPrice)}</div>
                       <div className="pitch-player-kit">
                         <JerseyIcon className="pitch-player-kit-svg" size={52} {...kitColors(getTeamCode(p), p.position)} />
                       </div>
@@ -659,7 +705,7 @@ export default function FantasyTransfers({ user, onBack, onGoToPickTeam }) {
                 <div className="pitch-slot" key={`ATT-${idx}`}>
                   {p ? (
                     <button type="button" className="pitch-player-card" onClick={() => openPlayerDetails(p, 'ATT', idx)}>
-                      <div className="pitch-player-price">{(p.fantasyPrice || 0).toFixed(1)}m</div>
+                      <div className="pitch-player-price" aria-label={acityPriceAriaLabel(p.fantasyPrice)}>{formatAcityPrice(p.fantasyPrice)}</div>
                       <div className="pitch-player-kit">
                         <JerseyIcon className="pitch-player-kit-svg" size={52} {...kitColors(getTeamCode(p), p.position)} />
                       </div>
@@ -687,7 +733,7 @@ export default function FantasyTransfers({ user, onBack, onGoToPickTeam }) {
                 <div className="list-item-content" onClick={() => openPlayerDetails(p, pos, idx)}>
                   <div className="name">{p.name}</div>
                   <div className="pos">{p.position}</div>
-                  <div className="price">{(p.fantasyPrice || 0).toFixed(1)}m</div>
+                  <div className="price" aria-label={acityPriceAriaLabel(p.fantasyPrice)}>{formatAcityPrice(p.fantasyPrice)}</div>
                   <div className="opp">Next: {formatPitchFixture(p, matches, currentGameweek)}</div>
                 </div>
               ) : (
@@ -734,6 +780,7 @@ export default function FantasyTransfers({ user, onBack, onGoToPickTeam }) {
         <PlayerPickerModal
           lockedPosition={pickerLock?.position}
           selectedIds={selectedIds}
+          canAffordPlayer={canAffordPlayer}
           onClose={() => { setPickerOpen(false); setPickerLock(null); }}
           onSelect={assignPlayer}
         />

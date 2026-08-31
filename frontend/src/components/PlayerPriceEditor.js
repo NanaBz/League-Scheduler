@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import api from '../utils/api';
+import { formatAcityPrice } from '../utils/formatAcityPrice';
 import './PlayerPriceEditor.css';
 
 const POSITIONS = ['GK', 'DF', 'MF', 'ATT'];
@@ -217,7 +218,7 @@ export default function PlayerPriceEditor({ onBack }) {
                             {p.number != null && p.number !== '' ? `#${p.number}` : 'No #'}
                             {' · '}
                             {p.position || 'MF'}
-                            {p.fantasyPrice != null ? ` · ${Number(p.fantasyPrice).toFixed(1)}m` : ''}
+                            {p.fantasyPrice != null ? ` · ${formatAcityPrice(p.fantasyPrice)}` : ''}
                           </span>
                         </button>
                       </li>
@@ -259,7 +260,7 @@ export default function PlayerPriceEditor({ onBack }) {
                             className="price-input"
                             disabled={savingPlayerId === player._id}
                           />
-                          <span className="price-currency">m</span>
+                          <span className="price-currency" title="Acity Coins (millions)">AC</span>
                         </div>
                         <button
                           type="button"

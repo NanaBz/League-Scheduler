@@ -27,7 +27,7 @@ export default function ValidationModal({
           <h3 className="vm-title">{title}</h3>
           <p className="vm-message">{message}</p>
         </div>
-        <div className="vm-actions">
+        <div className={`vm-actions${secondaryAction && saveAction ? ' vm-actions--multi' : ''}`}>
           {secondaryAction ? (
             <button
               type="button"

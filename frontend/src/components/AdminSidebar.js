@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ListChecks, Users, Trophy, SidebarOpen, SidebarClose, Eye } from 'lucide-react';
+import { ListChecks, Users, Trophy, SidebarOpen, SidebarClose, Eye, ScrollText } from 'lucide-react';
 
 export default function AdminSidebar({ activeSection, onSelect, onSwitchToUser, isAdmin }) {
   const [collapsed, setCollapsed] = useState(false);
@@ -45,6 +45,7 @@ export default function AdminSidebar({ activeSection, onSelect, onSwitchToUser, 
       <Item id="fixtures-mgmt" icon={<ListChecks size={18} />} label="Fixture Management" />
       <Item id="players-mgmt" icon={<Users size={18} />} label="Player Management" />
       <Item id="fantasy-mgmt" icon={<Trophy size={18} />} label="Fantasy Management" />
+      <Item id="activity-log" icon={<ScrollText size={18} />} label="Activity Log" />
     </aside>
   );
 }

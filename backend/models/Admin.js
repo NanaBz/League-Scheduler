@@ -18,6 +18,14 @@ const AdminSchema = new mongoose.Schema({
     type: Boolean,
     default: true
   },
+  passwordResetTokenHash: {
+    type: String,
+    default: null
+  },
+  passwordResetTokenExpires: {
+    type: Date,
+    default: null
+  },
   lastLogin: {
     type: Date,
     default: null
@@ -56,6 +64,11 @@ AdminSchema.methods.updateLastLogin = function() {
   this.lastLogin = new Date();
   this.isFirstLogin = false;
   return this.save();
+};
+
+AdminSchema.methods.clearPasswordResetToken = function() {
+  this.passwordResetTokenHash = null;
+  this.passwordResetTokenExpires = null;
 };
 
 module.exports = mongoose.model('Admin', AdminSchema);

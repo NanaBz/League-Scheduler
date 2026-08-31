@@ -1,6 +1,13 @@
 import React from 'react';
 import { displaySelectionPercentage, displayTotalPoints } from '../utils/fantasyPlayerStatsDisplay';
+import { acityPriceAriaLabel, formatAcityPrice } from '../utils/formatAcityPrice';
 import './PlayerDetailsModal.css';
+
+function roundPriceDisplay(value) {
+  const n = Number(value);
+  if (!Number.isFinite(n)) return 0;
+  return Math.round(n * 10) / 10;
+}
 
 export default function PlayerDetailsModal({ player, onReplace, onRemove, onClose }) {
   if (!player) return null;
@@ -19,7 +26,24 @@ export default function PlayerDetailsModal({ player, onReplace, onRemove, onClos
           <div className="pdm-player-info">
             <div className="pdm-name">{player.name}</div>
             <div className="pdm-meta">
-              {player.team?.name} • {player.position} • {(player.fantasyPrice || 0).toFixed(1)}m
+              {player.team?.name} • {player.position}
+            </div>
+            <div className="pdm-prices">
+              <div className="pdm-price-row">
+                <span className="pdm-price-label">Current Price</span>
+                <span className="pdm-price-value" aria-label={acityPriceAriaLabel(player.fantasyPrice)}>
+                  {formatAcityPrice(player.fantasyPrice)}
+                </span>
+              </div>
+              {player.purchasePrice != null &&
+              roundPriceDisplay(player.purchasePrice) !== roundPriceDisplay(player.fantasyPrice) ? (
+                <div className="pdm-price-row pdm-price-row--purchase">
+                  <span className="pdm-price-label">Bought for</span>
+                  <span className="pdm-price-value" aria-label={acityPriceAriaLabel(player.purchasePrice)}>
+                    {formatAcityPrice(player.purchasePrice)}
+                  </span>
+                </div>
+              ) : null}
             </div>
           </div>
 

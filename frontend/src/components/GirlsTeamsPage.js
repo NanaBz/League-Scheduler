@@ -79,7 +79,7 @@ export default function GirlsTeamsPage() {
       {!selectedTeam && (
         <>
           <header className="teams-page-header">
-            <h1><Users size={22} aria-hidden="true" /> Girls Teams</h1>
+            <h1><Users size={22} aria-hidden="true" /> Women&apos;s Teams</h1>
             <p>Orion and Firestorm — ACWPL squads, leadership, and player statistics.</p>
           </header>
           <div className="team-cards">

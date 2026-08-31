@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { Calendar } from 'lucide-react';
 import FixtureFilterControl from '../FixtureFilterControl';
+import FixtureDesktopMatchup, { FixtureDesktopTableHeader } from '../FixtureDesktopMatchup';
 import {
   showFixtureScores,
   statusBadgeClass,
@@ -85,15 +86,7 @@ export default function ArchiveFixtureList({ fixtures = [], competitionId, title
       ) : (
         <>
           <div className="desktop-only">
-            <div className="match-header">
-              <div>Date</div>
-              <div>Time</div>
-              <div>Home Team</div>
-              <div>Score</div>
-              <div>Away Team</div>
-              <div>Stage</div>
-              <div>Status</div>
-            </div>
+            <FixtureDesktopTableHeader />
             <div className="fixtures-container">
               {grouped.map((group) => (
                 <div key={group.key} className="matchweek-group">
@@ -104,29 +97,7 @@ export default function ArchiveFixtureList({ fixtures = [], competitionId, title
                     <div key={match._id} className="match-row">
                       <div>{formatArchiveDate(match.date)}</div>
                       <div>{match.time || '—'}</div>
-                      <div>
-                        <div className="team-info">
-                          {match.homeTeam.logo && (
-                            <img src={match.homeTeam.logo} alt="" className={getTeamLogoClass(match.homeTeam.name)} style={{ width: 20, height: 20 }} />
-                          )}
-                          <strong>{match.homeTeam.name}</strong>
-                        </div>
-                      </div>
-                      <div className="score-display">
-                        {showFixtureScores(match) ? (
-                          <span><strong>{match.homeScore} - {match.awayScore}</strong></span>
-                        ) : (
-                          <span>vs</span>
-                        )}
-                      </div>
-                      <div>
-                        <div className="team-info">
-                          {match.awayTeam.logo && (
-                            <img src={match.awayTeam.logo} alt="" className={getTeamLogoClass(match.awayTeam.name)} style={{ width: 20, height: 20 }} />
-                          )}
-                          <strong>{match.awayTeam.name}</strong>
-                        </div>
-                      </div>
+                      <FixtureDesktopMatchup match={match} getTeamLogoClass={getTeamLogoClass} />
                       <div>{formatArchiveStage(match.stage, competitionId) || (competitionId === 'girls-super-cup' ? `Round ${match.matchweek}` : 'Regular')}</div>
                       <div>
                         <span className={`badge ${desktopFixtureBadgeClass(match)}`}>

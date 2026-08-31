@@ -218,6 +218,13 @@
   background: #fee2e2;
 }
 
+.fantasy-form-lead {
+  margin: 0 0 16px;
+  color: #64748b;
+  font-size: 0.95rem;
+  line-height: 1.45;
+}
+
 @media (max-width: 768px) {
   .fantasy-btn {
     padding: 13px 18px;

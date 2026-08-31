@@ -115,9 +115,9 @@
   width: 72px;
   height: 72px;
   border-radius: var(--apl-radius-md, 12px);
-  background: rgba(255, 255, 255, 0.95);
-  border: 1px solid rgba(255, 255, 255, 0.35);
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.22);
+  background: transparent;
+  border: none;
+  box-shadow: none;
   flex-shrink: 0;
 }
 
@@ -140,6 +140,9 @@
   max-height: 50px;
   object-fit: contain;
   border-radius: 50%;
+  background: linear-gradient(135deg, #e8eaed 0%, #dadce0 100%);
+  border: 1px solid #bdc1c6;
+  box-sizing: border-box;
 }
 
 .super-cup-showcase__team-name {

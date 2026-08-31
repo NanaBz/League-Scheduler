@@ -5,6 +5,10 @@ const { isMatchweekComplete } = require('./fantasyMatchweek');
 const { lineupWithResolvedCaptains } = require('./fantasyCaptainRoles');
 const { getTransferCostForGameweek } = require('./fantasyFreeTransfers');
 const { resolveScoringCaptainId } = require('./fantasyCaptainScoring');
+const {
+  applyAutoSubstitutions,
+  collectLineupPlayerIds,
+} = require('./fantasyAutoSubstitutions');
 
 /** Goal points by registered position (ATT 4, MF 5, DF 6, GK 10). */
 function goalPointsPerGoal(position) {
@@ -31,7 +35,8 @@ function calculateMinutesPoints(minutes) {
 function recalcPerformanceTotal(p, position) {
   const goals = p.goals || 0;
   const assists = p.assists || 0;
-  const cs = p.cleansheetPoints || 0;
+  const minutes = Number(p.minutesPlayed) || 0;
+  const cs = minutes >= 45 ? (p.cleansheetPoints || 0) : 0;
   const ownGoals = p.ownGoals || 0;
   return (
     (p.minutesPoints || 0) +
@@ -93,12 +98,47 @@ async function playerMinutesByMatchweek(matchweek) {
   return minutes;
 }
 
+async function loadPlayerPositionsForLineup(lineup) {
+  const ids = collectLineupPlayerIds(lineup);
+  if (!ids.size) return new Map();
+  const players = await Player.find({ _id: { $in: [...ids] } }).select('position').lean();
+  return new Map(players.map((p) => [String(p._id), p.position]));
+}
+
+async function resolveEffectiveLineupForScoring(savedLineup, playerPoints, playerMinutes, options = {}) {
+  const { gameweekComplete = false, chipUsed = null } = options;
+  if (!savedLineup) {
+    return { lineupForScoring: null, effectiveLineup: null, substitutions: [] };
+  }
+  if (!gameweekComplete || chipUsed === 'BB') {
+    return { lineupForScoring: savedLineup, effectiveLineup: null, substitutions: [] };
+  }
+
+  const playerPositions = await loadPlayerPositionsForLineup(savedLineup);
+  const result = applyAutoSubstitutions(savedLineup, playerPoints, playerMinutes, playerPositions, {
+    gameweekComplete: true,
+    chipUsed,
+  });
+
+  for (const sub of result.substitutions) {
+    console.log(`[fantasy-autosub] Starter ${sub.out} -> SUB${sub.benchIndex + 1} ${sub.in}`);
+  }
+
+  return {
+    lineupForScoring: result.effectiveLineup,
+    effectiveLineup: result.changed ? result.effectiveLineup : null,
+    substitutions: result.substitutions,
+  };
+}
+
 function scoreLineupFromSnapshot(lineup, playerPoints, options = {}) {
   const {
     captainId,
     viceCaptainId,
     chipUsed,
     playerMinutes = new Map(),
+    autoSubInIds = null,
+    autoSubOutIds = null,
   } = options;
   const benchBoost = chipUsed === 'BB';
   const tripleCap = chipUsed === 'TC';
@@ -142,6 +182,8 @@ function scoreLineupFromSnapshot(lineup, playerPoints, options = {}) {
       isViceCaptain: String(viceCaptainId) === id,
       actingCaptain: vicePromoted && String(scoringCaptainId) === id,
       captainDidNotPlay: vicePromoted && String(captainId) === id,
+      autoSubIn: autoSubInIds ? autoSubInIds.has(id) : false,
+      autoSubOut: autoSubOutIds ? autoSubOutIds.has(id) : false,
     };
     if (typeof p === 'object' && p.name) {
       return {
@@ -186,7 +228,13 @@ function scoreLineupFromSnapshot(lineup, playerPoints, options = {}) {
   };
 }
 
-async function rescoreGameweek(matchweek, matches) {
+/** Whether locked gameweek autosub snapshots should be preserved during rescore. */
+function shouldPreserveLockedAutosubs({ gameweekComplete, isLocked, forceAutosubRecalc }) {
+  return Boolean(gameweekComplete && isLocked && !forceAutosubRecalc);
+}
+
+async function rescoreGameweek(matchweek, matches, options = {}) {
+  const { forceAutosubRecalc = false } = options;
   const mw = Number(matchweek);
   const squads = await FantasySquad.find({ matchweek: mw });
   const { points: playerPoints, minutes: playerMinutes } = await gameweekPlayerStats(mw);
@@ -195,14 +243,45 @@ async function rescoreGameweek(matchweek, matches) {
   for (const doc of squads) {
     if (!doc.lineup) continue;
     const resolvedLineup = await lineupWithResolvedCaptains(doc.lineup, doc.fantasyUser);
-    const { total } = scoreLineupFromSnapshot(resolvedLineup, playerPoints, {
+
+    const preserveLockedAutosubs = complete && doc.isLocked && !forceAutosubRecalc;
+    let lineupForScoring;
+    let effectiveLineup;
+    let substitutions;
+
+    if (preserveLockedAutosubs) {
+      lineupForScoring = doc.effectiveLineup || resolvedLineup;
+      effectiveLineup = doc.effectiveLineup;
+      substitutions = Array.isArray(doc.autoSubstitutions) ? doc.autoSubstitutions : [];
+    } else {
+      const resolved = await resolveEffectiveLineupForScoring(
+        resolvedLineup,
+        playerPoints,
+        playerMinutes,
+        { gameweekComplete: complete, chipUsed: doc.chipUsed }
+      );
+      lineupForScoring = resolved.lineupForScoring;
+      effectiveLineup = resolved.effectiveLineup;
+      substitutions = resolved.substitutions;
+    }
+
+    const autoSubInIds = new Set(substitutions.map((sub) => String(sub.in)));
+    const autoSubOutIds = new Set(substitutions.map((sub) => String(sub.out)));
+
+    const { total } = scoreLineupFromSnapshot(lineupForScoring, playerPoints, {
       captainId: resolvedLineup.captainId,
       viceCaptainId: resolvedLineup.viceCaptainId,
       chipUsed: doc.chipUsed,
       playerMinutes,
+      autoSubInIds,
+      autoSubOutIds,
     });
     const transferHitPoints = await getTransferCostForGameweek(doc.fantasyUser, mw);
     doc.lineup = resolvedLineup;
+    if (!preserveLockedAutosubs) {
+      doc.effectiveLineup = effectiveLineup;
+      doc.autoSubstitutions = substitutions.length ? substitutions : null;
+    }
     doc.transferHitPoints = transferHitPoints;
     doc.points = Math.max(0, total - transferHitPoints);
     if (complete) doc.isLocked = true;
@@ -254,4 +333,7 @@ module.exports = {
   scoreLineupFromSnapshot,
   rescoreGameweek,
   hydrateLineupPlayers,
+  loadPlayerPositionsForLineup,
+  resolveEffectiveLineupForScoring,
+  shouldPreserveLockedAutosubs,
 };

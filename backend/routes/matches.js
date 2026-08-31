@@ -8,6 +8,7 @@ const Player = require('../models/Player');
 const PlayerStats = require('../models/PlayerStats');
 const Season = require('../models/Season');
 const { authenticateAdmin } = require('../middleware/auth');
+const { logAdminAction } = require('../utils/adminAuditLog');
 const {
   resolveSeasonNumberForMatch,
   seasonNumberForNewFixtures,
@@ -121,6 +122,12 @@ router.post('/:id/reset-score', authenticateAdmin, async (req, res) => {
     }
     await match.populate('homeTeam', 'name logo');
     await match.populate('awayTeam', 'name logo');
+    await logAdminAction(req, 'match_score_reset', {
+      matchId: match._id,
+      competition: match.competition,
+      homeTeam: match.homeTeam?.name,
+      awayTeam: match.awayTeam?.name,
+    });
     res.json({ message: 'Match score reset', match });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -169,6 +176,10 @@ router.post('/generate-acwpl', authenticateAdmin, async (req, res) => {
       fixtures.push(match);
     }
     await Match.insertMany(fixtures);
+    await logAdminAction(req, 'fixtures_generated', {
+      competition: 'acwpl',
+      count: fixtures.length,
+    });
     res.json({
       message: 'ACWPL best-of-5 series fixtures generated',
       count: fixtures.length,
@@ -217,6 +228,12 @@ router.post('/', authenticateAdmin, async (req, res) => {
     const newMatch = await match.save();
     await newMatch.populate('homeTeam', 'name logo');
     await newMatch.populate('awayTeam', 'name logo');
+    await logAdminAction(req, 'match_created', {
+      matchId: newMatch._id,
+      competition: newMatch.competition,
+      homeTeam: newMatch.homeTeam?.name,
+      awayTeam: newMatch.awayTeam?.name,
+    });
     res.status(201).json(newMatch);
   } catch (error) {
     res.status(400).json({ message: error.message });
@@ -265,6 +282,14 @@ router.put('/:id', authenticateAdmin, async (req, res) => {
       const updatedMatch = await match.save();
       await updatedMatch.populate('homeTeam', 'name logo');
       await updatedMatch.populate('awayTeam', 'name logo');
+      await logAdminAction(req, 'match_live_score_updated', {
+        matchId: updatedMatch._id,
+        competition: updatedMatch.competition,
+        homeTeam: updatedMatch.homeTeam?.name,
+        awayTeam: updatedMatch.awayTeam?.name,
+        homeScore: updatedMatch.homeScore,
+        awayScore: updatedMatch.awayScore,
+      });
       return res.json(updatedMatch);
     }
 
@@ -314,6 +339,17 @@ router.put('/:id', authenticateAdmin, async (req, res) => {
       await finalizeGirlsSuperCupIfClosed();
     }
 
+    const scoreChanged =
+      oldHomeScore !== match.homeScore || oldAwayScore !== match.awayScore;
+    await logAdminAction(req, scoreChanged ? 'match_score_updated' : 'match_updated', {
+      matchId: updatedMatch._id,
+      competition: updatedMatch.competition,
+      homeTeam: updatedMatch.homeTeam?.name,
+      awayTeam: updatedMatch.awayTeam?.name,
+      homeScore: updatedMatch.homeScore,
+      awayScore: updatedMatch.awayScore,
+    });
+
     res.json(updatedMatch);
   } catch (error) {
     res.status(400).json({ message: error.message });
@@ -329,6 +365,10 @@ router.delete('/:id', authenticateAdmin, async (req, res) => {
     }
 
     await match.deleteOne();
+    await logAdminAction(req, 'match_deleted', {
+      matchId: match._id,
+      competition: match.competition,
+    });
     res.json({ message: 'Match deleted' });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -338,9 +378,12 @@ router.delete('/:id', authenticateAdmin, async (req, res) => {
 // Generate league fixtures
 router.post('/generate-league', authenticateAdmin, async (req, res) => {
   try {
-    const teams = await Team.find();
+    const teams = await Team.find({ category: 'boys' }).sort({ name: 1 });
     if (teams.length !== 6) {
-      return res.status(400).json({ message: 'Exactly 6 teams required for league' });
+      const totalTeams = await Team.countDocuments();
+      return res.status(400).json({
+        message: `Exactly 6 boys league teams required for league fixtures (found ${teams.length} boys, ${totalTeams} total). Girls/ACWPL teams are excluded.`,
+      });
     }
 
     // Clear existing league matches
@@ -472,6 +515,11 @@ router.post('/generate-league', authenticateAdmin, async (req, res) => {
     const totalMatches = fixtures.length;
     const expectedMatches = 30; // 6 teams, each plays 5 others twice = 30 matches
     
+    await logAdminAction(req, 'fixtures_generated', {
+      competition: 'league',
+      count: totalMatches,
+      matchweeks: fullSchedule.length,
+    });
     res.json({ 
       message: '🎯 League fixtures generated with CIRCLE METHOD (Round Robin Algorithm)', 
       count: totalMatches,
@@ -538,6 +586,10 @@ router.post('/generate-cup', authenticateAdmin, async (req, res) => {
     // Note: Final match will be created automatically once semi-finals are completed
 
     await Match.insertMany(fixtures);
+    await logAdminAction(req, 'fixtures_generated', {
+      competition: 'cup',
+      count: fixtures.length,
+    });
     res.json({ 
       message: 'Cup fixtures generated with randomized draw', 
       count: fixtures.length,
@@ -581,6 +633,11 @@ router.post('/generate-super-cup', authenticateAdmin, async (req, res) => {
       seasonNumber: fixtureSeason,
     });
     await superCupMatch.save();
+    await logAdminAction(req, 'fixtures_generated', {
+      competition: 'super-cup',
+      leagueWinner: leagueWinner.name,
+      cupWinner: cupWinner.name,
+    });
     res.json({ 
       message: 'Super Cup fixture generated successfully', 
       fixture: `${leagueWinner.name} (League Winner) vs ${cupWinner.name} (Cup Winner${originalDoubleWinnerId ? ' / Runner-up' : ''})`,
@@ -635,6 +692,10 @@ router.post('/generate-girls-super-cup', authenticateAdmin, async (req, res) => 
       );
     }
     await Match.insertMany(fixtures);
+    await logAdminAction(req, 'fixtures_generated', {
+      competition: 'girls-super-cup',
+      count: fixtures.length,
+    });
     res.json({
       message: 'Girls Super Cup best-of-3 fixtures generated (Orion vs Firestorm)',
       count: fixtures.length,
@@ -660,6 +721,7 @@ router.post('/save-fixtures', authenticateAdmin, async (req, res) => {
       { isPublished: true }
     );
 
+    await logAdminAction(req, 'fixtures_published', { competition });
     res.json({ message: `${competition} fixtures saved successfully` });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -683,6 +745,7 @@ router.post('/reset-fixtures', authenticateAdmin, async (req, res) => {
       await resetFantasySeasonData();
     }
 
+    await logAdminAction(req, 'fixtures_reset', { competition });
     res.json({ message: `${competition} fixtures reset successfully` });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -698,6 +761,7 @@ router.post('/recalculate-league-table', authenticateAdmin, async (req, res) => 
       goalDifference: -1,
       goalsFor: -1,
     });
+    await logAdminAction(req, 'league_table_recalculated');
     res.json({
       message: 'League table recalculated from finished fixtures.',
       teams,
@@ -1107,6 +1171,12 @@ router.post('/:id/start-live', authenticateAdmin, async (req, res) => {
     await match.save();
     await match.populate('homeTeam', 'name logo');
     await match.populate('awayTeam', 'name logo');
+    await logAdminAction(req, 'match_started_live', {
+      matchId: match._id,
+      competition: match.competition,
+      homeTeam: match.homeTeam?.name,
+      awayTeam: match.awayTeam?.name,
+    });
     res.json(match);
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -1140,6 +1210,12 @@ router.post('/:id/abandon-live', authenticateAdmin, async (req, res) => {
     await match.save();
     await match.populate('homeTeam', 'name logo');
     await match.populate('awayTeam', 'name logo');
+    await logAdminAction(req, 'match_abandoned_live', {
+      matchId: match._id,
+      competition: match.competition,
+      homeTeam: match.homeTeam?.name,
+      awayTeam: match.awayTeam?.name,
+    });
     res.json(match);
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -1202,6 +1278,14 @@ router.post('/:id/full-time', authenticateAdmin, async (req, res) => {
       await finalizeGirlsSuperCupIfClosed();
     }
 
+    await logAdminAction(req, 'match_full_time', {
+      matchId: match._id,
+      competition: match.competition,
+      homeTeam: match.homeTeam?.name,
+      awayTeam: match.awayTeam?.name,
+      homeScore: match.homeScore,
+      awayScore: match.awayScore,
+    });
     res.json(match);
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -1227,6 +1311,12 @@ router.post('/:id/events', authenticateAdmin, async (req, res) => {
         .populate('awayTeam', 'name logo')
         .populate('events.player', 'name number')
         .populate('events.assistPlayer', 'name number');
+      await logAdminAction(req, 'match_events_updated', {
+        matchId: match._id,
+        competition: match.competition,
+        eventsCount: events.length,
+        live: true,
+      });
       return res.json({
         message: 'Match events updated (live display)',
         matchId: match._id,
@@ -1389,6 +1479,11 @@ router.post('/:id/events', authenticateAdmin, async (req, res) => {
       }
     }
 
+    await logAdminAction(req, 'match_events_updated', {
+      matchId: match._id,
+      competition: match.competition,
+      eventsCount: events.length,
+    });
     res.json({ message: 'Match events updated', matchId: match._id, eventsCount: events.length });
   } catch (error) {
     res.status(400).json({ message: error.message });

@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const mongoose = require('mongoose');
 const { authenticateAdmin } = require('../middleware/auth');
+const { logAdminAction } = require('../utils/adminAuditLog');
 const FantasySquad = require('../models/FantasySquad');
 const FantasyMatchPerformance = require('../models/FantasyMatchPerformance');
 const {
@@ -24,6 +25,7 @@ const { getLiveSeasonStatsNumber } = require('../utils/seasonContext');
 const { isMatchweekComplete, latestCompletedMatchweek } = require('../utils/fantasyMatchweek');
 const { lineupWithResolvedCaptains } = require('../utils/fantasyCaptainRoles');
 const { performanceHasScoringEventStats } = require('../utils/fantasyCaptainScoring');
+const { parseFantasyMinutes } = require('../utils/fantasyMinutes');
 const {
   computeManagerOfTheWeek,
   computeTopManager,
@@ -61,6 +63,7 @@ router.post('/reset-season', authenticateAdmin, async (req, res) => {
       .select('matchweek isPlayed matchState isVoided competition')
       .lean();
     const currentGameweek = deriveCurrentGameweekFromMatches(matches);
+    await logAdminAction(req, 'fantasy_season_reset', { currentGameweek });
     return res.json({
       success: true,
       message: 'Fantasy season reset. All manager squads and matchweek data cleared.',
@@ -77,6 +80,10 @@ router.post('/reset-season', authenticateAdmin, async (req, res) => {
 router.post('/set-default-prices', authenticateAdmin, async (req, res) => {
   try {
     const result = await Player.updateMany({}, { $set: { fantasyPrice: 4.5 } });
+    await logAdminAction(req, 'fantasy_prices_reset', {
+      matched: result.matchedCount,
+      modified: result.modifiedCount,
+    });
     res.json({
       success: true,
       message: 'All player fantasy prices set to 4.5',
@@ -258,6 +265,11 @@ router.put('/matchweeks/:mw/deadline', authenticateAdmin, async (req, res) => {
       { upsert: true, new: true, setDefaultsOnInsert: true }
     ).lean();
 
+    await logAdminAction(req, 'fantasy_deadline_updated', {
+      matchweek: mw,
+      deadline: doc.deadline || null,
+      status: doc.status || null,
+    });
     return res.json({ success: true, data: doc });
   } catch (err) {
     return res.status(500).json({ success: false, message: err.message });
@@ -315,13 +327,26 @@ router.get('/matches/:matchId/players', authenticateAdmin, async (req, res) => {
 router.post('/matches/:matchId/minutes', authenticateAdmin, async (req, res) => {
   try {
     const { matchweek, playerMinutes } = req.body; // playerMinutes: [{ playerId, minutes }]
-    
+
+    if (!Array.isArray(playerMinutes)) {
+      return res.status(400).json({ success: false, message: 'playerMinutes array required' });
+    }
+
     const match = await Match.findById(req.params.matchId);
     if (!assertFantasyLeagueMatch(match, res)) return;
 
-    // Appearance: 1–44 min = 1 pt, 45+ min = 2 pts
+    // Appearance: 1–44 min = 1 pt, 45+ min = 2 pts (max 70 per player)
     for (const { playerId, minutes } of playerMinutes) {
-      let minutesPlayed = Number(minutes) || 0;
+      if (!playerId) {
+        return res.status(400).json({ success: false, message: 'Each entry must include playerId' });
+      }
+
+      const parsed = parseFantasyMinutes(minutes);
+      if (!parsed.ok) {
+        return res.status(400).json({ success: false, message: parsed.error });
+      }
+
+      let minutesPlayed = parsed.minutes;
       const existing = await FantasyMatchPerformance.findOne({
         match: req.params.matchId,
         player: playerId,
@@ -339,12 +364,16 @@ router.post('/matches/:matchId/minutes', authenticateAdmin, async (req, res) => 
             minutesPoints,
           },
         },
-        { upsert: true, new: true }
+        { upsert: true, new: true, runValidators: true }
       );
     }
 
     const updatedMatch = await Match.findById(req.params.matchId);
     await afterMatchPerformanceUpdate(updatedMatch);
+    await logAdminAction(req, 'fantasy_minutes_updated', {
+      matchId: req.params.matchId,
+      matchweek: updatedMatch?.matchweek,
+    });
     return res.json({ success: true, message: 'Minutes assigned successfully' });
   } catch (err) {
     return res.status(500).json({ success: false, message: err.message });
@@ -372,6 +401,11 @@ router.post('/matches/:matchId/bonus', authenticateAdmin, async (req, res) => {
 
     const updatedMatch = await Match.findById(req.params.matchId);
     await afterMatchPerformanceUpdate(updatedMatch);
+    await logAdminAction(req, 'fantasy_bonus_assigned', {
+      matchId: req.params.matchId,
+      matchweek: mw,
+      assignmentCount: bonusAssignments.length,
+    });
     return res.json({ success: true, message: 'Bonus points assigned' });
   } catch (err) {
     return res.status(500).json({ success: false, message: err.message });
@@ -394,6 +428,12 @@ router.post('/matches/:matchId/special', authenticateAdmin, async (req, res) => 
 
     const updatedMatch = await Match.findById(req.params.matchId);
     await afterMatchPerformanceUpdate(updatedMatch);
+    await logAdminAction(req, 'fantasy_special_assigned', {
+      matchId: req.params.matchId,
+      matchweek: mw,
+      playerId,
+      specialPoints,
+    });
     return res.json({ success: true, message: 'Special points assigned' });
   } catch (err) {
     return res.status(500).json({ success: false, message: err.message });
@@ -444,8 +484,13 @@ router.post('/rescore-gameweek/:matchweek', authenticateAdmin, async (req, res) 
 
     const backfilled = await backfillMissingSnapshotsForGameweek(mw);
     const eventSynced = await syncFantasyPerformanceForGameweek(mw);
-    await rescoreGameweek(mw, matches);
+    await rescoreGameweek(mw, matches, { forceAutosubRecalc: true });
 
+    await logAdminAction(req, 'fantasy_gameweek_rescored', {
+      matchweek: mw,
+      backfilled,
+      eventSynced,
+    });
     return res.json({
       success: true,
       message: `Gameweek ${mw} rescored.`,

@@ -218,8 +218,8 @@
   padding: 2px;
   box-sizing: border-box;
   border-radius: var(--apl-radius-sm, 8px);
-  background: var(--apl-surface-base, #fff);
-  border: 1px solid var(--apl-border-subtle, #e2e8f0);
+  background: transparent;
+  border: none;
 }
 
 .agha-cup-bracket .agha-cup-team-main .falcons-logo {
@@ -230,6 +230,9 @@
   object-fit: contain;
   border-radius: 50%;
   padding: 3px;
+  background: linear-gradient(135deg, #e8eaed 0%, #dadce0 100%);
+  border: 1px solid #bdc1c6;
+  box-sizing: border-box;
 }
 
 .agha-cup-team-name {

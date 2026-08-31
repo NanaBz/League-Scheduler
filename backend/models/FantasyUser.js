@@ -36,6 +36,14 @@ const FantasyUserSchema = new mongoose.Schema({
     type: Date,
     default: null
   },
+  passwordResetTokenHash: {
+    type: String,
+    default: null
+  },
+  passwordResetTokenExpires: {
+    type: Date,
+    default: null
+  },
   lastLogin: {
     type: Date,
     default: null
@@ -69,6 +77,11 @@ FantasyUserSchema.methods.isVerificationCodeValid = async function(code) {
   if (!this.verificationCodeHash || !this.verificationCodeExpires) return false;
   if (this.verificationCodeExpires < new Date()) return false;
   return bcrypt.compare(code, this.verificationCodeHash);
+};
+
+FantasyUserSchema.methods.clearPasswordResetToken = function() {
+  this.passwordResetTokenHash = null;
+  this.passwordResetTokenExpires = null;
 };
 
 module.exports = mongoose.model('FantasyUser', FantasyUserSchema);

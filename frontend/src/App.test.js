@@ -1,18 +1,25 @@
-import React from 'react';
+jest.mock('axios', () => ({
+  __esModule: true,
+  default: {
+    get: jest.fn(),
+    put: jest.fn(),
+    post: jest.fn(),
+    delete: jest.fn(),
+    create: jest.fn(() => ({
+      get: jest.fn(),
+      put: jest.fn(),
+      post: jest.fn(),
+      delete: jest.fn(),
+      interceptors: { request: { use: jest.fn() }, response: { use: jest.fn() } },
+    })),
+    interceptors: { request: { use: jest.fn() }, response: { use: jest.fn() } },
+  },
+}));
 
-function App() {
-  return (
-    <div style={{ 
-      padding: '20px', 
-      fontSize: '24px', 
-      color: 'red',
-      background: 'yellow',
-      textAlign: 'center'
-    }}>
-      <h1>REACT TEST - THIS SHOULD BE VISIBLE</h1>
-      <p>If you can see this, React is working!</p>
-    </div>
-  );
-}
+import App from './App';
 
-export default App;
+describe('App', () => {
+  test('exports a React component', () => {
+    expect(typeof App).toBe('function');
+  });
+});

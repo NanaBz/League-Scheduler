@@ -84,6 +84,39 @@
   font-weight: 600;
 }
 
+.pdm-prices {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.pdm-price-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 8px;
+}
+
+.pdm-price-label {
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #9ca3af;
+}
+
+.pdm-price-value {
+  font-size: 1rem;
+  font-weight: 800;
+  color: #111827;
+}
+
+.pdm-price-row--purchase .pdm-price-value {
+  color: #6b7280;
+  font-weight: 700;
+}
+
 .pdm-stats {
   display: grid;
   grid-template-columns: 1fr 1fr;

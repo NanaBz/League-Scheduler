@@ -346,17 +346,19 @@
 
 /* ── Player picker modal ── */
 .ppm-overlay {
-  padding: 0;
-  align-items: flex-end;
+  padding: 12px;
+  align-items: center;
+  justify-content: center;
 }
 
 .ppm-modal {
   width: 100%;
   max-width: 720px;
-  max-height: 92vh;
-  border-radius: 16px 16px 0 0;
+  max-height: min(92vh, calc(100dvh - 24px));
+  border-radius: 16px;
   display: flex;
   flex-direction: column;
+  overflow: visible;
 }
 
 .ppm-header {
@@ -367,6 +369,7 @@
 .ppm-controls {
   padding: 10px 12px;
   flex-shrink: 0;
+  overflow: visible;
 }
 
 .ppm-list {
@@ -686,6 +689,31 @@
     font-size: 0.52rem;
   }
 
+  .pv-modal .pv-pitch-view .pick-team-pitch-wrap {
+    padding: 8px 4px 10px;
+  }
+
+  .pv-modal .pick-team-container .player-slot {
+    flex: 0 0 96px;
+    width: 96px;
+    min-width: 96px;
+    max-width: 96px;
+  }
+
+  .pv-modal .pick-team-container .formation-row[class*='-row-4'] .player-slot {
+    flex: 0 0 80px;
+    width: 80px;
+    min-width: 80px;
+    max-width: 80px;
+  }
+
+  .pv-modal .pick-team-container .formation-row[class*='-row-5'] .player-slot {
+    flex: 0 0 66px;
+    width: 66px;
+    min-width: 66px;
+    max-width: 66px;
+  }
+
   .transfers-container .summary-bar {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
@@ -775,4 +803,81 @@
   .fantasy-card .btn-pill {
     transition: none;
   }
+}
+
+/* ── Team view modal (Points / Highest / other managers) — same pitch as Pick Team ── */
+.pv-modal .pv-pitch-view.pick-team-container {
+  max-width: none;
+  margin: 0;
+  padding: 0;
+}
+
+.pv-modal .pv-pitch-view .formation-display {
+  margin-bottom: 10px;
+}
+
+.pv-modal .pv-pitch-view .pick-team-pitch-wrap {
+  margin-bottom: 14px;
+  max-width: 100%;
+}
+
+.pv-modal .pv-pitch-view .bench-section {
+  margin-bottom: 0;
+}
+
+.pv-modal .pick-team-player-card--readonly {
+  cursor: default;
+  pointer-events: none;
+}
+
+.pv-modal .bench-player--readonly {
+  cursor: default;
+  pointer-events: none;
+}
+
+.pv-modal .bench-player--readonly:hover {
+  transform: none;
+  border-color: #e2e8f0;
+  box-shadow: 0 1px 4px rgba(15, 23, 42, 0.06);
+}
+
+.pv-modal .bench-player--boost {
+  border-color: #00d9ff;
+  background: rgba(0, 217, 255, 0.08);
+}
+
+.pv-modal .bench-player--autosub-out {
+  opacity: 0.72;
+}
+
+.pv-modal .bench-player--empty {
+  opacity: 0.5;
+  justify-content: center;
+}
+
+.pv-modal .pick-team-container .role-chip-autosub {
+  background: #dbeafe;
+  color: #1d4ed8;
+  border-color: #93c5fd;
+  transform: translateX(40px);
+}
+
+.pv-modal .pick-team-container .player-opponent--autosub {
+  color: #1d4ed8;
+  font-weight: 700;
+}
+
+.pv-modal .pick-team-container .bench-pos--autosub {
+  color: #1d4ed8;
+  font-weight: 700;
+}
+
+.pv-modal .pick-team-container .player-opponent:not(.player-opponent--autosub) {
+  color: #15803d;
+  font-weight: 700;
+}
+
+.pv-modal .pick-team-container .bench-pos:not(.bench-pos--autosub) {
+  color: #15803d;
+  font-weight: 700;
 }

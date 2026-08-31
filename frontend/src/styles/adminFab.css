@@ -1,0 +1,54 @@
+/**
+ * Mobile-only admin FAB — quick return to admin panel after footer login.
+ * Sits above the floating bottom nav; hidden on desktop.
+ */
+
+.admin-fab {
+  display: none;
+}
+
+@media (max-width: 767px) {
+  .admin-fab {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: fixed;
+    right: max(16px, env(safe-area-inset-right, 0px));
+    bottom: calc(96px + env(safe-area-inset-bottom, 0px));
+    z-index: 999;
+    width: 56px;
+    height: 56px;
+    padding: 0;
+    border: none;
+    border-radius: 50%;
+    background: var(--primary-red, #dc2626);
+    color: #fff;
+    cursor: pointer;
+    box-shadow:
+      0 6px 20px rgba(220, 38, 38, 0.38),
+      0 2px 6px rgba(15, 23, 42, 0.12);
+    transition:
+      transform var(--apl-transition-fast, 0.15s ease),
+      background var(--apl-transition-fast, 0.15s ease),
+      box-shadow var(--apl-transition-fast, 0.15s ease);
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .admin-fab:hover {
+    background: var(--primary-red-dark, #b91c1c);
+    box-shadow:
+      0 8px 24px rgba(220, 38, 38, 0.42),
+      0 3px 8px rgba(15, 23, 42, 0.14);
+  }
+
+  .admin-fab:active {
+    transform: scale(0.96);
+  }
+
+  .admin-fab:focus-visible {
+    outline: none;
+    box-shadow:
+      var(--apl-focus-ring, 0 0 0 3px rgba(220, 38, 38, 0.35)),
+      0 6px 20px rgba(220, 38, 38, 0.38);
+  }
+}

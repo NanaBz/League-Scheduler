@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const Season = require('../models/Season');
 const { authenticateAdmin } = require('../middleware/auth');
-const AuditLog = require('../models/AuditLog');
+const { logAdminAction } = require('../utils/adminAuditLog');
 const { syncSeasonActiveFlagsToLatest } = require('../utils/seasonContext');
 const {
   generateAcademicYearOptions,
@@ -63,13 +63,7 @@ router.get('/', async (req, res) => {
 
 router.post('/reconcile-active', authenticateAdmin, async (req, res) => {
   try {
-    await AuditLog.create({
-      action: 'reconcile_season_active',
-      admin: { id: req.admin._id, email: req.admin.email },
-      details: {},
-      ip: req.ip,
-      userAgent: req.headers['user-agent'],
-    });
+    await logAdminAction(req, 'reconcile_season_active');
     const seasonNumber = await syncSeasonActiveFlagsToLatest();
     if (seasonNumber == null) {
       return res.status(400).json({ message: 'No season documents found' });
@@ -91,13 +85,7 @@ router.post('/reset', authenticateAdmin, async (req, res) => {
       });
     }
 
-    await AuditLog.create({
-      action: 'reset_season_testing',
-      admin: { id: req.admin._id, email: req.admin.email },
-      details: { mode: 'testing' },
-      ip: req.ip,
-      userAgent: req.headers['user-agent'],
-    });
+    await logAdminAction(req, 'reset_season_testing', { mode: 'testing' });
 
     const result = await resetSeasonWithoutArchive();
     res.json({
@@ -120,12 +108,10 @@ router.post('/archive-and-reset', authenticateAdmin, async (req, res) => {
       return res.status(400).json({ message: validation.message, code: validation.code });
     }
 
-    await AuditLog.create({
-      action: 'archive_and_reset_season',
-      admin: { id: req.admin._id, email: req.admin.email },
-      details: { academicYear, semester, displayName: displayName || null },
-      ip: req.ip,
-      userAgent: req.headers['user-agent'],
+    await logAdminAction(req, 'archive_and_reset_season', {
+      academicYear,
+      semester,
+      displayName: displayName || null,
     });
 
     const result = await archiveAndResetSeason({ academicYear, semester, displayName });
@@ -169,13 +155,7 @@ router.get('/:seasonNumber', async (req, res) => {
 
 router.delete('/cleanup-duplicates', authenticateAdmin, async (req, res) => {
   try {
-    await AuditLog.create({
-      action: 'cleanup_duplicate_seasons',
-      admin: { id: req.admin._id, email: req.admin.email },
-      details: {},
-      ip: req.ip,
-      userAgent: req.headers['user-agent'],
-    });
+    await logAdminAction(req, 'cleanup_duplicate_seasons');
     const seasons = await Season.find().sort({ seasonNumber: 1, createdAt: 1 });
     const seenNumbers = new Set();
     const duplicatesToDelete = [];
@@ -206,13 +186,7 @@ router.delete('/cleanup-duplicates', authenticateAdmin, async (req, res) => {
 router.delete('/:seasonNumber', authenticateAdmin, async (req, res) => {
   try {
     const seasonNumber = parseInt(req.params.seasonNumber, 10);
-    await AuditLog.create({
-      action: 'delete_season',
-      admin: { id: req.admin._id, email: req.admin.email },
-      details: { seasonNumber },
-      ip: req.ip,
-      userAgent: req.headers['user-agent'],
-    });
+    await logAdminAction(req, 'delete_season', { seasonNumber });
 
     const seasonToDelete = await Season.findOne({ seasonNumber });
     if (!seasonToDelete) {
@@ -233,13 +207,7 @@ router.delete('/:seasonNumber', authenticateAdmin, async (req, res) => {
 
 router.delete('/', authenticateAdmin, async (req, res) => {
   try {
-    await AuditLog.create({
-      action: 'delete_all_seasons',
-      admin: { id: req.admin._id, email: req.admin.email },
-      details: {},
-      ip: req.ip,
-      userAgent: req.headers['user-agent'],
-    });
+    await logAdminAction(req, 'delete_all_seasons');
 
     const result = await Season.deleteMany({});
 

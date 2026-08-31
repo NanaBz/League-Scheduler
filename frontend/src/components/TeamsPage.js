@@ -76,7 +76,7 @@ export default function TeamsPage({ refreshKey = 0, onNavigateToGirlsTeams }) {
       {!selectedTeam && (
         <>
           <header className="teams-page-header">
-            <h1><Users size={22} aria-hidden="true" /> Boys Teams</h1>
+            <h1><Users size={22} aria-hidden="true" /> Men&apos;s Teams</h1>
             <p>Explore league squads, leadership, and player statistics.</p>
           </header>
           <div className="team-cards">

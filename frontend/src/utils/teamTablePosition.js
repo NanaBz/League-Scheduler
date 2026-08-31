@@ -12,20 +12,29 @@ export function ordinal(n) {
   return `${n}th`;
 }
 
-function sortLeagueTeams(teams) {
-  return (teams || [])
-    .filter((t) => t && t.competition === 'league')
-    .sort(
-      (a, b) =>
-        (b.points || 0) - (a.points || 0) ||
-        (b.goalDifference || 0) - (a.goalDifference || 0) ||
-        (b.goalsFor || 0) - (a.goalsFor || 0)
-    );
+function compareByName(a, b) {
+  return (a.name || '').localeCompare(b.name || '', undefined, { sensitivity: 'base' });
+}
+
+function compareByStandings(a, b) {
+  return (
+    (b.points || 0) - (a.points || 0) ||
+    (b.goalDifference || 0) - (a.goalDifference || 0) ||
+    (b.goalsFor || 0) - (a.goalsFor || 0) ||
+    compareByName(a, b)
+  );
+}
+
+/** League table order: alphabetical before any fixture is played, then points/GD/GF. */
+export function sortLeagueTeams(teams) {
+  const leagueTeams = (teams || []).filter((t) => t && t.competition === 'league');
+  const seasonStarted = leagueTeams.some((t) => (t.played || 0) > 0);
+  return [...leagueTeams].sort(seasonStarted ? compareByStandings : compareByName);
 }
 
 /** True once any league side has played a league fixture (recorded on Team). */
 export function leagueTableHasResults(teams) {
-  return sortLeagueTeams(teams).some((t) => (t.played || 0) > 0);
+  return (teams || []).some((t) => t && t.competition === 'league' && (t.played || 0) > 0);
 }
 
 /**
@@ -47,6 +56,7 @@ export function buildAcwplTableFromMatches(matches, acwplTeamDocs = []) {
   const strict = (acwplTeamDocs || []).filter((t) => t && ACWPL_NAMES.includes(t.name));
   const seed = strict.length ? strict : ACWPL_NAMES.map((name) => ({ name }));
   const base = seed.map((team) => ({
+    ...team,
     name: team.name,
     played: 0,
     won: 0,
@@ -104,10 +114,8 @@ export function buildAcwplTableFromMatches(matches, acwplTeamDocs = []) {
     }
   }
 
-  return base.sort(
-    (a, b) =>
-      b.points - a.points || b.goalDifference - a.goalDifference || b.goalsFor - a.goalsFor
-  );
+  const seasonStarted = base.some((t) => (t.played || 0) > 0);
+  return base.sort(seasonStarted ? compareByStandings : compareByName);
 }
 
 export function acwplTableHasResults(matches) {

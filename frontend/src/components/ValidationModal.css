@@ -18,6 +18,10 @@
   animation: vm-slideIn 0.3s ease-out;
 }
 
+.vm-modal:has(.vm-actions--multi) {
+  max-width: 460px;
+}
+
 @keyframes vm-slideIn {
   from {
     opacity: 0;
@@ -98,6 +102,20 @@
   justify-content: center;
 }
 
+.vm-actions--multi {
+  gap: 6px;
+  padding: 12px 16px;
+}
+
+.vm-actions--multi .vm-btn {
+  flex: 1 1 0;
+  min-width: 0;
+  padding: 7px 10px;
+  font-size: 0.78rem;
+  line-height: 1.25;
+  white-space: normal;
+}
+
 .vm-btn {
   padding: 10px 24px;
   border: none;
@@ -169,6 +187,11 @@
     max-width: none;
   }
 
+  .vm-modal:has(.vm-actions--multi) {
+    width: 92%;
+    max-width: 360px;
+  }
+
   .vm-content {
     padding: 20px;
   }
@@ -187,6 +210,16 @@
 
   .vm-actions {
     padding: 12px 20px;
+  }
+
+  .vm-actions--multi {
+    padding: 10px 12px;
+    gap: 5px;
+  }
+
+  .vm-actions--multi .vm-btn {
+    padding: 6px 8px;
+    font-size: 0.72rem;
   }
 
   .vm-btn {

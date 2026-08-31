@@ -3,6 +3,7 @@ import JerseyIcon from './JerseyIcon';
 import { getTeamCode, kitColors } from '../utils/fantasyKitColors';
 import { formatPitchFixture } from '../utils/fantasyPlayerFixtures';
 import { displaySelectionPercentage, displayTotalPoints } from '../utils/fantasyPlayerStatsDisplay';
+import { acityPriceAriaLabel, formatAcityPrice } from '../utils/formatAcityPrice';
 import { allStarters, playerId } from '../utils/fantasyLineup';
 import './PickTeamPlayerModal.css';
 
@@ -124,7 +125,9 @@ export default function PickTeamPlayerModal({
               </div>
               <div className="ptpm-stat-tile">
                 <span className="ptpm-stat-tile__label">Price</span>
-                <span className="ptpm-stat-tile__value">{(player.fantasyPrice || 0).toFixed(1)}m</span>
+                <span className="ptpm-stat-tile__value" aria-label={acityPriceAriaLabel(player.fantasyPrice)}>
+                  {formatAcityPrice(player.fantasyPrice)}
+                </span>
               </div>
               <div className="ptpm-stat-tile">
                 <span className="ptpm-stat-tile__label">Club</span>

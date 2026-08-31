@@ -272,8 +272,8 @@
   object-fit: contain;
   border-radius: var(--apl-radius-sm, 8px);
   flex-shrink: 0;
-  background: var(--apl-surface-base, #fff);
-  border: 1px solid var(--apl-border-subtle, #e2e8f0);
+  background: transparent;
+  border: none;
   padding: 2px;
   box-sizing: border-box;
 }

@@ -23,6 +23,18 @@ const { buildManagerProfilePayload } = require('../utils/fantasyManagerProfile')
 const { nextFixturesForTeam } = require('../utils/fantasyPlayerFixtures');
 const { loadPlayerStatsMaps, attachPlayerStats, statsForPlayer } = require('../utils/fantasyPlayerStats');
 const { validateMaxPlayersPerClubFromPlayers } = require('../utils/fantasySquadValidation');
+const {
+  roundPrice,
+  normalizePlayerIds,
+  normalizePurchasePriceMap,
+  createEmptyFinancialState,
+  resolveFinancialState,
+  processSquadFinancialTransition,
+  buildMarketPricesMap,
+  buildFinancialSummary,
+  needsFinancialMigration,
+  buildFinancialMigrationAudit,
+} = require('../utils/fantasySquadLedger');
 const { validateLineupPayload, resolveDefaultCaptainRoles } = require('../utils/fantasyLineup');
 const { lineupWithResolvedCaptains } = require('../utils/fantasyCaptainRoles');
 const {
@@ -42,6 +54,7 @@ const {
   gameweekPlayerStats,
   scoreLineupFromSnapshot,
   hydrateLineupPlayers,
+  resolveEffectiveLineupForScoring,
 } = require('../utils/fantasyScoring');
 
 const EMPTY_SLOTS = {
@@ -77,7 +90,8 @@ function slotsEqual(a, b) {
   return JSON.stringify(normalizeSlotIds(a)) === JSON.stringify(normalizeSlotIds(b));
 }
 
-async function hydrateSquadSlots(slots) {
+async function hydrateSquadSlots(slots, playerPurchasePrices = {}) {
+  const purchases = normalizePurchasePriceMap(playerPurchasePrices);
   const ids = Object.values(slots)
     .flat()
     .filter(Boolean)
@@ -119,6 +133,8 @@ async function hydrateSquadSlots(slots) {
       return attachPlayerStats(
         {
           ...player,
+          fantasyPrice: roundPrice(player.fantasyPrice),
+          purchasePrice: purchases[String(id)] != null ? roundPrice(purchases[String(id)]) : undefined,
           nextThree: nextFixturesForTeam(leagueMatches, teamId, {
             fromMatchweek: currentGameweek,
             limit: 3,
@@ -131,8 +147,34 @@ async function hydrateSquadSlots(slots) {
   return hydrated;
 }
 
+async function loadMarketPricesById(playerIds) {
+  const ids = normalizePlayerIds(playerIds);
+  if (!ids.length) return new Map();
+
+  const objectIds = ids
+    .filter((id) => mongoose.Types.ObjectId.isValid(id))
+    .map((id) => new mongoose.Types.ObjectId(id));
+
+  if (!objectIds.length) return new Map();
+
+  const players = await Player.find({ _id: { $in: objectIds } }).select('_id fantasyPrice').lean();
+  return buildMarketPricesMap(players);
+}
+
+function mapLedgerError(result) {
+  if (result.ok) return result;
+  if (result.message === 'Insufficient bank balance.') {
+    return { ok: false, message: 'Squad exceeds available budget.' };
+  }
+  return result;
+}
+
 async function validateSlotPlayers(slots) {
-  const ids = [...new Set(Object.values(slots).flat().filter(Boolean))];
+  const allIds = Object.values(slots).flat().filter(Boolean).map(String);
+  const ids = [...new Set(allIds)];
+  if (allIds.length !== ids.length) {
+    return { ok: false, message: 'Duplicate player in squad.' };
+  }
   if (ids.length === 0) return { ok: true };
 
   const objectIds = [];
@@ -144,7 +186,7 @@ async function validateSlotPlayers(slots) {
   }
 
   const players = await Player.find({ _id: { $in: objectIds } })
-    .select('_id position team')
+    .select('_id position team fantasyPrice')
     .populate('team', 'name')
     .lean();
   const byId = new Map(players.map((p) => [p._id.toString(), p]));
@@ -155,6 +197,12 @@ async function validateSlotPlayers(slots) {
       const player = byId.get(String(id));
       if (!player) {
         return { ok: false, message: 'One or more players were not found.' };
+      }
+      if (player.active === false) {
+        return {
+          ok: false,
+          message: `${player.team?.name || 'Team'} player ${player.name || 'selection'} is no longer available. Remove them from your squad.`,
+        };
       }
       if (player.position !== pos) {
         return { ok: false, message: `${player.position} player cannot be placed in ${pos} slot.` };
@@ -167,7 +215,77 @@ async function validateSlotPlayers(slots) {
     return clubCheck;
   }
 
-  return { ok: true };
+  return { ok: true, playersById: byId };
+}
+
+async function buildMySquadFinancialContext(doc, slots) {
+  const normalizedSlots = normalizeSlotIds(slots);
+  const playerIds = squadIdsFromSlots(normalizedSlots);
+  const marketPricesById = await loadMarketPricesById(playerIds);
+
+  let financial = doc
+    ? resolveFinancialState({
+        bankBalance: doc.bankBalance,
+        playerPurchasePrices: doc.playerPurchasePrices,
+        playerIds,
+        marketPricesById,
+      })
+    : createEmptyFinancialState();
+
+  if (
+    doc?._id &&
+    needsFinancialMigration(doc.bankBalance, doc.playerPurchasePrices, playerIds)
+  ) {
+    const migrationAudit = buildFinancialMigrationAudit({
+      bankBalance: doc.bankBalance,
+      playerPurchasePrices: doc.playerPurchasePrices,
+      playerIds,
+      marketPricesById,
+    });
+    if (migrationAudit) {
+      console.warn(
+        '[fantasy-financial-migration]',
+        JSON.stringify({
+          squadId: String(doc._id),
+          fantasyUserId: doc.fantasyUser ? String(doc.fantasyUser) : undefined,
+          ...migrationAudit,
+        })
+      );
+    }
+    await FantasyDraftSquad.updateOne(
+      { _id: doc._id },
+      {
+        $set: {
+          bankBalance: financial.bankBalance,
+          playerPurchasePrices: financial.playerPurchasePrices,
+        },
+      }
+    );
+  }
+
+  const summary = buildFinancialSummary(
+    financial.bankBalance,
+    playerIds,
+    marketPricesById
+  );
+
+  return {
+    normalizedSlots,
+    playerIds,
+    marketPricesById,
+    bankBalance: summary.bankBalance,
+    playerPurchasePrices: financial.playerPurchasePrices,
+    squadMarketValue: summary.squadMarketValue,
+    totalTeamValue: summary.totalTeamValue,
+  };
+}
+
+function squadFinancialResponseFields(financial) {
+  return {
+    bankBalance: financial.bankBalance,
+    squadMarketValue: financial.squadMarketValue,
+    totalTeamValue: financial.totalTeamValue,
+  };
 }
 
 async function loadLeagueMatchesForFantasy() {
@@ -336,6 +454,7 @@ router.get('/players', async (req, res) => {
     }
 
     if (search) filter.name = { $regex: new RegExp(search, 'i') };
+    filter.active = { $ne: false };
 
     const [players, leagueMatches, statsMaps] = await Promise.all([
       Player.find(filter).populate('team', 'name logo competition category').lean(),
@@ -462,7 +581,8 @@ router.get('/my-squad', authenticateFantasyUser, async (req, res) => {
       doc,
       currentGameweek
     );
-    const squad = await hydrateSquadSlots(slots);
+    const financial = await buildMySquadFinancialContext(doc, slots);
+    const squad = await hydrateSquadSlots(financial.normalizedSlots, financial.playerPurchasePrices);
     const lineup = hydrateLineupFromSquad(doc?.lineup, squad);
     const transferInOrder = (doc?.transferInOrder || []).map(String);
     const transferState = await getTransferStateForUser(
@@ -479,6 +599,7 @@ router.get('/my-squad', authenticateFantasyUser, async (req, res) => {
       chipState,
       squadPlayerCount,
       transferState,
+      ...squadFinancialResponseFields(financial),
     });
   } catch (error) {
     return res.status(500).json({ success: false, message: error.message });
@@ -498,7 +619,8 @@ router.put('/my-squad', authenticateFantasyUser, async (req, res) => {
 
     const existing = await FantasyDraftSquad.findOne({ fantasyUser: req.fantasyUser._id }).lean();
     const incomingCount = squadIdsFromSlots(slots).length;
-    const existingCount = squadIdsFromSlots(normalizeSlotIds(existing?.slots || EMPTY_SLOTS)).length;
+    const existingSlots = normalizeSlotIds(existing?.slots || EMPTY_SLOTS);
+    const existingCount = squadIdsFromSlots(existingSlots).length;
     const matches = await loadLeagueMatchesForFantasy();
     const currentGameweek = deriveCurrentGameweekFromMatches(matches);
 
@@ -515,16 +637,40 @@ router.put('/my-squad', authenticateFantasyUser, async (req, res) => {
       });
     }
 
+    const oldIds = squadIdsFromSlots(existingSlots);
+    const newIds = squadIdsFromSlots(slots);
+    const marketPricesById = await loadMarketPricesById([...oldIds, ...newIds]);
+
+    const ledgerResult = mapLedgerError(
+      processSquadFinancialTransition({
+        hasExistingDoc: Boolean(existing),
+        existingBankBalance: existing?.bankBalance,
+        existingPurchasePrices: existing?.playerPurchasePrices,
+        oldPlayerIds: oldIds,
+        newPlayerIds: newIds,
+        marketPricesById,
+      })
+    );
+
+    if (!ledgerResult.ok) {
+      return res.status(400).json({ success: false, message: ledgerResult.message });
+    }
+
     const squadChanged = !existing?.slots || !slotsEqual(existing.slots, slots);
 
-    const oldIds = new Set(squadIdsFromSlots(normalizeSlotIds(existing?.slots || EMPTY_SLOTS)));
-    const newIds = squadIdsFromSlots(slots);
+    const oldIdSet = new Set(oldIds);
     const newIdSet = new Set(newIds);
-    const transfersIn = newIds.filter((id) => !oldIds.has(id));
-    const transfersOut = [...oldIds].filter((id) => !newIdSet.has(id));
+    const transfersIn = newIds.filter((id) => !oldIdSet.has(id));
+    const transfersOut = oldIds.filter((id) => !newIdSet.has(id));
     const transferInOrder = mergeTransferInOrder(existing?.transferInOrder, transfersIn);
 
-    const update = { fantasyUser: req.fantasyUser._id, slots, transferInOrder };
+    const update = {
+      fantasyUser: req.fantasyUser._id,
+      slots,
+      transferInOrder,
+      bankBalance: ledgerResult.bankBalance,
+      playerPurchasePrices: ledgerResult.playerPurchasePrices,
+    };
     if (squadChanged) {
       update.lineup = null;
     }
@@ -539,7 +685,12 @@ router.put('/my-squad', authenticateFantasyUser, async (req, res) => {
       await recordGameweekTransfers(req.fantasyUser._id, currentGameweek, transfersIn, transfersOut);
     }
 
-    const squad = await hydrateSquadSlots(normalizeSlotIds(doc.slots));
+    const financialSummary = buildFinancialSummary(
+      doc.bankBalance,
+      newIds,
+      marketPricesById
+    );
+    const squad = await hydrateSquadSlots(normalizeSlotIds(doc.slots), doc.playerPurchasePrices);
     const lineup = squadChanged ? null : hydrateLineupFromSquad(doc.lineup, squad);
     const chipState = await getFantasyChipState(req.fantasyUser._id, currentGameweek, matches);
     const squadPlayerCount = squadIdsFromSlots(normalizeSlotIds(doc.slots)).length;
@@ -556,8 +707,14 @@ router.put('/my-squad', authenticateFantasyUser, async (req, res) => {
       chipState,
       squadPlayerCount,
       transferState,
+      ...squadFinancialResponseFields({
+        bankBalance: financialSummary.bankBalance,
+        squadMarketValue: financialSummary.squadMarketValue,
+        totalTeamValue: financialSummary.totalTeamValue,
+      }),
     });
   } catch (error) {
+    console.error('PUT /fantasy/my-squad failed:', error.message || error);
     return res.status(500).json({ success: false, message: error.message });
   }
 });
@@ -731,11 +888,35 @@ router.get('/managers/:fantasyUserId/team-view', authenticateFantasyUser, async 
     const hydrated = await hydrateLineupPlayers(gwDoc.lineup);
     const resolvedRaw = await lineupWithResolvedCaptains(gwDoc.lineup, targetId);
     const { points: playerPoints, minutes: playerMinutes } = await gameweekPlayerStats(viewGameweek);
-    const scored = scoreLineupFromSnapshot(hydrated, playerPoints, {
+    const gameweekComplete = isMatchweekComplete(matches, viewGameweek);
+
+    let lineupRawForScoring = resolvedRaw;
+    let substitutions = gwDoc.autoSubstitutions || [];
+
+    if (gameweekComplete && gwDoc.effectiveLineup) {
+      lineupRawForScoring = await lineupWithResolvedCaptains(gwDoc.effectiveLineup, targetId);
+    } else if (gameweekComplete && gwDoc.chipUsed !== 'BB') {
+      const effective = await resolveEffectiveLineupForScoring(
+        resolvedRaw,
+        playerPoints,
+        playerMinutes,
+        { gameweekComplete: true, chipUsed: gwDoc.chipUsed }
+      );
+      lineupRawForScoring = effective.lineupForScoring;
+      substitutions = effective.substitutions;
+    }
+
+    const lineupForScoring = await hydrateLineupPlayers(lineupRawForScoring);
+    const autoSubInIds = new Set((substitutions || []).map((sub) => String(sub.in)));
+    const autoSubOutIds = new Set((substitutions || []).map((sub) => String(sub.out)));
+
+    const scored = scoreLineupFromSnapshot(lineupForScoring, playerPoints, {
       captainId: resolvedRaw.captainId,
       viceCaptainId: resolvedRaw.viceCaptainId,
       chipUsed: gwDoc.chipUsed,
       playerMinutes,
+      autoSubInIds,
+      autoSubOutIds,
     });
 
     const transferHitPoints =
@@ -758,6 +939,8 @@ router.get('/managers/:fantasyUserId/team-view', authenticateFantasyUser, async 
       starterPoints,
       benchPoints,
       chipUsed: gwDoc.chipUsed || null,
+      autoSubstitutions: substitutions?.length ? substitutions : null,
+      savedLineup: hydrated,
       team: {
         team: targetUser.teamName,
         user: targetUser.managerName,

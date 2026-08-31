@@ -104,6 +104,13 @@ export default function PickTeam({ user, onBack, onGoToTransfers }) {
   const savedBaselineRef = useRef(null);
   const historyTrapActiveRef = useRef(false);
   const skipHistoryCleanupRef = useRef(false);
+  const chipHistoryRef = useRef(chipHistory);
+
+  useEffect(() => {
+    chipHistoryRef.current = chipHistory;
+  }, [chipHistory]);
+
+  const userId = fantasyUserId(user);
 
   const derivedGameweekInfo = useMemo(() => deriveGameweekInfo(matches), [matches]);
   const upcomingInfo = useMemo(() => {
@@ -155,15 +162,9 @@ export default function PickTeam({ user, onBack, onGoToTransfers }) {
         /* fall back to local cache */
       }
 
-      const uid = fantasyUserId(user);
-      if ((!rawSquad || countSquadPlayers(rawSquad) === 0) && uid) {
-        const cachedOnly = loadSquadFromLocalStorage(uid);
-        if (countSquadPlayers(cachedOnly) > 0) {
-          rawSquad = cachedOnly;
-        }
-      }
+      const uid = userId;
 
-      let history = chipHistory;
+      let history = chipHistoryRef.current;
       try {
         const chipsRes = await api.get('/fantasy/my-chips');
         if (chipsRes?.data?.success) {
@@ -182,20 +183,13 @@ export default function PickTeam({ user, onBack, onGoToTransfers }) {
       rawSquad = resolveSquadFromApiAndCache(rawSquad, uid, apiSquadCount, {
         preferApi: serverChipState?.freeHitExpired === true,
       });
-      let resolvedCount = countSquadPlayers(rawSquad);
-      if (apiSquadCount >= 13 && resolvedCount < 13 && uid) {
-        const cached = loadSquadFromLocalStorage(uid);
-        if (countSquadPlayers(cached) === 13) {
-          rawSquad = normalizeSquadShape(cached);
-          resolvedCount = 13;
-        }
-      }
-      setServerSquadCount(Math.max(apiSquadCount, resolvedCount));
+      const resolvedCount = countSquadPlayers(rawSquad);
+      setServerSquadCount(apiSquadCount);
       setChipState(serverChipState);
       const resolvedChip =
         serverChipState?.activeChip || savedLineup?.chipUsed || null;
 
-      if (uid && !savedLineup) {
+      if (uid && !savedLineup && resolvedCount >= 13) {
         savedLineup = loadLineupFromLocalStorage(uid);
       }
 
@@ -207,9 +201,6 @@ export default function PickTeam({ user, onBack, onGoToTransfers }) {
         );
         setSquad(refreshed);
         if (uid) saveSquadToLocalStorage(uid, refreshed);
-        if (uid && countSquadPlayers(refreshed) === 13 && apiSquadCount < 13) {
-          api.put('/fantasy/my-squad', { squad: refreshed }).catch(() => {});
-        }
 
         try {
           const players = flattenSquad(refreshed);
@@ -255,18 +246,13 @@ export default function PickTeam({ user, onBack, onGoToTransfers }) {
       setChipStatus(buildChipStatusForGameweek(gameweek, {}, history, resolvedChip, serverChipState));
     } catch (err) {
       console.error('Pick team load failed:', err);
-      const uid = fantasyUserId(user);
-      const cached = uid ? loadSquadFromLocalStorage(uid) : null;
-      if (countSquadPlayers(cached) === 13) {
-        setSquad(normalizeSquadShape(cached));
-        setServerSquadCount(13);
-        const players = flattenSquad(cached);
-        setLineup(applyDefaultCaptainRoles(buildLineupFromSquad(players), players.map(playerId)));
-      }
+      setSquad(null);
+      setLineup(null);
+      setServerSquadCount(0);
     } finally {
       setLoading(false);
     }
-  }, [user?.id]);
+  }, [userId]);
 
   useEffect(() => {
     loadData();

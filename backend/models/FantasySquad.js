@@ -48,6 +48,16 @@ const FantasySquadSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.Mixed,
     default: null
   },
+  /** Effective XI/bench after automatic substitutions (gameweek scoring only) */
+  effectiveLineup: {
+    type: mongoose.Schema.Types.Mixed,
+    default: null
+  },
+  /** Automatic substitution audit trail for the gameweek */
+  autoSubstitutions: {
+    type: mongoose.Schema.Types.Mixed,
+    default: null
+  },
   squadSlots: {
     type: mongoose.Schema.Types.Mixed,
     default: null

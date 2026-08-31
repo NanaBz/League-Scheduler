@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Users } from 'lucide-react';
 import api from '../utils/api';
+import PlayerDeleteConfirmModal from './PlayerDeleteConfirmModal';
 import './PlayerManagement.css';
 
 const POSITIONS = ['GK', 'DF', 'MF', 'ATT'];
@@ -33,6 +34,12 @@ export default function PlayerManagement({ onDataChange = () => {} }) {
   const [playerSearchOpen, setPlayerSearchOpen] = useState(false);
   const [highlightedPlayerId, setHighlightedPlayerId] = useState(null);
   const [savedSnapshots, setSavedSnapshots] = useState({});
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [deletePreview, setDeletePreview] = useState(null);
+  const [deletePreviewLoading, setDeletePreviewLoading] = useState(false);
+  const [deletePreviewError, setDeletePreviewError] = useState('');
+  const [deleteTargetId, setDeleteTargetId] = useState(null);
+  const [deletingPlayer, setDeletingPlayer] = useState(false);
   const playerSearchRef = useRef(null);
 
   const isPlayerDirty = useCallback((player) => {
@@ -219,24 +226,58 @@ export default function PlayerManagement({ onDataChange = () => {} }) {
     }
   };
 
-  const deletePlayer = async (playerId) => {
-    if (!window.confirm('Remove this player?')) return;
+  const requestDeletePlayer = async (player) => {
+    setDeleteModalOpen(true);
+    setDeleteTargetId(player._id);
+    setDeletePreview(null);
+    setDeletePreviewError('');
+    setDeletePreviewLoading(true);
     try {
-      await api.delete(`/players/${playerId}`);
-      // Optimistically remove from local state
-      setPlayers(prev => prev.filter(p => p._id !== playerId));
-      setSavedSnapshots(prev => {
+      const { data } = await api.get(`/players/${player._id}/removal-preview`);
+      setDeletePreview(data);
+    } catch (e) {
+      setDeletePreviewError(e.response?.data?.message || e.message);
+    } finally {
+      setDeletePreviewLoading(false);
+    }
+  };
+
+  const resetDeleteModal = () => {
+    setDeleteModalOpen(false);
+    setDeleteTargetId(null);
+    setDeletePreview(null);
+    setDeletePreviewError('');
+    setDeletingPlayer(false);
+  };
+
+  const closeDeleteModal = () => {
+    if (deletingPlayer) return;
+    resetDeleteModal();
+  };
+
+  const confirmDeletePlayer = async () => {
+    if (!deleteTargetId || !deletePreview) return;
+    setDeletingPlayer(true);
+    setError('');
+    try {
+      const permanent = deletePreview.canPermanentDelete;
+      await api.delete(`/players/${deleteTargetId}${permanent ? '?permanent=true' : ''}`);
+      setPlayers((prev) => prev.filter((p) => p._id !== deleteTargetId));
+      setSavedSnapshots((prev) => {
         const next = { ...prev };
-        delete next[playerId];
+        delete next[deleteTargetId];
         return next;
       });
       onDataChange();
+      resetDeleteModal();
     } catch (e) {
-      setError(e.response?.data?.message || e.message);
-      // On error, refetch to restore state
-      await fetchPlayers(selectedTeamId);
+      setDeletePreviewError(e.response?.data?.message || e.message);
+    } finally {
+      setDeletingPlayer(false);
     }
   };
+
+  const deletePlayer = requestDeletePlayer;
 
   const transferPlayer = async (playerId, toTeamId) => {
     if (!toTeamId) return;
@@ -575,7 +616,7 @@ export default function PlayerManagement({ onDataChange = () => {} }) {
                           <button
                             type="button"
                             className="btn btn-danger btn-small"
-                            onClick={() => deletePlayer(p._id)}
+                            onClick={() => deletePlayer(p)}
                           >
                             Remove
                           </button>
@@ -692,7 +733,7 @@ export default function PlayerManagement({ onDataChange = () => {} }) {
                         <button
                           type="button"
                           className="btn btn-danger btn-small admin-player-action-btn admin-player-action-btn--remove"
-                          onClick={() => deletePlayer(p._id)}
+                          onClick={() => deletePlayer(p)}
                         >
                           Remove
                         </button>
@@ -780,6 +821,16 @@ export default function PlayerManagement({ onDataChange = () => {} }) {
           </div>
         </>
       )}
+
+      <PlayerDeleteConfirmModal
+        open={deleteModalOpen}
+        loading={deletePreviewLoading}
+        error={deletePreviewError}
+        preview={deletePreview}
+        deleting={deletingPlayer}
+        onConfirm={confirmDeletePlayer}
+        onCancel={closeDeleteModal}
+      />
     </div>
   );
 }

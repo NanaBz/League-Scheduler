@@ -45,6 +45,26 @@ const FantasyDraftSquadSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Player',
   }],
+  /** Real bank balance immediately before Free Hit — restored when FH ends. */
+  freeHitBaselineBankBalance: {
+    type: Number,
+    default: null,
+  },
+  /** Real purchase-price map immediately before Free Hit — restored when FH ends. */
+  freeHitBaselinePurchasePrices: {
+    type: mongoose.Schema.Types.Mixed,
+    default: null,
+  },
+  /** Available Acity Coins (cash) for transfers — default full season budget. */
+  bankBalance: {
+    type: Number,
+    default: 100.0,
+  },
+  /** Map of playerId → purchase price (AC millions) at time of acquisition. */
+  playerPurchasePrices: {
+    type: mongoose.Schema.Types.Mixed,
+    default: () => ({}),
+  },
 }, {
   timestamps: true
 });

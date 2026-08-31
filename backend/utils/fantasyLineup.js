@@ -140,4 +140,10 @@ function resolveDefaultCaptainRoles(lineup, transferInOrder = []) {
   return { captainId, viceCaptainId };
 }
 
-module.exports = { validateLineupPayload, resolveDefaultCaptainRoles, STARTER_LIMITS };
+module.exports = {
+  validateLineupPayload,
+  resolveDefaultCaptainRoles,
+  STARTER_LIMITS,
+  normalizeStarterIds,
+  starterCountsValid,
+};
