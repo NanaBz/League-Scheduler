@@ -12,6 +12,12 @@ const {
   GENERIC_FORGOT_MESSAGE,
 } = require('../utils/passwordReset');
 const { fantasyEmailVerifyBypassEnabled } = require('../utils/startupValidation');
+const {
+  validateManagerName,
+  validateFantasyTeamName,
+  serializeFantasyUser,
+} = require('../utils/fantasyProfileValidation');
+const { deleteFantasyAccount } = require('../utils/fantasyAccountDelete');
 
 const normalizeEmail = (email) => (email || '').trim().toLowerCase();
 const generateCode = () => `${Math.floor(100000 + Math.random() * 900000)}`;
@@ -80,13 +86,7 @@ router.post('/register', async (req, res) => {
         message: 'Account created. Email verification is skipped (testing only).',
         verificationBypassed: true,
         token,
-        user: {
-          id: user._id,
-          email: user.email,
-          teamName: user.teamName,
-          managerName: user.managerName,
-          isVerified: true
-        }
+        user: serializeFantasyUser(user)
       });
     }
 
@@ -126,13 +126,7 @@ router.post('/verify', async (req, res) => {
         message: 'Email verified (testing bypass).',
         verificationBypassed: true,
         token,
-        user: {
-          id: user._id,
-          email: user.email,
-          teamName: user.teamName,
-          managerName: user.managerName,
-          isVerified: user.isVerified
-        }
+        user: serializeFantasyUser(user)
       });
     }
 
@@ -152,13 +146,7 @@ router.post('/verify', async (req, res) => {
       success: true,
       message: 'Email verified successfully.',
       token,
-      user: {
-        id: user._id,
-        email: user.email,
-        teamName: user.teamName,
-        managerName: user.managerName,
-        isVerified: user.isVerified
-      }
+      user: serializeFantasyUser(user)
     });
   } catch (err) {
     console.error('Fantasy verify error:', err);
@@ -196,13 +184,7 @@ router.post('/login', async (req, res) => {
           message: 'Login successful (testing: unverified account was activated without email code).',
           verificationBypassed: true,
           token,
-          user: {
-            id: user._id,
-            email: user.email,
-            teamName: user.teamName,
-            managerName: user.managerName,
-            isVerified: true
-          }
+          user: serializeFantasyUser(user),
         });
       }
       const code = generateCode();
@@ -220,13 +202,7 @@ router.post('/login', async (req, res) => {
       success: true,
       message: 'Login successful.',
       token,
-      user: {
-        id: user._id,
-        email: user.email,
-        teamName: user.teamName,
-        managerName: user.managerName,
-        isVerified: user.isVerified
-      }
+      user: serializeFantasyUser(user)
     });
   } catch (err) {
     console.error('Fantasy login error:', err);
@@ -270,18 +246,81 @@ router.post('/resend-code', async (req, res) => {
 });
 
 router.get('/me', authenticateFantasyUser, async (req, res) => {
-  const user = req.fantasyUser;
   return res.json({
     success: true,
-    user: {
-      id: user._id,
-      email: user.email,
-      teamName: user.teamName,
-      managerName: user.managerName,
-      isVerified: user.isVerified,
-      lastLogin: user.lastLogin
-    }
+    user: serializeFantasyUser(req.fantasyUser),
   });
+});
+
+router.patch('/profile', authenticateFantasyUser, async (req, res) => {
+  try {
+    const user = req.fantasyUser;
+    const updates = {};
+
+    if (req.body.managerName !== undefined) {
+      const result = validateManagerName(req.body.managerName);
+      if (!result.ok) {
+        return res.status(400).json({ success: false, message: result.message });
+      }
+      updates.managerName = result.value;
+    }
+
+    if (req.body.teamName !== undefined) {
+      const result = validateFantasyTeamName(req.body.teamName);
+      if (!result.ok) {
+        return res.status(400).json({ success: false, message: result.message });
+      }
+      updates.teamName = result.value;
+    }
+
+    if (req.body.email !== undefined) {
+      return res.status(400).json({ success: false, message: 'Email cannot be changed through this endpoint.' });
+    }
+
+    if (!Object.keys(updates).length) {
+      return res.status(400).json({ success: false, message: 'No valid profile fields to update.' });
+    }
+
+    Object.assign(user, updates);
+    await user.save();
+
+    return res.json({
+      success: true,
+      message: 'Profile updated.',
+      user: serializeFantasyUser(user),
+    });
+  } catch (err) {
+    console.error('Fantasy profile update error:', err.message);
+    return res.status(500).json({ success: false, message: 'Server error. Please try again.' });
+  }
+});
+
+router.delete('/account', authenticateFantasyUser, async (req, res) => {
+  try {
+    const { password, confirmation } = req.body;
+    if (confirmation !== 'DELETE') {
+      return res.status(400).json({
+        success: false,
+        message: 'Type DELETE to confirm account deletion.',
+      });
+    }
+    if (!password) {
+      return res.status(400).json({ success: false, message: 'Current password is required.' });
+    }
+
+    const user = req.fantasyUser;
+    const passwordOk = await user.comparePassword(password);
+    if (!passwordOk) {
+      return res.status(401).json({ success: false, message: 'Incorrect password.' });
+    }
+
+    await deleteFantasyAccount(user._id);
+
+    return res.json({ success: true, message: 'Account deleted successfully.' });
+  } catch (err) {
+    console.error('Fantasy account delete error:', err.message);
+    return res.status(500).json({ success: false, message: 'Server error. Please try again.' });
+  }
 });
 
 router.post('/forgot-password', async (req, res) => {

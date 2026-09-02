@@ -1,0 +1,151 @@
+.fas-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  background: rgba(15, 23, 42, 0.45);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 16px 12px;
+  overflow-y: auto;
+}
+
+.fas-modal {
+  width: 100%;
+  max-width: 520px;
+  background: #fff;
+  border-radius: 16px;
+  padding: 16px;
+  box-shadow: 0 20px 50px rgba(15, 23, 42, 0.18);
+  margin-bottom: 24px;
+}
+
+.fas-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.fas-header h2 {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.fas-close {
+  border: none;
+  background: #f1f5f9;
+  color: #475569;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  font-size: 1.4rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.fas-section {
+  margin-bottom: 18px;
+}
+
+.fas-section h3 {
+  margin: 0 0 10px;
+  font-size: 0.78rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #64748b;
+}
+
+.fas-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 10px;
+}
+
+.fas-field span {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #334155;
+}
+
+.fas-field input {
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-size: 0.95rem;
+}
+
+.fas-readonly {
+  background: #f8fafc;
+  color: #64748b;
+}
+
+.fas-hint {
+  margin: 0 0 10px;
+  font-size: 0.82rem;
+  color: #64748b;
+  line-height: 1.45;
+}
+
+.fas-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  margin-bottom: 8px;
+}
+
+.fantasy-btn-secondary {
+  background: #f1f5f9;
+  color: #0f172a;
+  border: 1px solid #e2e8f0;
+}
+
+.fas-danger {
+  border-top: 1px solid #fecaca;
+  padding-top: 14px;
+}
+
+.fas-danger h3 {
+  color: #b91c1c;
+}
+
+.fas-delete-btn {
+  width: 100%;
+  margin-top: 4px;
+  padding: 12px;
+  border: none;
+  border-radius: 10px;
+  background: #dc2626;
+  color: #fff;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.fas-delete-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.fas-message {
+  margin: 0 0 10px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  font-size: 0.88rem;
+  font-weight: 600;
+}
+
+.fas-message--ok {
+  background: #ecfdf5;
+  color: #047857;
+}
+
+.fas-message--error {
+  background: #fef2f2;
+  color: #b91c1c;
+}

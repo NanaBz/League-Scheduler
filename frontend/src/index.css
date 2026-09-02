@@ -2677,6 +2677,8 @@ code {
   justify-content: space-between;
   padding: 1rem 2rem;
   min-height: 80px;
+  border-radius: var(--apl-radius-lg, 16px);
+  overflow: hidden;
 }
 
 /* Left Section: Brand */

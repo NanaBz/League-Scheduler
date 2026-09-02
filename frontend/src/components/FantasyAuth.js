@@ -7,6 +7,7 @@ import FantasyTransfers from './FantasyTransfers';
 import PickTeam from './PickTeam';
 import LeaguesAndCups from './LeaguesAndCups';
 import FantasyInfoPage from './FantasyInfoPage';
+import FantasyAccountSettings from './FantasyAccountSettings';
 import './FantasyAuth.css';
 
 const TOKEN_KEY = 'fantasyToken';
@@ -26,6 +27,7 @@ export default function FantasyAuth() {
   const [tab, setTab] = useState(() => (resetTokenFromUrl ? 'reset' : 'login')); // login | register | verify | forgot | reset
   const [subView, setSubView] = useState(null); // null | pick | transfers | leagues | info
   const [managerProfileOpen, setManagerProfileOpen] = useState(false);
+  const [accountSettingsOpen, setAccountSettingsOpen] = useState(false);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
 
@@ -284,7 +286,15 @@ export default function FantasyAuth() {
 
     return (
       <div className="fantasy-auth-container fantasy-section">
-        <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', marginBottom: 12 }}>
+        <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+          <button
+            type="button"
+            className="fantasy-btn fantasy-btn-secondary"
+            style={{ width: 'auto' }}
+            onClick={() => setAccountSettingsOpen(true)}
+          >
+            Account
+          </button>
           <button type="button" className="fantasy-btn fantasy-btn-secondary" style={{ width: 'auto' }} onClick={clearSession}>
             Sign out
           </button>
@@ -299,6 +309,14 @@ export default function FantasyAuth() {
           onProfileViewChange={setManagerProfileOpen}
         />
         {!managerProfileOpen ? <FantasyLeagueCupSection user={user} /> : null}
+        {accountSettingsOpen ? (
+          <FantasyAccountSettings
+            user={user}
+            onClose={() => setAccountSettingsOpen(false)}
+            onUserUpdated={setUser}
+            onLogout={clearSession}
+          />
+        ) : null}
       </div>
     );
   }
