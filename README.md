@@ -151,61 +151,6 @@ Free tiers are available for all three services.
 
 ---
 
-## Quick Start
-
-### Prerequisites
-
-- Node.js v14 or higher
-- MongoDB (local installation or MongoDB Atlas)
-
-### Installation
-
-1. **Clone the repository**
-   ```bash
-   git clone <your-repo-url>
-   cd League-Scheduler
-   ```
-
-2. **Setup backend**
-   ```bash
-   cd backend
-   npm install
-   cp .env.example .env
-   # Edit .env — at minimum set MONGODB_URI, ADMIN_JWT_SECRET, FANTASY_JWT_SECRET, ADMIN_EMAIL
-   npm run dev
-   ```
-
-3. **Setup frontend**
-   ```bash
-   cd frontend
-   npm install
-   npm start
-   ```
-
-4. **Initialize data (admin panel)**
-   - Log in to the admin panel
-   - Initialize Teams to create the six league teams
-   - Set League Fixtures to generate 10 matchweeks
-   - Publish fixtures, then generate cup and super cup fixtures as needed
-
-### Environment Variables
-
-See `backend/.env.example` for the full list. Key variables:
-
-| Variable | Purpose |
-|----------|---------|
-| `MONGODB_URI` | MongoDB connection string |
-| `ADMIN_JWT_SECRET` | Signs admin panel sessions |
-| `FANTASY_JWT_SECRET` | Signs fantasy user sessions (must differ from admin secret in production) |
-| `ADMIN_EMAIL` / `ADMIN_EMAILS` | Admin login whitelist |
-| `CORS_ORIGINS` | Allowed frontend origins |
-| `FRONTEND_URL` | Used in password reset links |
-| `SMTP_*` | Email delivery for verification and password reset |
-
-For local fantasy development without SMTP, set `FANTASY_BYPASS_EMAIL_VERIFY=true` (never enable in production).
-
----
-
 ## League System Overview
 
 ### Men's League
@@ -246,43 +191,6 @@ Routes are grouped under `/api/`:
 
 ---
 
-## Development
-
-### Backend
-
-```bash
-cd backend
-npm run dev   # nodemon auto-restart
-```
-
-### Frontend
-
-```bash
-cd frontend
-npm start     # development server on http://localhost:3000
-npm run lint  # ESLint
-```
-
-### Running Tests
-
-Backend unit tests live alongside utilities (e.g. `backend/utils/*.test.js`). Run individual files with Node:
-
-```bash
-cd backend
-node utils/fantasyScoring.test.js
-node utils/fantasySquadValidation.test.js
-node utils/seasonArchiveSnapshot.test.js
-```
-
-Frontend tests use React Testing Library:
-
-```bash
-cd frontend
-npm test
-```
-
----
-
 ## Project Structure
 
 ```
@@ -304,19 +212,3 @@ League-Scheduler/
 ├── DEPLOYMENT_GUIDE.md
 └── README.md
 ```
-
----
-
-## Contributing
-
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Test thoroughly
-5. Submit a pull request
-
----
-
-## License
-
-MIT License
