@@ -1,81 +1,161 @@
-# League Scheduler
+# ACity League System
 
-A comprehensive web application for managing a school's football league system with MongoDB + Express backend and React frontend.
+A full-stack web application for managing a school football league — fixtures, live match tracking, standings, player statistics, multi-competition support, season archives, and an integrated fantasy football game (ACFPL). Built with React, Node.js, Express, and MongoDB.
+
+**Live demo:** [https://league-scheduler-bqav.vercel.app/](https://league-scheduler-bqav.vercel.app/)
+
+---
 
 ## Screenshots
 
-### Desktop View
-![League Table](screenshots/desktop-league-table.png)
-![Fixtures](screenshots/desktop-fixtures.png)
-![Admin Panel](screenshots/desktop-admin-panel.png)
+### Desktop
 
-### Mobile View
-![Mobile League Table](screenshots/mobile-league-table.png)
-![Mobile Fixtures](screenshots/mobile-fixtures.png)
+![Men's League — table](screenshots/desktop-league-table.png)
+
+![Agha Cup — knockout bracket](screenshots/desktop-fixtures-agha-cup.png)
+
+![Super Cup](screenshots/desktop-fixtures-super-cup.png)
+
+![Stats — leaderboards](screenshots/desktop-stats.png)
+
+![Teams — men's squads](screenshots/desktop-teams-mens.png)
+
+![Fantasy — pick team (8+1 lineup)](screenshots/desktop-fantasy-pick-team.png)
+
+![Archived seasons](screenshots/desktop-archived-seasons.png)
+
+![Admin — fixture management](screenshots/desktop-admin-fixtures.png)
+
+![Admin — fantasy management](screenshots/desktop-admin-fantasy.png)
+
+### Mobile
+
+![Men's League — fixtures & table](screenshots/mobile-fixtures-league.png)
+
+![Teams — men's squads](screenshots/mobile-teams-mens.png)
+
+![Fantasy — dashboard](screenshots/mobile-fantasy-dashboard.png)
+
+![Admin — fixture management](screenshots/mobile-admin-fixtures.png)
+
+---
 
 ## Features
 
+### Competitions
 
-### Admin Panel & Actions
-- **Secure Authentication**: Email whitelist with strong password requirements
-- **Stats Management**: Admins can update player and team statistics after each match. These stats are reflected in the public Stats view and league table.
-- **Teams Management**: Admins can initialize, add, edit, or remove teams. Team changes are instantly reflected in the Teams view for all users.
-- **Fantasy Management**: Admins can set fantasy prices, manage squads, and update fantasy match performances. These actions power the Fantasy section for users.
-- **Set League Fixtures**: Generate home and away fixtures for 6 teams (10 matchweeks total)
-- **Set Cup Fixtures**: Create knockout tournament for top 4 teams (semifinals and final)
-- **Set Super Cup Fixture**: League winner vs cup winner
-- **Edit Matches**: Update scores, dates, and times for all matches. Match results update Stats, Teams, and Fantasy modules automatically.
-- **Reset Season**: Clear all data and start fresh (removes teams, stats, matches, and fantasy data)
-- **Session Management**: JWT-based authentication with automatic logout
+Five competition types are managed from a single app, each with dedicated UI styling:
 
-### Security Features
-- **Email Whitelist**: Only authorized admins can access admin panel
-- **Password Hashing**: bcryptjs encryption for secure password storage
-- **JWT Tokens**: Secure session management with expiration
-- **CORS Handling**: By default, all origins are allowed unless CORS_ORIGINS is set in the backend environment. This ensures smooth frontend-backend communication for public deployments.
+| Competition | Format | Notes |
+|-------------|--------|-------|
+| **Men's League** | 6-team double round-robin | 30 fixtures across 10 matchweeks; randomized circle-method scheduling |
+| **Agha Cup** | Top-4 knockout | Semi-finals and final; penalty shootout support on draws |
+| **Super Cup** | Single match | League winner vs cup winner (with double-winner fallback logic) |
+| **ACWPL** | Women's best-of-5 series | Orion vs Firestorm; early clinch voids remaining fixtures |
+| **Girls Super Cup** | Women's best-of-3 bracket | Clinch-at-2-wins logic with bracket visualization |
 
 ### User View
-- **Stats**: View real-time player and team statistics, updated by admin actions after matches.
-- **Teams**: Browse all teams, their squads, and details. Team changes by admins are instantly visible.
-- **Fantasy**: Play fantasy football using real match data and admin-set prices/squads. Fantasy scores update after each match.
-- **League Table**: Real-time standings with points, goals, and statistics
-- **Fixtures & Results**: View all matches with filtering options
-- **Winner Banners**: Congratulatory messages when competitions are won
 
-### Mobile Features
-- **Responsive Design**: Mobile-first responsive design with bottom navigation
-- **Mobile League Table**: Card-based layout optimized for touch interaction
-- **Mobile Fixtures & Results**: Clean card layout for matches with easy-to-read information
-- **Mobile Cup Matches**: Organized by tournament stages (Semi-Finals, Final) with penalty shootout display
-- **Mobile Super Cup**: Special purple gradient card design for the ultimate championship showdown
-- **Mobile Archived Seasons**: Complete mobile responsiveness for viewing historical season data with card-based league tables and match results
-- **Touch-Friendly Navigation**: Bottom navigation bar with competition tabs
-- **Mobile Admin Access**: Full admin functionality accessible on mobile devices
+- **Fixtures & Results** — Filter by competition and matchweek; expandable match cards with lineups, events, and live status badges
+- **League Table** — Real-time standings with points, goals, and tiebreakers
+- **Stats** — Per-competition leaderboards (goals, assists, clean sheets, cards)
+- **Teams** — Men's and women's team toggles; browse squads, staff, and team details
+- **Archived Seasons** — Browse frozen snapshots from past seasons (standings, fixtures, scorers, team pages)
+- **Winner Banners** — Congratulatory banners when competitions are decided
+
+### Live Match Tracking
+
+- Match lifecycle: **Scheduled → Live → Full Time**
+- Rich event entry: goals (with assists and own goals), yellow/red cards, clean sheets, minutes
+- Starting lineups (9-player formations with position constraints)
+- Match results cascade automatically into league tables, player stats, and fantasy scoring
+
+### Fantasy — ACFPL (Acity Fantasy Premier League)
+
+Integrated fantasy football powered by real league match data:
+
+- **Account** — Register, email verification, login, password reset, profile edit, account deletion
+- **Squad** — 13 players (2 GK, 4 DEF, 4 MF, 3 ATT); AC 100.0m budget; max 3 players per real club
+- **Pick Team** — Custom **8+1 starting lineup** (1 GK + 8 outfield); captain, vice-captain, bench order
+- **Scoring** — Position-weighted points from real fixtures (goals, assists, minutes, clean sheets, cards, bonus/special points)
+- **Transfers** — Free-transfer banking (up to 2), −4pt hits for extra transfers
+- **Chips** — Wildcard, Free Hit, Bench Boost, Triple Captain, Duo Captain
+- **Auto-substitutions** — Bench players replace non-playing starters after gameweek lock
+- **Overall League** — Rankings across 10 gameweeks
+- **Acity Cup** — 32-manager knockout bracket (R32 through Final, GW6–10)
+- **Manager profiles** — Multi-season history and season achievements
+
+### Admin Panel
+
+Four admin areas accessible via sidebar navigation:
+
+1. **Fixture Management** — Generate, publish, and edit fixtures for all competitions; live match controls; goalscorer and event entry; season reset workflow with academic-year tagging
+2. **Player Management** — CRUD for players; inter-team transfers; deletion preview (impact on stats and matches)
+3. **Fantasy Management** — Set player prices, enter minutes/bonus/special points, set gameweek deadlines, rescore gameweeks, dashboard stats
+4. **Activity Log** — Audit trail of 30+ admin action types
+
+Additional admin capabilities:
+
+- Initialize default teams and generate fixtures (league, cup, super cup, ACWPL, girls super cup)
+- Publish/reset fixture drafts before going live to users
+- Recalculate league table; check and update competition winners
+- Archive-and-reset season (preserves frozen snapshot, clears active data)
+- Switch between admin and user views; mobile admin FAB shortcut
+
+### Security
+
+- **Dual authentication** — Separate JWT systems for admin (email whitelist) and fantasy users
+- **Password hashing** — bcryptjs for all stored passwords
+- **Email flows** — Verification codes and password reset links via SMTP (nodemailer)
+- **Production hardening** — Helmet headers, HTTPS redirect, CORS origin allowlist, startup validation
+- **Audit logging** — Admin actions recorded with timestamps and details
+
+### Mobile
+
+- Mobile-first responsive design with bottom navigation
+- Card-based layouts for league tables, fixtures, cup brackets, and archived data
+- Touch-friendly competition tabs and expandable fixture cards
+- Full admin functionality accessible on mobile devices
+
+---
 
 ## Technology Stack
 
-- **Backend**: Node.js, Express.js, MongoDB, Mongoose
-- **Frontend**: React, Axios
-- **Database**: MongoDB
-- **Authentication**: JWT tokens, bcryptjs password hashing
-- **Security**: Email whitelist, CORS handling
+| Layer | Technologies |
+|-------|-------------|
+| **Frontend** | React 18, React Router v6, Axios, lucide-react, Create React App |
+| **Backend** | Node.js, Express.js, Mongoose |
+| **Database** | MongoDB (Atlas in production) |
+| **Auth** | JWT (separate admin + fantasy secrets), bcryptjs |
+| **Email** | nodemailer (SMTP) |
+| **Security** | Helmet, CORS, email whitelist |
+| **Testing** | 35+ unit test files (backend fantasy scoring, season archive, squad validation, transfers, etc.) |
 
-## 🚀 Quick Deployment
+---
 
-**Live Demo**: [https://league-scheduler-bqav.vercel.app/]
+## Deployment
 
-For full deployment instructions, see [DEPLOYMENT_GUIDE.md](DEPLOYMENT_GUIDE.md)
+**Live demo:** [https://league-scheduler-bqav.vercel.app/](https://league-scheduler-bqav.vercel.app/)
+
+For full deployment instructions, see [DEPLOYMENT_GUIDE.md](DEPLOYMENT_GUIDE.md).
 
 ### Production Stack
-- **Frontend**: Vercel
-- **Backend**: Render
-- **Database**: MongoDB Atlas
-- **Cost**: Free tier available
+
+| Service | Provider |
+|---------|----------|
+| Frontend | Vercel |
+| Backend | Render |
+| Database | MongoDB Atlas |
+
+Free tiers are available for all three services.
+
+---
 
 ## Quick Start
 
 ### Prerequisites
-- Node.js (v14 or higher)
+
+- Node.js v14 or higher
 - MongoDB (local installation or MongoDB Atlas)
 
 ### Installation
@@ -86,75 +166,146 @@ For full deployment instructions, see [DEPLOYMENT_GUIDE.md](DEPLOYMENT_GUIDE.md)
    cd League-Scheduler
    ```
 
-2. **Setup Backend**
+2. **Setup backend**
    ```bash
    cd backend
    npm install
    cp .env.example .env
-   # Edit .env with your MongoDB connection string
+   # Edit .env — at minimum set MONGODB_URI, ADMIN_JWT_SECRET, FANTASY_JWT_SECRET, ADMIN_EMAIL
    npm run dev
    ```
 
-3. **Setup Frontend**
+3. **Setup frontend**
    ```bash
    cd frontend
    npm install
    npm start
    ```
 
-4. **Initialize Data**
-   - Go to Admin Panel
-   - Click "Initialize Teams" to create default teams
-   - Click "Set League Fixtures" to generate the league schedule
-   - Click "Set Cup Fixtures" to create cup matches
+4. **Initialize data (admin panel)**
+   - Log in to the admin panel
+   - Initialize Teams to create the six league teams
+   - Set League Fixtures to generate 10 matchweeks
+   - Publish fixtures, then generate cup and super cup fixtures as needed
 
-## API Endpoints
-### Stats
-- `GET /api/stats` - Get all player and team statistics
-- `POST /api/stats` - Add or update stats for a player or team
+### Environment Variables
 
-### Fantasy
-- `GET /api/fantasy` - Get fantasy data (users, squads, performances)
-- `POST /api/fantasy` - Update fantasy match performance
-- `POST /api/fantasy/set-prices` - Set fantasy prices for players
+See `backend/.env.example` for the full list. Key variables:
 
-### Teams
-- `GET /api/teams` - Get all teams with league table data
-- `POST /api/teams` - Create a new team
-- `POST /api/teams/initialize` - Initialize default teams
+| Variable | Purpose |
+|----------|---------|
+| `MONGODB_URI` | MongoDB connection string |
+| `ADMIN_JWT_SECRET` | Signs admin panel sessions |
+| `FANTASY_JWT_SECRET` | Signs fantasy user sessions (must differ from admin secret in production) |
+| `ADMIN_EMAIL` / `ADMIN_EMAILS` | Admin login whitelist |
+| `CORS_ORIGINS` | Allowed frontend origins |
+| `FRONTEND_URL` | Used in password reset links |
+| `SMTP_*` | Email delivery for verification and password reset |
 
-### Matches
-- `GET /api/matches` - Get matches (with filtering)
-- `POST /api/matches` - Create a new match
-- `PUT /api/matches/:id` - Update match details
-- `POST /api/matches/generate-league` - Generate league fixtures
-- `POST /api/matches/generate-cup` - Generate cup fixtures
+For local fantasy development without SMTP, set `FANTASY_BYPASS_EMAIL_VERIFY=true` (never enable in production).
 
-### Competitions
-- `GET /api/competitions` - Get competition data
-- `POST /api/competitions/reset-season` - Reset all data
-- `POST /api/competitions/check-winners` - Check and update winners
+---
 
-## League System
+## League System Overview
 
-- **6 Teams**: Dragons, Vikings, Warriors, Lions, Elites, Falcons
-- **League**: Double round-robin (home and away)
-- **Cup**: Top 4 teams in knockout format
-- **Super Cup**: League winner vs Cup winner
+### Men's League
+
+- **6 teams:** Dragons, Vikings, Warriors, Lions, Elites, Falcons
+- **Format:** Double round-robin (home and away), 30 matches, 10 matchweeks
+- **Scheduling:** Randomized circle method with shuffled match order
+
+### Cup & Super Cup
+
+- **Agha Cup:** Top 4 from the league table; semi-finals and final
+- **Super Cup:** League winner vs cup winner
+
+### Women's Competitions
+
+- **ACWPL:** Best-of-5 series (Orion vs Firestorm)
+- **Girls Super Cup:** Best-of-3 bracket
+
+---
+
+## API Overview
+
+Routes are grouped under `/api/`:
+
+| Route prefix | Purpose |
+|--------------|---------|
+| `/api/auth` | Admin authentication, password reset |
+| `/api/fantasy/auth` | Fantasy user register, verify, login, profile, account deletion |
+| `/api/teams` | Team CRUD, initialization, staff management |
+| `/api/players` | Player CRUD, transfers, deletion preview |
+| `/api/matches` | Fixture generation, live match controls, events, scores |
+| `/api/competitions` | Competition state, winner detection |
+| `/api/seasons` | Season archive, reset, reconcile |
+| `/api/stats` | Player and team statistics |
+| `/api/fantasy` | Squads, lineups, chips, overall league, Acity Cup |
+| `/api/fantasy/admin` | Fantasy admin (prices, minutes, bonus, rescore, deadlines) |
+| `/api/admin-activity` | Audit log |
+
+---
 
 ## Development
 
-### Backend Development
+### Backend
+
 ```bash
 cd backend
-npm run dev  # Starts with nodemon for auto-restart
+npm run dev   # nodemon auto-restart
 ```
 
-### Frontend Development
+### Frontend
+
 ```bash
 cd frontend
-npm start  # Starts development server
+npm start     # development server on http://localhost:3000
+npm run lint  # ESLint
 ```
+
+### Running Tests
+
+Backend unit tests live alongside utilities (e.g. `backend/utils/*.test.js`). Run individual files with Node:
+
+```bash
+cd backend
+node utils/fantasyScoring.test.js
+node utils/fantasySquadValidation.test.js
+node utils/seasonArchiveSnapshot.test.js
+```
+
+Frontend tests use React Testing Library:
+
+```bash
+cd frontend
+npm test
+```
+
+---
+
+## Project Structure
+
+```
+League-Scheduler/
+├── backend/
+│   ├── models/          # Mongoose schemas (22 models)
+│   ├── routes/          # Express route handlers
+│   ├── utils/           # Business logic, scoring, validation, tests
+│   ├── middleware/      # Auth middleware (admin + fantasy)
+│   └── server.js
+├── frontend/
+│   ├── src/
+│   │   ├── components/  # UI components (~50+)
+│   │   ├── pages/       # Archived season pages
+│   │   ├── utils/       # Client-side helpers and tests
+│   │   └── styles/      # CSS modules per feature area
+│   └── public/
+├── screenshots/         # README screenshot assets
+├── DEPLOYMENT_GUIDE.md
+└── README.md
+```
+
+---
 
 ## Contributing
 
@@ -163,6 +314,8 @@ npm start  # Starts development server
 3. Make your changes
 4. Test thoroughly
 5. Submit a pull request
+
+---
 
 ## License
 
