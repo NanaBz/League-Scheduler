@@ -40,9 +40,17 @@
   width: 52px;
   height: 52px;
   flex-shrink: 0;
-  border-radius: 14px;
-  background: rgba(220, 38, 38, 0.22);
-  color: #fecaca;
+  border-radius: 50%;
+  overflow: hidden;
+  background: #0f172a;
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.28);
+}
+
+.app-footer__brand-logo {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
 }
 
 .app-footer__eyebrow {

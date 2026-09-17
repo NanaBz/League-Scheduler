@@ -615,13 +615,28 @@ code {
 }
 
 .nav-logo {
-  height: 40px;
-  width: auto;
+  height: 44px;
+  width: 44px;
+  object-fit: cover;
+  border-radius: 50%;
+  flex-shrink: 0;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.12);
 }
-.nav-logo img {
-  height: 100%;
-  width: auto;
-  object-fit: contain;
+
+.nav-brand-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.nav-brand-eyebrow {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #64748b;
+  line-height: 1;
 }
 /* Optional: if you want to visually blend out pure white backgrounds without changing the file */
 .logo-blend img { mix-blend-mode: multiply; }

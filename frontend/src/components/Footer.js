@@ -12,6 +12,7 @@ import {
   Circle,
 } from 'lucide-react';
 import './Footer.css';
+import { ACITY_SPORTS_LOGO, ACITY_SPORTS_NAME, APP_TITLE } from '../constants/branding';
 
 const GITHUB_REPO_URL = 'https://github.com/NanaBz/League-Scheduler';
 const GITHUB_REPO_NAME = 'League-Scheduler';
@@ -42,12 +43,12 @@ const Footer = ({
     <footer className="app-footer">
       <div className="app-footer__main">
         <div className="app-footer__brand">
-          <div className="app-footer__brand-icon" aria-hidden="true">
-            <Trophy size={28} strokeWidth={2.2} />
+          <div className="app-footer__brand-icon">
+            <img src={ACITY_SPORTS_LOGO} alt="" className="app-footer__brand-logo" aria-hidden="true" />
           </div>
           <div className="app-footer__brand-copy">
-            <p className="app-footer__eyebrow">Academic City</p>
-            <h2 className="app-footer__title">Acity Premier League</h2>
+            <p className="app-footer__eyebrow">{ACITY_SPORTS_NAME}</p>
+            <h2 className="app-footer__title">{APP_TITLE}</h2>
             <p className="app-footer__desc">
               Modern football league management for Academic City — fixtures, stats, teams, and fantasy.
             </p>

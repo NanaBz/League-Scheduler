@@ -33,6 +33,7 @@ import {
   clearAdminSession,
   hasAdminSession,
 } from './utils/adminSession';
+import { ACITY_SPORTS_LOGO, ACITY_SPORTS_NAME, APP_TITLE } from './constants/branding';
 import './styles/designFoundation.css';
 import './styles/fixtures.css';
 import './styles/aghaCup.css';
@@ -302,11 +303,11 @@ function App() {
       <div className="loading-screen">
           <div className="loading-content">
           <img
-            src="/logos/acity-sports-logo.jpg"
-            alt="Acity Sports"
+            src={ACITY_SPORTS_LOGO}
+            alt={ACITY_SPORTS_NAME}
             className="loading-logo"
           />
-          <h2>Acity Premier League</h2>
+          <h2>{APP_TITLE}</h2>
           <p>Loading your football management system...</p>
           <div className="loading-bar">
             <div className="loading-progress"></div>
@@ -323,8 +324,11 @@ function App() {
         <nav className="unified-top-nav">
           {/* Left Section: Brand */}
           <div className="nav-brand">
-            <img src="/logos/acity-sports-logo.jpg" alt="Acity Sports" className="nav-logo" style={{ borderRadius: '50%' }} />
-            <h1>Acity Premier League</h1>
+            <img src={ACITY_SPORTS_LOGO} alt={ACITY_SPORTS_NAME} className="nav-logo" />
+            <div className="nav-brand-copy">
+              <span className="nav-brand-eyebrow">{ACITY_SPORTS_NAME}</span>
+              <h1>{APP_TITLE}</h1>
+            </div>
           </div>
           
           {/* Center Section: Competition Navigation (only when on Fixtures section) */}
