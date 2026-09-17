@@ -1,5 +1,4 @@
 const express = require('express');
-const crypto = require('crypto');
 const router = express.Router();
 const FantasyUser = require('../models/FantasyUser');
 const { generateFantasyToken, authenticateFantasyUser, validatePasswordStrength } = require('../middleware/fantasyAuth');
@@ -40,10 +39,6 @@ function issueAuthSuccess(res, user, message) {
   });
 }
 
-function randomPasswordPlaceholder() {
-  return crypto.randomBytes(32).toString('hex');
-}
-
 router.get('/config', (req, res) => {
   return res.json({
     success: true,
@@ -70,10 +65,14 @@ router.post('/register', async (req, res) => {
     const skipVerify = fantasySkipEmailVerifyEnabled();
     const code = skipVerify ? null : generateCode();
 
-    let user = await FantasyUser.findOne({ email: normalizedEmail });
-    if (user && (user.isVerified || skipVerify)) {
-      return res.status(409).json({ success: false, message: 'Account already exists. Please sign in instead.' });
+    const existingUser = await FantasyUser.findOne({ email: normalizedEmail });
+    if (existingUser) {
+      if (existingUser.isVerified || skipVerify) {
+        return res.status(409).json({ success: false, message: 'An account with this email already exists. Please sign in instead.' });
+      }
     }
+
+    let user = existingUser;
 
     if (user) {
       user.password = password;
@@ -109,6 +108,9 @@ router.post('/register', async (req, res) => {
     await sendVerificationEmail(normalizedEmail, code);
     return res.json({ success: true, message: 'Registration received. Check your email for the 6-digit verification code.' });
   } catch (err) {
+    if (err.code === 11000) {
+      return res.status(409).json({ success: false, message: 'An account with this email already exists. Please sign in instead.' });
+    }
     console.error('Fantasy register error:', err);
     return res.status(500).json({ success: false, message: err.message || 'Server error. Please try again.' });
   }
@@ -201,53 +203,33 @@ router.post('/google', async (req, res) => {
       return res.status(503).json({ success: false, message: 'Google Sign-In is not configured.' });
     }
 
-    const { credential, teamName, managerName } = req.body;
+    const { credential } = req.body;
     if (!credential) {
       return res.status(400).json({ success: false, message: 'Google credential is required.' });
     }
 
     const googleProfile = await verifyGoogleIdToken(credential);
-    let user = await FantasyUser.findOne({
+    const user = await FantasyUser.findOne({
       $or: [{ googleId: googleProfile.googleId }, { email: googleProfile.email }],
     });
 
-    if (user) {
-      if (!user.googleId) {
-        user.googleId = googleProfile.googleId;
-      }
-      user.isVerified = true;
-      user.verificationCodeHash = null;
-      user.verificationCodeExpires = null;
-      user.lastLogin = new Date();
-      await user.save();
-      return issueAuthSuccess(res, user, 'Signed in with Google.');
-    }
-
-    const teamResult = validateFantasyTeamName(teamName);
-    const managerResult = validateManagerName(managerName);
-    if (!teamResult.ok || !managerResult.ok) {
-      return res.status(422).json({
+    if (!user) {
+      return res.status(404).json({
         success: false,
-        needsProfile: true,
-        email: googleProfile.email,
-        suggestedManagerName: googleProfile.name || '',
-        message: 'Choose your fantasy team name and manager name to finish creating your account.',
+        registerRequired: true,
+        message: 'No fantasy account found for this Google email. Register first with your email, password, team name, and manager name.',
       });
     }
 
-    user = new FantasyUser({
-      email: googleProfile.email,
-      password: randomPasswordPlaceholder(),
-      googleId: googleProfile.googleId,
-      authProvider: 'google',
-      teamName: teamResult.value,
-      managerName: managerResult.value,
-      isVerified: true,
-      lastLogin: new Date(),
-    });
+    if (!user.googleId) {
+      user.googleId = googleProfile.googleId;
+    }
+    user.isVerified = true;
+    user.verificationCodeHash = null;
+    user.verificationCodeExpires = null;
+    user.lastLogin = new Date();
     await user.save();
-
-    return issueAuthSuccess(res, user, 'Account created with Google.');
+    return issueAuthSuccess(res, user, 'Signed in with Google.');
   } catch (err) {
     console.error('Fantasy Google auth error:', err.message);
     return res.status(401).json({ success: false, message: err.message || 'Google Sign-In failed.' });
