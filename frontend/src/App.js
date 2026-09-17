@@ -33,7 +33,7 @@ import {
   clearAdminSession,
   hasAdminSession,
 } from './utils/adminSession';
-import { ACITY_SPORTS_LOGO, ACITY_SPORTS_NAME, APP_TITLE } from './constants/branding';
+import { ACITY_SPORTS_LOGO, ACITY_SPORTS_LOGO_HEADER, ACITY_SPORTS_NAME, APP_TITLE } from './constants/branding';
 import './styles/designFoundation.css';
 import './styles/fixtures.css';
 import './styles/aghaCup.css';
@@ -324,7 +324,9 @@ function App() {
         <nav className="unified-top-nav">
           {/* Left Section: Brand */}
           <div className="nav-brand">
-            <img src={ACITY_SPORTS_LOGO} alt={ACITY_SPORTS_NAME} className="nav-logo" />
+            <span className="nav-logo-wrap" aria-hidden="true">
+              <img src={ACITY_SPORTS_LOGO_HEADER} alt="" className="nav-logo" />
+            </span>
             <div className="nav-brand-copy">
               <span className="nav-brand-eyebrow">{ACITY_SPORTS_NAME}</span>
               <h1>{APP_TITLE}</h1>
