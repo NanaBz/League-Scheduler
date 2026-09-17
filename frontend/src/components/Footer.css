@@ -34,20 +34,29 @@
 }
 
 .app-footer__brand-icon {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 56px;
-  height: 56px;
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  background: #ffffff;
   flex-shrink: 0;
+  overflow: hidden;
+  padding: 5px;
+  box-shadow:
+    0 0 0 2px rgba(255, 255, 255, 0.95),
+    0 4px 14px rgba(0, 0, 0, 0.22);
 }
 
 .app-footer__brand-logo {
   width: 100%;
-  height: auto;
-  max-height: 56px;
+  height: 100%;
+  max-width: none;
+  max-height: none;
   object-fit: contain;
   display: block;
+  border-radius: 50%;
 }
 
 .app-footer__eyebrow {
