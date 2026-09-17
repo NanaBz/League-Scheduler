@@ -52,6 +52,8 @@ export default function FantasyAuth() {
   const [resetPassword, setResetPassword] = useState('');
   const [resetConfirmPassword, setResetConfirmPassword] = useState('');
   const [resetLoading, setResetLoading] = useState(false);
+  const [loginLoading, setLoginLoading] = useState(false);
+  const [registerLoading, setRegisterLoading] = useState(false);
 
   useEffect(() => {
     if (resetTokenFromUrl) {
@@ -61,7 +63,12 @@ export default function FantasyAuth() {
   }, [resetTokenFromUrl]);
 
   const persistSession = useCallback((t, u) => {
-    localStorage.setItem(TOKEN_KEY, t);
+    try {
+      localStorage.setItem(TOKEN_KEY, t);
+    } catch {
+      setError('Signed in, but this browser blocked saving your session. Turn off private browsing or allow site storage, then sign in again.');
+      return;
+    }
     setToken(t);
     setUser(u);
     setTab('login');
@@ -123,8 +130,10 @@ export default function FantasyAuth() {
 
   const handleLogin = async (e) => {
     e.preventDefault();
+    if (loginLoading) return;
     setError('');
     setMessage('');
+    setLoginLoading(true);
     try {
       const { data } = await api.post('/fantasy/auth/login', {
         email: loginEmail.trim(),
@@ -152,11 +161,14 @@ export default function FantasyAuth() {
       } else {
         setError(d?.message || err.message || 'Login failed');
       }
+    } finally {
+      setLoginLoading(false);
     }
   };
 
   const handleRegister = async (e) => {
     e.preventDefault();
+    if (registerLoading) return;
     setError('');
     setMessage('');
     setRegisterConflict(false);
@@ -164,6 +176,7 @@ export default function FantasyAuth() {
       setError('Passwords do not match.');
       return;
     }
+    setRegisterLoading(true);
     try {
       const { data } = await api.post('/fantasy/auth/register', {
         email: regEmail.trim(),
@@ -190,15 +203,26 @@ export default function FantasyAuth() {
       const d = err.response?.data;
       if (d?.accountExists) {
         setRegisterConflict(true);
-        setError(d?.message || 'An account with this email already exists.');
         setLoginEmail(regEmail.trim());
+        setLoginPassword(regPassword);
         setForgotEmail(regEmail.trim());
+        setError(d?.message || 'An account with this email already exists.');
+        if (d?.suggestLoginWithSamePassword) {
+          setMessage('Your account may already exist from an earlier attempt. Try signing in with the same password below.');
+        }
         if (d?.useGoogleSignIn || d?.suggestForgotPassword) {
           setTab('login');
         }
+      } else if (!err.response) {
+        setError('Registration timed out or lost connection. If you already tried once, go to Sign in with the same email and password instead of registering again.');
+        setLoginEmail(regEmail.trim());
+        setLoginPassword(regPassword);
+        setTab('login');
       } else {
         setError(d?.message || err.message || 'Registration failed');
       }
+    } finally {
+      setRegisterLoading(false);
     }
   };
 
@@ -425,7 +449,9 @@ export default function FantasyAuth() {
               <input id="fa-login-pass" className="fantasy-input" type="password" autoComplete="current-password" value={loginPassword} onChange={(e) => setLoginPassword(e.target.value)} required />
             </div>
             <div className="fantasy-actions">
-              <button type="submit" className="fantasy-btn fantasy-btn-primary">Sign in</button>
+              <button type="submit" className="fantasy-btn fantasy-btn-primary" disabled={loginLoading}>
+                {loginLoading ? 'Signing in…' : 'Sign in'}
+              </button>
               <button type="button" className="fantasy-btn fantasy-btn-text" onClick={() => { setTab('forgot'); setError(''); setMessage(''); }}>
                 Forgot password?
               </button>

@@ -29,6 +29,27 @@ const { deleteFantasyAccount } = require('../utils/fantasyAccountDelete');
 const normalizeEmail = (email) => (email || '').trim().toLowerCase();
 const generateCode = () => `${Math.floor(100000 + Math.random() * 900000)}`;
 
+async function findUserByEmail(email) {
+  const normalizedEmail = normalizeEmail(email);
+  const exactMatch = await FantasyUser.findOne({ email: normalizedEmail });
+  if (exactMatch) return exactMatch;
+
+  const escaped = normalizedEmail.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return FantasyUser.findOne({ email: { $regex: new RegExp(`^${escaped}$`, 'i') } });
+}
+
+async function sendPasswordResetForUser(user, normalizedEmail, audience = 'ACFPL Fantasy') {
+  const token = generateResetToken();
+  user.passwordResetTokenHash = await hashResetToken(token);
+  user.passwordResetTokenExpires = resetTokenExpiry(
+    Number(process.env.PASSWORD_RESET_TTL_MINUTES) || 60
+  );
+  await user.save();
+
+  const resetUrl = buildResetUrl('/fantasy', token);
+  await sendPasswordResetEmail(normalizedEmail, resetUrl, { audience });
+}
+
 function respondAccountAlreadyExists(res, existingUser) {
   if (existingUser.authProvider === 'google') {
     return res.status(409).json({
@@ -43,7 +64,8 @@ function respondAccountAlreadyExists(res, existingUser) {
     success: false,
     accountExists: true,
     suggestForgotPassword: true,
-    message: 'An account with this email already exists. Sign in with your password, or use Forgot password if you do not remember it.',
+    suggestLoginWithSamePassword: true,
+    message: 'An account with this email already exists. If you just tried to register, sign in with the same password. Otherwise use Forgot password.',
   });
 }
 
@@ -83,14 +105,33 @@ router.post('/register', async (req, res) => {
     const skipVerify = fantasySkipEmailVerifyEnabled();
     const code = skipVerify ? null : generateCode();
 
-    const existingUser = await FantasyUser.findOne({ email: normalizedEmail });
-    if (existingUser && (existingUser.isVerified || skipVerify)) {
+    const existingUser = await findUserByEmail(normalizedEmail);
+
+    if (existingUser?.authProvider === 'google') {
+      existingUser.password = password;
+      existingUser.teamName = teamName;
+      existingUser.managerName = managerName;
+      existingUser.authProvider = 'local';
+      existingUser.isVerified = true;
+      existingUser.verificationCodeHash = null;
+      existingUser.verificationCodeExpires = null;
+      existingUser.lastLogin = new Date();
+      await existingUser.save();
+      return issueAuthSuccess(
+        res,
+        existingUser,
+        'Account linked to email and password. You are signed in.'
+      );
+    }
+
+    if (existingUser?.isVerified) {
       return respondAccountAlreadyExists(res, existingUser);
     }
 
     let user = existingUser;
 
     if (user) {
+      user.email = normalizedEmail;
       user.password = password;
       user.teamName = teamName;
       user.managerName = managerName;
@@ -125,7 +166,7 @@ router.post('/register', async (req, res) => {
     return res.json({ success: true, message: 'Registration received. Check your email for the 6-digit verification code.' });
   } catch (err) {
     if (err.code === 11000) {
-      const duplicateUser = await FantasyUser.findOne({ email: normalizeEmail(req.body?.email) });
+      const duplicateUser = await findUserByEmail(req.body?.email);
       if (duplicateUser) {
         return respondAccountAlreadyExists(res, duplicateUser);
       }
@@ -155,7 +196,7 @@ router.post('/verify', async (req, res) => {
       return res.status(400).json({ success: false, message: 'Email and verification code are required.' });
     }
 
-    const user = await FantasyUser.findOne({ email: normalizeEmail(email) });
+    const user = await findUserByEmail(email);
     if (!user) {
       return res.status(404).json({ success: false, message: 'Account not found.' });
     }
@@ -185,13 +226,18 @@ router.post('/login', async (req, res) => {
       return res.status(400).json({ success: false, message: 'Email and password are required.' });
     }
 
-    const user = await FantasyUser.findOne({ email: normalizeEmail(email) });
+    const user = await findUserByEmail(email);
     if (!user) {
       return res.status(404).json({
         success: false,
         accountNotFound: true,
         message: 'No account found for this email. Please register first.',
       });
+    }
+
+    if (user.email !== normalizeEmail(email)) {
+      user.email = normalizeEmail(email);
+      await user.save();
     }
 
     if (!user.hasPasswordLogin()) {
@@ -244,9 +290,10 @@ router.post('/google', async (req, res) => {
     }
 
     const googleProfile = await verifyGoogleIdToken(credential);
-    const user = await FantasyUser.findOne({
-      $or: [{ googleId: googleProfile.googleId }, { email: googleProfile.email }],
-    });
+    let user = await FantasyUser.findOne({ googleId: googleProfile.googleId });
+    if (!user) {
+      user = await findUserByEmail(googleProfile.email);
+    }
 
     if (!user) {
       return res.status(404).json({
@@ -285,7 +332,7 @@ router.post('/resend-code', async (req, res) => {
       return res.status(400).json({ success: false, message: 'Email is required.' });
     }
 
-    const user = await FantasyUser.findOne({ email: normalizeEmail(email) });
+    const user = await findUserByEmail(email);
     if (!user) {
       return res.json({ success: true, message: 'If the account exists, a code has been sent.' });
     }
@@ -296,6 +343,9 @@ router.post('/resend-code', async (req, res) => {
 
     const code = generateCode();
     await user.setVerificationCode(code);
+    if (user.email !== normalizeEmail(email)) {
+      user.email = normalizeEmail(email);
+    }
     await user.save();
     await sendVerificationEmail(user.email, code);
 
@@ -394,7 +444,7 @@ router.post('/forgot-password', async (req, res) => {
     }
 
     const normalizedEmail = normalizeEmail(email);
-    const user = await FantasyUser.findOne({ email: normalizedEmail });
+    const user = await findUserByEmail(normalizedEmail);
     const adminContactEmail = getFantasyAdminContactEmail();
     const alternatives = {
       googleSignIn: googleSignInEnabled(),
@@ -412,16 +462,8 @@ router.post('/forgot-password', async (req, res) => {
       });
     }
 
-    if (user && user.isVerified && user.hasPasswordLogin()) {
-      const token = generateResetToken();
-      user.passwordResetTokenHash = await hashResetToken(token);
-      user.passwordResetTokenExpires = resetTokenExpiry(
-        Number(process.env.PASSWORD_RESET_TTL_MINUTES) || 60
-      );
-      await user.save();
-
-      const resetUrl = buildResetUrl('/fantasy', token);
-      await sendPasswordResetEmail(normalizedEmail, resetUrl, { audience: 'ACFPL Fantasy' });
+    if (user && user.hasPasswordLogin()) {
+      await sendPasswordResetForUser(user, normalizedEmail);
 
       return res.json({
         success: true,
@@ -432,10 +474,21 @@ router.post('/forgot-password', async (req, res) => {
     }
 
     if (user && !user.hasPasswordLogin()) {
+      if (passwordResetViaEmailEnabled()) {
+        await sendPasswordResetForUser(user, normalizedEmail);
+
+        return res.json({
+          success: true,
+          emailSent: true,
+          message: 'We sent a link to set a password for this account so you can sign in with email and password.',
+          alternatives,
+        });
+      }
+
       return res.json({
         success: true,
         emailSent: false,
-        message: 'This account uses Google Sign-In. Continue with Google instead of resetting a password.',
+        message: 'This account uses Google Sign-In. Continue with Google, or contact the league admin to set a password.',
         alternatives,
       });
     }
