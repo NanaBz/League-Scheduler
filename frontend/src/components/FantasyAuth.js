@@ -32,6 +32,7 @@ export default function FantasyAuth() {
   const [accountSettingsOpen, setAccountSettingsOpen] = useState(false);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
+  const [registerConflict, setRegisterConflict] = useState(false);
 
   const [loginEmail, setLoginEmail] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
@@ -142,6 +143,10 @@ export default function FantasyAuth() {
         setVerifyEmail(loginEmail.trim());
         setTab('verify');
         setMessage(d.message || 'Please verify your email.');
+      } else if (d?.accountNotFound) {
+        setError(d?.message || 'No account found for this email. Please register first.');
+        setTab('register');
+        setRegEmail(loginEmail.trim());
       } else if (d?.useGoogleSignIn) {
         setError(`${d?.message || 'Login failed.'} Use Continue with Google below.`);
       } else {
@@ -154,6 +159,7 @@ export default function FantasyAuth() {
     e.preventDefault();
     setError('');
     setMessage('');
+    setRegisterConflict(false);
     if (regPassword !== regConfirmPassword) {
       setError('Passwords do not match.');
       return;
@@ -182,7 +188,17 @@ export default function FantasyAuth() {
       }
     } catch (err) {
       const d = err.response?.data;
-      setError(d?.message || err.message || 'Registration failed');
+      if (d?.accountExists) {
+        setRegisterConflict(true);
+        setError(d?.message || 'An account with this email already exists.');
+        setLoginEmail(regEmail.trim());
+        setForgotEmail(regEmail.trim());
+        if (d?.useGoogleSignIn || d?.suggestForgotPassword) {
+          setTab('login');
+        }
+      } else {
+        setError(d?.message || err.message || 'Registration failed');
+      }
     }
   };
 
@@ -375,10 +391,10 @@ export default function FantasyAuth() {
     <div className="fantasy-auth-container fantasy-section">
       {tab !== 'verify' && tab !== 'forgot' && tab !== 'reset' && (
         <div className="fantasy-auth-tabs">
-          <button type="button" className={`fantasy-tab ${tab === 'login' ? 'active' : ''}`} onClick={() => { setTab('login'); setError(''); setMessage(''); }}>
+          <button type="button" className={`fantasy-tab ${tab === 'login' ? 'active' : ''}`} onClick={() => { setTab('login'); setError(''); setMessage(''); setRegisterConflict(false); }}>
             Sign in
           </button>
-          <button type="button" className={`fantasy-tab ${tab === 'register' ? 'active' : ''}`} onClick={() => { setTab('register'); setError(''); setMessage(''); }}>
+          <button type="button" className={`fantasy-tab ${tab === 'register' ? 'active' : ''}`} onClick={() => { setTab('register'); setError(''); setMessage(''); setRegisterConflict(false); }}>
             Register
           </button>
         </div>
@@ -499,6 +515,16 @@ export default function FantasyAuth() {
           </div>
           <div className="fantasy-actions">
             <button type="submit" className="fantasy-btn fantasy-btn-primary">Create account</button>
+            {registerConflict ? (
+              <>
+                <button type="button" className="fantasy-btn fantasy-btn-secondary" onClick={() => { setTab('login'); setRegisterConflict(false); setMessage('This email already has an account. Sign in with your password.'); }}>
+                  Go to sign in
+                </button>
+                <button type="button" className="fantasy-btn fantasy-btn-text" onClick={() => { setTab('forgot'); setRegisterConflict(false); setError(''); setMessage(''); }}>
+                  Forgot password?
+                </button>
+              </>
+            ) : null}
           </div>
         </form>
       )}

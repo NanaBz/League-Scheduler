@@ -29,6 +29,24 @@ const { deleteFantasyAccount } = require('../utils/fantasyAccountDelete');
 const normalizeEmail = (email) => (email || '').trim().toLowerCase();
 const generateCode = () => `${Math.floor(100000 + Math.random() * 900000)}`;
 
+function respondAccountAlreadyExists(res, existingUser) {
+  if (existingUser.authProvider === 'google') {
+    return res.status(409).json({
+      success: false,
+      accountExists: true,
+      useGoogleSignIn: googleSignInEnabled(),
+      message: 'An account with this email already exists via Google Sign-In. Please sign in with Google instead of registering again.',
+    });
+  }
+
+  return res.status(409).json({
+    success: false,
+    accountExists: true,
+    suggestForgotPassword: true,
+    message: 'An account with this email already exists. Sign in with your password, or use Forgot password if you do not remember it.',
+  });
+}
+
 function issueAuthSuccess(res, user, message) {
   const token = generateFantasyToken(user._id, user.email);
   return res.json({
@@ -66,10 +84,8 @@ router.post('/register', async (req, res) => {
     const code = skipVerify ? null : generateCode();
 
     const existingUser = await FantasyUser.findOne({ email: normalizedEmail });
-    if (existingUser) {
-      if (existingUser.isVerified || skipVerify) {
-        return res.status(409).json({ success: false, message: 'An account with this email already exists. Please sign in instead.' });
-      }
+    if (existingUser && (existingUser.isVerified || skipVerify)) {
+      return respondAccountAlreadyExists(res, existingUser);
     }
 
     let user = existingUser;
@@ -109,7 +125,16 @@ router.post('/register', async (req, res) => {
     return res.json({ success: true, message: 'Registration received. Check your email for the 6-digit verification code.' });
   } catch (err) {
     if (err.code === 11000) {
-      return res.status(409).json({ success: false, message: 'An account with this email already exists. Please sign in instead.' });
+      const duplicateUser = await FantasyUser.findOne({ email: normalizeEmail(req.body?.email) });
+      if (duplicateUser) {
+        return respondAccountAlreadyExists(res, duplicateUser);
+      }
+      return res.status(409).json({
+        success: false,
+        accountExists: true,
+        suggestForgotPassword: true,
+        message: 'An account with this email already exists. Sign in with your password, or use Forgot password if you do not remember it.',
+      });
     }
     console.error('Fantasy register error:', err);
     return res.status(500).json({ success: false, message: err.message || 'Server error. Please try again.' });
@@ -162,12 +187,17 @@ router.post('/login', async (req, res) => {
 
     const user = await FantasyUser.findOne({ email: normalizeEmail(email) });
     if (!user) {
-      return res.status(401).json({ success: false, message: 'Invalid email or password.' });
+      return res.status(404).json({
+        success: false,
+        accountNotFound: true,
+        message: 'No account found for this email. Please register first.',
+      });
     }
 
     if (!user.hasPasswordLogin()) {
       return res.status(401).json({
         success: false,
+        accountExists: true,
         message: 'This account uses Google Sign-In. Continue with Google instead.',
         useGoogleSignIn: googleSignInEnabled(),
       });
@@ -175,7 +205,12 @@ router.post('/login', async (req, res) => {
 
     const passwordOk = await user.comparePassword(password);
     if (!passwordOk) {
-      return res.status(401).json({ success: false, message: 'Invalid email or password.' });
+      return res.status(401).json({
+        success: false,
+        accountExists: true,
+        suggestForgotPassword: true,
+        message: 'Incorrect password. Try again or use Forgot password below.',
+      });
     }
 
     if (!user.isVerified && !fantasySkipEmailVerifyEnabled()) {

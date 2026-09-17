@@ -80,7 +80,7 @@ FantasyUserSchema.methods.comparePassword = async function(candidate) {
 };
 
 FantasyUserSchema.methods.hasPasswordLogin = function() {
-  return Boolean(this.password);
+  return this.authProvider !== 'google' && Boolean(this.password);
 };
 
 FantasyUserSchema.methods.setVerificationCode = async function(code, ttlMinutes = 10) {
