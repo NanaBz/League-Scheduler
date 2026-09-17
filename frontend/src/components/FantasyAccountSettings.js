@@ -86,7 +86,8 @@ export default function FantasyAccountSettings({ user, onClose, onUserUpdated, o
 
   if (!user) return null;
 
-  const deleteEnabled = deleteConfirm === 'DELETE' && deletePassword.length > 0;
+  const requiresPasswordToDelete = user.hasPasswordLogin !== false;
+  const deleteEnabled = deleteConfirm === 'DELETE' && (!requiresPasswordToDelete || deletePassword.length > 0);
 
   return (
     <div className="fas-overlay" onClick={handleCancel} role="presentation">
@@ -151,15 +152,19 @@ export default function FantasyAccountSettings({ user, onClose, onUserUpdated, o
             Deleting your account removes your squad and login. Historical season archives keep recorded names and points.
           </p>
           <form onSubmit={handleDelete} className="fas-delete-form">
-            <label className="fas-field">
-              <span>Current password</span>
-              <input
-                type="password"
-                value={deletePassword}
-                onChange={(e) => setDeletePassword(e.target.value)}
-                autoComplete="current-password"
-              />
-            </label>
+            {requiresPasswordToDelete ? (
+              <label className="fas-field">
+                <span>Current password</span>
+                <input
+                  type="password"
+                  value={deletePassword}
+                  onChange={(e) => setDeletePassword(e.target.value)}
+                  autoComplete="current-password"
+                />
+              </label>
+            ) : (
+              <p className="fas-hint">This account uses Google Sign-In, so no password is required to delete it.</p>
+            )}
             <label className="fas-field">
               <span>Type DELETE to confirm</span>
               <input

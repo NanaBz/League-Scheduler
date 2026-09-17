@@ -8,6 +8,7 @@ import PickTeam from './PickTeam';
 import LeaguesAndCups from './LeaguesAndCups';
 import FantasyInfoPage from './FantasyInfoPage';
 import FantasyAccountSettings from './FantasyAccountSettings';
+import FantasyGoogleSignIn from './FantasyGoogleSignIn';
 import './FantasyAuth.css';
 
 const TOKEN_KEY = 'fantasyToken';
@@ -24,8 +25,13 @@ export default function FantasyAuth() {
   });
   const [user, setUser] = useState(null);
   const [loadingMe, setLoadingMe] = useState(!!localStorage.getItem(TOKEN_KEY));
-  const [tab, setTab] = useState(() => (resetTokenFromUrl ? 'reset' : 'login')); // login | register | verify | forgot | reset
+  const [tab, setTab] = useState(() => (resetTokenFromUrl ? 'reset' : 'login')); // login | register | verify | forgot | reset | google-profile
   const [subView, setSubView] = useState(null); // null | pick | transfers | leagues | info
+  const [authConfig, setAuthConfig] = useState(null);
+  const [googleCredential, setGoogleCredential] = useState('');
+  const [googleEmail, setGoogleEmail] = useState('');
+  const [googleTeam, setGoogleTeam] = useState('');
+  const [googleManager, setGoogleManager] = useState('');
   const [managerProfileOpen, setManagerProfileOpen] = useState(false);
   const [accountSettingsOpen, setAccountSettingsOpen] = useState(false);
   const [message, setMessage] = useState('');
@@ -103,6 +109,21 @@ export default function FantasyAuth() {
     loadMe();
   }, [loadMe]);
 
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const { data } = await api.get('/fantasy/auth/config');
+        if (!cancelled && data?.config) setAuthConfig(data.config);
+      } catch {
+        if (!cancelled) setAuthConfig(null);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   const handleLogin = async (e) => {
     e.preventDefault();
     setError('');
@@ -125,6 +146,8 @@ export default function FantasyAuth() {
         setVerifyEmail(loginEmail.trim());
         setTab('verify');
         setMessage(d.message || 'Please verify your email.');
+      } else if (d?.useGoogleSignIn) {
+        setError(`${d?.message || 'Login failed.'} Use Continue with Google below.`);
       } else {
         setError(d?.message || err.message || 'Login failed');
       }
@@ -198,6 +221,53 @@ export default function FantasyAuth() {
     }
   };
 
+  const handleGoogleCredential = async (credential, profile = {}) => {
+    setError('');
+    setMessage('');
+    try {
+      const { data } = await api.post('/fantasy/auth/google', {
+        credential,
+        teamName: profile.teamName,
+        managerName: profile.managerName,
+      });
+      if (data?.success && data.token) {
+        persistSession(data.token, data.user);
+        setGoogleCredential('');
+        setGoogleEmail('');
+        setGoogleTeam('');
+        setGoogleManager('');
+        setMessage(data.message || 'Signed in with Google.');
+        return;
+      }
+      setError(data?.message || 'Google Sign-In failed.');
+    } catch (err) {
+      const d = err.response?.data;
+      if (d?.needsProfile) {
+        setGoogleCredential(credential);
+        setGoogleEmail(d.email || '');
+        setGoogleManager(d.suggestedManagerName || '');
+        setGoogleTeam('');
+        setTab('google-profile');
+        setMessage(d.message || 'Finish setting up your fantasy account.');
+        return;
+      }
+      setError(d?.message || err.message || 'Google Sign-In failed.');
+    }
+  };
+
+  const handleGoogleProfileSubmit = async (e) => {
+    e.preventDefault();
+    if (!googleCredential) {
+      setError('Google sign-in expired. Please try again.');
+      setTab('register');
+      return;
+    }
+    await handleGoogleCredential(googleCredential, {
+      teamName: googleTeam.trim(),
+      managerName: googleManager.trim(),
+    });
+  };
+
   const handleForgotPassword = async (e) => {
     e.preventDefault();
     setError('');
@@ -205,9 +275,16 @@ export default function FantasyAuth() {
     setForgotLoading(true);
     try {
       const { data } = await api.post('/fantasy/auth/forgot-password', { email: forgotEmail.trim() });
-      setMessage(data?.message || 'If an account exists for that email, a password reset link has been sent.');
+      const parts = [data?.message || 'If an account exists for that email, a password reset link has been sent.'];
+      if (data?.alternatives?.googleSignIn) {
+        parts.push('You can also sign in with Google if you used it when registering.');
+      }
+      if (data?.alternatives?.adminContactEmail) {
+        parts.push(`Or contact the league admin at ${data.alternatives.adminContactEmail}.`);
+      }
+      setMessage(parts.join(' '));
     } catch (err) {
-      setError(err.response?.data?.message || err.message || 'Could not send reset email.');
+      setError(err.response?.data?.message || err.message || 'Could not process password reset request.');
     } finally {
       setForgotLoading(false);
     }
@@ -321,9 +398,11 @@ export default function FantasyAuth() {
     );
   }
 
+  const showGoogleSignIn = authConfig?.googleSignInEnabled && process.env.REACT_APP_GOOGLE_CLIENT_ID;
+
   return (
     <div className="fantasy-auth-container fantasy-section">
-      {tab !== 'verify' && tab !== 'forgot' && tab !== 'reset' && (
+      {tab !== 'verify' && tab !== 'forgot' && tab !== 'reset' && tab !== 'google-profile' && (
         <div className="fantasy-auth-tabs">
           <button type="button" className={`fantasy-tab ${tab === 'login' ? 'active' : ''}`} onClick={() => { setTab('login'); setError(''); setMessage(''); }}>
             Sign in
@@ -338,34 +417,61 @@ export default function FantasyAuth() {
       {error && <div className="fantasy-message fantasy-error">{error}</div>}
 
       {tab === 'login' && (
-        <form className="fantasy-form" onSubmit={handleLogin}>
-          <div className="fantasy-form-group">
-            <label className="fantasy-label" htmlFor="fa-login-email">Email</label>
-            <input id="fa-login-email" className="fantasy-input" type="email" autoComplete="email" value={loginEmail} onChange={(e) => setLoginEmail(e.target.value)} required />
-          </div>
-          <div className="fantasy-form-group">
-            <label className="fantasy-label" htmlFor="fa-login-pass">Password</label>
-            <input id="fa-login-pass" className="fantasy-input" type="password" autoComplete="current-password" value={loginPassword} onChange={(e) => setLoginPassword(e.target.value)} required />
-          </div>
-          <div className="fantasy-actions">
-            <button type="submit" className="fantasy-btn fantasy-btn-primary">Sign in</button>
-            <button type="button" className="fantasy-btn fantasy-btn-text" onClick={() => { setTab('forgot'); setError(''); setMessage(''); }}>
-              Forgot password?
-            </button>
-          </div>
-        </form>
+        <>
+          {showGoogleSignIn ? (
+            <>
+              <FantasyGoogleSignIn
+                onCredential={(credential) => handleGoogleCredential(credential)}
+                onError={setError}
+              />
+              <div className="fantasy-auth-divider"><span>or sign in with email</span></div>
+            </>
+          ) : null}
+          <form className="fantasy-form" onSubmit={handleLogin}>
+            <div className="fantasy-form-group">
+              <label className="fantasy-label" htmlFor="fa-login-email">Email</label>
+              <input id="fa-login-email" className="fantasy-input" type="email" autoComplete="email" value={loginEmail} onChange={(e) => setLoginEmail(e.target.value)} required />
+            </div>
+            <div className="fantasy-form-group">
+              <label className="fantasy-label" htmlFor="fa-login-pass">Password</label>
+              <input id="fa-login-pass" className="fantasy-input" type="password" autoComplete="current-password" value={loginPassword} onChange={(e) => setLoginPassword(e.target.value)} required />
+            </div>
+            <div className="fantasy-actions">
+              <button type="submit" className="fantasy-btn fantasy-btn-primary">Sign in</button>
+              <button type="button" className="fantasy-btn fantasy-btn-text" onClick={() => { setTab('forgot'); setError(''); setMessage(''); }}>
+                Forgot password?
+              </button>
+            </div>
+          </form>
+        </>
       )}
 
       {tab === 'forgot' && (
         <form className="fantasy-form" onSubmit={handleForgotPassword}>
-          <p className="fantasy-form-lead">Enter your registered email and we&apos;ll send a reset link if an account exists.</p>
+          <p className="fantasy-form-lead">
+            {authConfig?.passwordResetViaEmail
+              ? 'Enter your registered email and we will send a reset link if the account uses a password.'
+              : 'Password reset emails are not available on this site. Use Google Sign-In if you registered that way, or contact the league admin for help.'}
+          </p>
+          {showGoogleSignIn ? (
+            <>
+              <FantasyGoogleSignIn
+                onCredential={(credential) => handleGoogleCredential(credential)}
+                onError={setError}
+              />
+              <div className="fantasy-auth-divider"><span>or request admin help by email</span></div>
+            </>
+          ) : null}
+          {authConfig?.adminContactEmail ? (
+            <p className="fantasy-form-note">League admin: <a href={`mailto:${authConfig.adminContactEmail}`}>{authConfig.adminContactEmail}</a></p>
+          ) : null}
           <div className="fantasy-form-group">
             <label className="fantasy-label" htmlFor="fa-forgot-email">Email</label>
             <input id="fa-forgot-email" className="fantasy-input" type="email" autoComplete="email" value={forgotEmail} onChange={(e) => setForgotEmail(e.target.value)} required />
           </div>
           <div className="fantasy-actions">
             <button type="submit" className="fantasy-btn fantasy-btn-primary" disabled={forgotLoading}>
-              {forgotLoading ? 'Sending…' : 'Send reset link'}
+              {forgotLoading ? 'Checking…' : authConfig?.passwordResetViaEmail ? 'Send reset link' : 'Continue'}
             </button>
             <button type="button" className="fantasy-btn fantasy-btn-secondary" onClick={() => { setTab('login'); setError(''); setMessage(''); }}>
               Back to sign in
@@ -396,7 +502,37 @@ export default function FantasyAuth() {
         </form>
       )}
 
+      {tab === 'google-profile' && (
+        <form className="fantasy-form" onSubmit={handleGoogleProfileSubmit}>
+          <p className="fantasy-form-lead">Finish creating your fantasy account for <strong>{googleEmail}</strong>.</p>
+          <div className="fantasy-form-group">
+            <label className="fantasy-label" htmlFor="fa-google-team">Fantasy team name</label>
+            <input id="fa-google-team" className="fantasy-input" type="text" value={googleTeam} onChange={(e) => setGoogleTeam(e.target.value)} required />
+          </div>
+          <div className="fantasy-form-group">
+            <label className="fantasy-label" htmlFor="fa-google-mgr">Manager name</label>
+            <input id="fa-google-mgr" className="fantasy-input" type="text" value={googleManager} onChange={(e) => setGoogleManager(e.target.value)} required />
+          </div>
+          <div className="fantasy-actions">
+            <button type="submit" className="fantasy-btn fantasy-btn-primary">Create account</button>
+            <button type="button" className="fantasy-btn fantasy-btn-secondary" onClick={() => { setTab('register'); setError(''); setMessage(''); }}>
+              Back
+            </button>
+          </div>
+        </form>
+      )}
+
       {tab === 'register' && (
+        <>
+          {showGoogleSignIn ? (
+            <>
+              <FantasyGoogleSignIn
+                onCredential={(credential) => handleGoogleCredential(credential)}
+                onError={setError}
+              />
+              <div className="fantasy-auth-divider"><span>or register with email</span></div>
+            </>
+          ) : null}
         <form className="fantasy-form" onSubmit={handleRegister}>
           <div className="fantasy-form-group">
             <label className="fantasy-label" htmlFor="fa-reg-email">Email</label>
@@ -422,9 +558,10 @@ export default function FantasyAuth() {
             <button type="submit" className="fantasy-btn fantasy-btn-primary">Create account</button>
           </div>
         </form>
+        </>
       )}
 
-      {tab === 'verify' && (
+      {tab === 'verify' && !authConfig?.skipEmailVerify && (
         <form className="fantasy-form" onSubmit={handleVerify}>
           <div className="fantasy-form-group">
             <label className="fantasy-label" htmlFor="fa-verify-email">Email</label>

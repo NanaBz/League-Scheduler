@@ -1,4 +1,5 @@
 const express = require('express');
+const crypto = require('crypto');
 const router = express.Router();
 const FantasyUser = require('../models/FantasyUser');
 const { generateFantasyToken, authenticateFantasyUser, validatePasswordStrength } = require('../middleware/fantasyAuth');
@@ -11,7 +12,14 @@ const {
   buildResetUrl,
   GENERIC_FORGOT_MESSAGE,
 } = require('../utils/passwordReset');
-const { fantasyEmailVerifyBypassEnabled } = require('../utils/startupValidation');
+const {
+  fantasySkipEmailVerifyEnabled,
+  passwordResetViaEmailEnabled,
+  getFantasyAuthPublicConfig,
+  getFantasyAdminContactEmail,
+  googleSignInEnabled,
+} = require('../utils/fantasyAuthConfig');
+const { verifyGoogleIdToken } = require('../utils/googleAuth');
 const {
   validateManagerName,
   validateFantasyTeamName,
@@ -22,13 +30,26 @@ const { deleteFantasyAccount } = require('../utils/fantasyAccountDelete');
 const normalizeEmail = (email) => (email || '').trim().toLowerCase();
 const generateCode = () => `${Math.floor(100000 + Math.random() * 900000)}`;
 
-/** When true, skip email codes: register/login issue tokens; verify accepts without a valid code. Dev/test only. */
-function fantasyEmailVerifyBypass() {
-  if (process.env.NODE_ENV === 'production' && fantasyEmailVerifyBypassEnabled()) {
-    throw new Error('FANTASY_BYPASS_EMAIL_VERIFY must not be enabled in production');
-  }
-  return fantasyEmailVerifyBypassEnabled();
+function issueAuthSuccess(res, user, message) {
+  const token = generateFantasyToken(user._id, user.email);
+  return res.json({
+    success: true,
+    message,
+    token,
+    user: serializeFantasyUser(user),
+  });
 }
+
+function randomPasswordPlaceholder() {
+  return crypto.randomBytes(32).toString('hex');
+}
+
+router.get('/config', (req, res) => {
+  return res.json({
+    success: true,
+    config: getFantasyAuthPublicConfig(),
+  });
+});
 
 router.post('/register', async (req, res) => {
   try {
@@ -46,20 +67,20 @@ router.post('/register', async (req, res) => {
       return res.status(400).json({ success: false, message: 'Password is too weak.', errors: passwordValidation.errors });
     }
 
-    const bypass = fantasyEmailVerifyBypass();
-    const code = bypass ? null : generateCode();
+    const skipVerify = fantasySkipEmailVerifyEnabled();
+    const code = skipVerify ? null : generateCode();
 
     let user = await FantasyUser.findOne({ email: normalizedEmail });
-    if (user && user.isVerified) {
+    if (user && (user.isVerified || skipVerify)) {
       return res.status(409).json({ success: false, message: 'Account already exists. Please sign in instead.' });
     }
 
     if (user) {
-      // Reset credentials for existing unverified account
       user.password = password;
       user.teamName = teamName;
       user.managerName = managerName;
-      if (bypass) {
+      user.authProvider = 'local';
+      if (skipVerify) {
         user.isVerified = true;
         user.verificationCodeHash = null;
         user.verificationCodeExpires = null;
@@ -72,26 +93,20 @@ router.post('/register', async (req, res) => {
         password,
         teamName,
         managerName,
-        isVerified: bypass
+        authProvider: 'local',
+        isVerified: skipVerify,
       });
-      if (!bypass) await user.setVerificationCode(code);
+      if (!skipVerify) await user.setVerificationCode(code);
     }
 
+    user.lastLogin = skipVerify ? new Date() : user.lastLogin;
     await user.save();
 
-    if (bypass) {
-      const token = generateFantasyToken(user._id, user.email);
-      return res.json({
-        success: true,
-        message: 'Account created. Email verification is skipped (testing only).',
-        verificationBypassed: true,
-        token,
-        user: serializeFantasyUser(user)
-      });
+    if (skipVerify) {
+      return issueAuthSuccess(res, user, 'Account created. You are signed in.');
     }
 
     await sendVerificationEmail(normalizedEmail, code);
-
     return res.json({ success: true, message: 'Registration received. Check your email for the 6-digit verification code.' });
   } catch (err) {
     console.error('Fantasy register error:', err);
@@ -101,33 +116,21 @@ router.post('/register', async (req, res) => {
 
 router.post('/verify', async (req, res) => {
   try {
-    const { email, code } = req.body;
-    if (!email) {
-      return res.status(400).json({ success: false, message: 'Email is required.' });
+    if (fantasySkipEmailVerifyEnabled()) {
+      return res.status(400).json({
+        success: false,
+        message: 'Email verification is disabled. Please sign in with your password or Google.',
+      });
     }
-    if (!fantasyEmailVerifyBypass() && !code) {
+
+    const { email, code } = req.body;
+    if (!email || !code) {
       return res.status(400).json({ success: false, message: 'Email and verification code are required.' });
     }
 
     const user = await FantasyUser.findOne({ email: normalizeEmail(email) });
     if (!user) {
       return res.status(404).json({ success: false, message: 'Account not found.' });
-    }
-
-    if (fantasyEmailVerifyBypass()) {
-      user.isVerified = true;
-      user.verificationCodeHash = null;
-      user.verificationCodeExpires = null;
-      user.lastLogin = new Date();
-      await user.save();
-      const token = generateFantasyToken(user._id, user.email);
-      return res.json({
-        success: true,
-        message: 'Email verified (testing bypass).',
-        verificationBypassed: true,
-        token,
-        user: serializeFantasyUser(user)
-      });
     }
 
     const isValid = await user.isVerificationCodeValid(code);
@@ -141,13 +144,7 @@ router.post('/verify', async (req, res) => {
     user.lastLogin = new Date();
     await user.save();
 
-    const token = generateFantasyToken(user._id, user.email);
-    return res.json({
-      success: true,
-      message: 'Email verified successfully.',
-      token,
-      user: serializeFantasyUser(user)
-    });
+    return issueAuthSuccess(res, user, 'Email verified successfully.');
   } catch (err) {
     console.error('Fantasy verify error:', err);
     return res.status(500).json({ success: false, message: 'Server error. Please try again.' });
@@ -166,27 +163,20 @@ router.post('/login', async (req, res) => {
       return res.status(401).json({ success: false, message: 'Invalid email or password.' });
     }
 
+    if (!user.hasPasswordLogin()) {
+      return res.status(401).json({
+        success: false,
+        message: 'This account uses Google Sign-In. Continue with Google instead.',
+        useGoogleSignIn: googleSignInEnabled(),
+      });
+    }
+
     const passwordOk = await user.comparePassword(password);
     if (!passwordOk) {
       return res.status(401).json({ success: false, message: 'Invalid email or password.' });
     }
 
-    if (!user.isVerified) {
-      if (fantasyEmailVerifyBypass()) {
-        user.isVerified = true;
-        user.verificationCodeHash = null;
-        user.verificationCodeExpires = null;
-        user.lastLogin = new Date();
-        await user.save();
-        const token = generateFantasyToken(user._id, user.email);
-        return res.json({
-          success: true,
-          message: 'Login successful (testing: unverified account was activated without email code).',
-          verificationBypassed: true,
-          token,
-          user: serializeFantasyUser(user),
-        });
-      }
+    if (!user.isVerified && !fantasySkipEmailVerifyEnabled()) {
       const code = generateCode();
       await user.setVerificationCode(code);
       await user.save();
@@ -194,24 +184,85 @@ router.post('/login', async (req, res) => {
       return res.status(403).json({ success: false, requiresVerification: true, message: 'Please verify your email. A new code has been sent.' });
     }
 
+    user.isVerified = true;
     user.lastLogin = new Date();
     await user.save();
 
-    const token = generateFantasyToken(user._id, user.email);
-    return res.json({
-      success: true,
-      message: 'Login successful.',
-      token,
-      user: serializeFantasyUser(user)
-    });
+    return issueAuthSuccess(res, user, 'Login successful.');
   } catch (err) {
     console.error('Fantasy login error:', err);
     return res.status(500).json({ success: false, message: 'Server error. Please try again.' });
   }
 });
 
+router.post('/google', async (req, res) => {
+  try {
+    if (!googleSignInEnabled()) {
+      return res.status(503).json({ success: false, message: 'Google Sign-In is not configured.' });
+    }
+
+    const { credential, teamName, managerName } = req.body;
+    if (!credential) {
+      return res.status(400).json({ success: false, message: 'Google credential is required.' });
+    }
+
+    const googleProfile = await verifyGoogleIdToken(credential);
+    let user = await FantasyUser.findOne({
+      $or: [{ googleId: googleProfile.googleId }, { email: googleProfile.email }],
+    });
+
+    if (user) {
+      if (!user.googleId) {
+        user.googleId = googleProfile.googleId;
+      }
+      user.isVerified = true;
+      user.verificationCodeHash = null;
+      user.verificationCodeExpires = null;
+      user.lastLogin = new Date();
+      await user.save();
+      return issueAuthSuccess(res, user, 'Signed in with Google.');
+    }
+
+    const teamResult = validateFantasyTeamName(teamName);
+    const managerResult = validateManagerName(managerName);
+    if (!teamResult.ok || !managerResult.ok) {
+      return res.status(422).json({
+        success: false,
+        needsProfile: true,
+        email: googleProfile.email,
+        suggestedManagerName: googleProfile.name || '',
+        message: 'Choose your fantasy team name and manager name to finish creating your account.',
+      });
+    }
+
+    user = new FantasyUser({
+      email: googleProfile.email,
+      password: randomPasswordPlaceholder(),
+      googleId: googleProfile.googleId,
+      authProvider: 'google',
+      teamName: teamResult.value,
+      managerName: managerResult.value,
+      isVerified: true,
+      lastLogin: new Date(),
+    });
+    await user.save();
+
+    return issueAuthSuccess(res, user, 'Account created with Google.');
+  } catch (err) {
+    console.error('Fantasy Google auth error:', err.message);
+    return res.status(401).json({ success: false, message: err.message || 'Google Sign-In failed.' });
+  }
+});
+
 router.post('/resend-code', async (req, res) => {
   try {
+    if (fantasySkipEmailVerifyEnabled()) {
+      return res.json({
+        success: true,
+        message: 'Email verification is disabled. Sign in with your password or Google.',
+      });
+    }
+
     const { email } = req.body;
     if (!email) {
       return res.status(400).json({ success: false, message: 'Email is required.' });
@@ -224,13 +275,6 @@ router.post('/resend-code', async (req, res) => {
 
     if (user.isVerified) {
       return res.json({ success: true, message: 'Account already verified. Please sign in.' });
-    }
-
-    if (fantasyEmailVerifyBypass()) {
-      return res.json({
-        success: true,
-        message: 'Email verification is disabled for testing; sign in with your password.'
-      });
     }
 
     const code = generateCode();
@@ -304,14 +348,16 @@ router.delete('/account', authenticateFantasyUser, async (req, res) => {
         message: 'Type DELETE to confirm account deletion.',
       });
     }
-    if (!password) {
-      return res.status(400).json({ success: false, message: 'Current password is required.' });
-    }
 
     const user = req.fantasyUser;
-    const passwordOk = await user.comparePassword(password);
-    if (!passwordOk) {
-      return res.status(401).json({ success: false, message: 'Incorrect password.' });
+    if (user.hasPasswordLogin()) {
+      if (!password) {
+        return res.status(400).json({ success: false, message: 'Current password is required.' });
+      }
+      const passwordOk = await user.comparePassword(password);
+      if (!passwordOk) {
+        return res.status(401).json({ success: false, message: 'Incorrect password.' });
+      }
     }
 
     await deleteFantasyAccount(user._id);
@@ -332,8 +378,24 @@ router.post('/forgot-password', async (req, res) => {
 
     const normalizedEmail = normalizeEmail(email);
     const user = await FantasyUser.findOne({ email: normalizedEmail });
+    const adminContactEmail = getFantasyAdminContactEmail();
+    const alternatives = {
+      googleSignIn: googleSignInEnabled(),
+      adminContactEmail,
+    };
 
-    if (user && user.isVerified) {
+    if (!passwordResetViaEmailEnabled()) {
+      return res.json({
+        success: true,
+        emailSent: false,
+        message: adminContactEmail
+          ? `Password reset emails are unavailable. Sign in with Google if you used it, or contact the league admin at ${adminContactEmail}.`
+          : 'Password reset emails are unavailable. Sign in with Google if you used it, or contact the league admin for help.',
+        alternatives,
+      });
+    }
+
+    if (user && user.isVerified && user.hasPasswordLogin()) {
       const token = generateResetToken();
       user.passwordResetTokenHash = await hashResetToken(token);
       user.passwordResetTokenExpires = resetTokenExpiry(
@@ -343,9 +405,30 @@ router.post('/forgot-password', async (req, res) => {
 
       const resetUrl = buildResetUrl('/fantasy', token);
       await sendPasswordResetEmail(normalizedEmail, resetUrl, { audience: 'ACFPL Fantasy' });
+
+      return res.json({
+        success: true,
+        emailSent: true,
+        message: GENERIC_FORGOT_MESSAGE,
+        alternatives,
+      });
     }
 
-    return res.json({ success: true, message: GENERIC_FORGOT_MESSAGE });
+    if (user && !user.hasPasswordLogin()) {
+      return res.json({
+        success: true,
+        emailSent: false,
+        message: 'This account uses Google Sign-In. Continue with Google instead of resetting a password.',
+        alternatives,
+      });
+    }
+
+    return res.json({
+      success: true,
+      emailSent: false,
+      message: GENERIC_FORGOT_MESSAGE,
+      alternatives,
+    });
   } catch (err) {
     console.error('Fantasy forgot-password error:', err.message);
     return res.status(500).json({ success: false, message: 'Server error. Please try again.' });
@@ -400,6 +483,7 @@ router.post('/reset-password', async (req, res) => {
     }
 
     matchedUser.password = password;
+    matchedUser.authProvider = 'local';
     matchedUser.clearPasswordResetToken();
     await matchedUser.save();
 

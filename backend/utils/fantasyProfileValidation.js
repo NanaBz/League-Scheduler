@@ -37,6 +37,11 @@ function serializeFantasyUser(user) {
     managerName: user.managerName,
     isVerified: user.isVerified,
     lastLogin: user.lastLogin,
+    authProvider: user.authProvider || 'local',
+    hasPasswordLogin: typeof user.hasPasswordLogin === 'function'
+      ? user.hasPasswordLogin()
+      : Boolean(user.password),
+    googleLinked: Boolean(user.googleId),
   };
 }
 

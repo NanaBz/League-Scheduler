@@ -1,22 +1,14 @@
 const nodemailer = require('nodemailer');
+const { Resend } = require('resend');
+const {
+  getEmailFrom,
+  getEmailProvider,
+} = require('./emailConfig');
 
-const isDevelopment = process.env.NODE_ENV !== 'production';
-
-const buildTransport = () => {
+const buildSmtpTransport = () => {
   const { SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS } = process.env;
-  
-  // In development without SMTP config, use console logging
-  if (isDevelopment && (!SMTP_HOST || !SMTP_PORT || !SMTP_USER || !SMTP_PASS)) {
-    console.warn('⚠️  SMTP not configured - emails will be logged to console');
-    return null;
-  }
-  
-  if (!SMTP_HOST || !SMTP_PORT || !SMTP_USER || !SMTP_PASS) {
-    throw new Error('SMTP settings are not configured (SMTP_HOST/SMTP_PORT/SMTP_USER/SMTP_PASS).');
-  }
-
   const portNumber = Number(SMTP_PORT) || 587;
-  const secure = portNumber === 465; // true for 465, false for other ports
+  const secure = portNumber === 465;
 
   return nodemailer.createTransport({
     host: SMTP_HOST,
@@ -24,51 +16,74 @@ const buildTransport = () => {
     secure,
     auth: {
       user: SMTP_USER,
-      pass: SMTP_PASS
-    }
+      pass: SMTP_PASS,
+    },
   });
 };
 
-const sendVerificationEmail = async (to, code) => {
-  const transporter = buildTransport();
-  
-  // Development fallback: log to console instead of sending email
-  if (!transporter) {
-    console.log('\n📧 === VERIFICATION EMAIL (Dev Mode) ===');
-    console.log(`To: ${to}`);
-    console.log(`Code: ${code}`);
-    console.log(`Expires: 10 minutes`);
-    console.log('=======================================\n');
-    return; // Don't actually send email
+const logDevEmail = (label, payload) => {
+  console.log(`\n📧 === ${label} (Dev Mode) ===`);
+  for (const [key, value] of Object.entries(payload)) {
+    console.log(`${key}: ${value}`);
   }
-  
-  const from = process.env.SMTP_FROM || process.env.SMTP_USER;
+  console.log('=======================================\n');
+};
+
+const sendEmail = async ({ to, subject, text, html }) => {
+  const provider = getEmailProvider();
+  const from = getEmailFrom();
+
+  if (provider === 'console') {
+    logDevEmail('EMAIL', { To: to, Subject: subject, Body: text });
+    return;
+  }
+
+  if (!from) {
+    throw new Error('EMAIL_FROM (or SMTP_FROM) is required when sending email.');
+  }
+
+  if (provider === 'resend') {
+    const resend = new Resend(process.env.RESEND_API_KEY);
+    const { error } = await resend.emails.send({
+      from,
+      to: [to],
+      subject,
+      text,
+      html,
+    });
+
+    if (error) {
+      throw new Error(error.message || 'Resend failed to send email.');
+    }
+    return;
+  }
+
+  if (provider === 'smtp') {
+    const transporter = buildSmtpTransport();
+    await transporter.sendMail({ from, to, subject, text, html });
+    return;
+  }
+
+  throw new Error(
+    'Email is not configured. Set RESEND_API_KEY + EMAIL_FROM, or configure SMTP settings.'
+  );
+};
+
+const sendVerificationEmail = async (to, code) => {
   const subject = 'Your Fantasy League verification code';
   const text = `Your verification code is ${code}. It expires in 10 minutes.`;
   const html = `<p>Hello,</p><p>Your fantasy verification code is <strong>${code}</strong>.</p><p>This code expires in 10 minutes.</p>`;
 
-  await transporter.sendMail({ from, to, subject, text, html });
+  await sendEmail({ to, subject, text, html });
 };
 
 const sendPasswordResetEmail = async (to, resetUrl, { audience = 'Fantasy' } = {}) => {
-  const transporter = buildTransport();
-
-  if (!transporter) {
-    console.log('\n📧 === PASSWORD RESET EMAIL (Dev Mode) ===');
-    console.log(`To: ${to}`);
-    console.log(`Audience: ${audience}`);
-    console.log(`Reset link: ${resetUrl}`);
-    console.log(`Expires: ${process.env.PASSWORD_RESET_TTL_MINUTES || 60} minutes`);
-    console.log('=========================================\n');
-    return;
-  }
-
-  const from = process.env.SMTP_FROM || process.env.SMTP_USER;
+  const ttl = process.env.PASSWORD_RESET_TTL_MINUTES || 60;
   const subject = `${audience} password reset`;
-  const text = `You requested a password reset. Open this link to choose a new password (expires in one hour):\n\n${resetUrl}\n\nIf you did not request this, you can ignore this email.`;
-  const html = `<p>You requested a password reset for your ${audience} account.</p><p><a href="${resetUrl}">Reset your password</a></p><p>This link expires in one hour. If you did not request this, you can ignore this email.</p>`;
+  const text = `You requested a password reset. Open this link to choose a new password (expires in ${ttl} minutes):\n\n${resetUrl}\n\nIf you did not request this, you can ignore this email.`;
+  const html = `<p>You requested a password reset for your ${audience} account.</p><p><a href="${resetUrl}">Reset your password</a></p><p>This link expires in ${ttl} minutes. If you did not request this, you can ignore this email.</p>`;
 
-  await transporter.sendMail({ from, to, subject, text, html });
+  await sendEmail({ to, subject, text, html });
 };
 
-module.exports = { sendVerificationEmail, sendPasswordResetEmail };
+module.exports = { sendVerificationEmail, sendPasswordResetEmail, sendEmail };

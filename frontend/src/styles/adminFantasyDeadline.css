@@ -64,6 +64,40 @@
   overflow-x: hidden;
 }
 
+.admin-fantasy-password-reset {
+  margin-top: 1rem;
+  padding: 1rem;
+}
+
+.admin-fantasy-password-reset h3 {
+  margin: 0 0 0.35rem;
+  font-size: 1rem;
+}
+
+.admin-fantasy-password-reset__lead {
+  margin: 0 0 0.85rem;
+  color: #64748b;
+  font-size: 0.875rem;
+}
+
+.admin-fantasy-password-reset__form {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.admin-fantasy-password-reset__field {
+  display: grid;
+  gap: 0.35rem;
+  font-size: 0.875rem;
+}
+
+.admin-fantasy-password-reset__field input {
+  width: 100%;
+  padding: 0.55rem 0.65rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+}
+
 .admin-deadline-list-header {
   display: grid;
   grid-template-columns: 72px minmax(0, 1fr) 84px minmax(96px, 120px) 72px;

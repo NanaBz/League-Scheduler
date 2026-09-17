@@ -36,11 +36,8 @@ withEnv(
     FANTASY_JWT_SECRET: 'fantasy-secret',
     CORS_ORIGINS: 'https://example.com',
     FRONTEND_URL: 'https://example.com',
-    SMTP_HOST: 'smtp.test',
-    SMTP_PORT: '587',
-    SMTP_USER: 'user',
-    SMTP_PASS: 'pass',
-    FANTASY_BYPASS_EMAIL_VERIFY: undefined,
+    FANTASY_SKIP_EMAIL_VERIFY: 'true',
+    GOOGLE_CLIENT_ID: 'google-client-id.apps.googleusercontent.com',
   },
   () => {
     validateProductionStartup();
@@ -56,10 +53,8 @@ withEnv(
     FANTASY_JWT_SECRET: 'same',
     CORS_ORIGINS: 'https://example.com',
     FRONTEND_URL: 'https://example.com',
-    SMTP_HOST: 'smtp.test',
-    SMTP_PORT: '587',
-    SMTP_USER: 'user',
-    SMTP_PASS: 'pass',
+    FANTASY_SKIP_EMAIL_VERIFY: 'true',
+    GOOGLE_CLIENT_ID: 'google-client-id.apps.googleusercontent.com',
   },
   () => {
     try {

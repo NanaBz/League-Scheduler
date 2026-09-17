@@ -129,6 +129,10 @@ export default function FantasyManagement() {
   const [matchweekDeadlines, setMatchweekDeadlines] = useState([]);
   const [editingDeadline, setEditingDeadline] = useState(null);
   const [deadlineCountdowns, setDeadlineCountdowns] = useState({});
+  const [resetEmail, setResetEmail] = useState('');
+  const [resetPassword, setResetPassword] = useState('');
+  const [resetConfirmPassword, setResetConfirmPassword] = useState('');
+  const [resettingPassword, setResettingPassword] = useState(false);
 
   useEffect(() => {
     fetchDashboard();
@@ -223,6 +227,30 @@ export default function FantasyManagement() {
       alert('Error saving deadline: ' + (err.response?.data?.message || err.message));
     }
     return false;
+  };
+
+  const handleAdminPasswordReset = async (e) => {
+    e.preventDefault();
+    if (resetPassword !== resetConfirmPassword) {
+      alert('Passwords do not match.');
+      return;
+    }
+    setResettingPassword(true);
+    try {
+      const { data } = await api.post('/fantasy/admin/users/reset-password', {
+        email: resetEmail.trim(),
+        newPassword: resetPassword,
+        confirmPassword: resetConfirmPassword,
+      });
+      alert(data?.message || 'Password updated.');
+      setResetEmail('');
+      setResetPassword('');
+      setResetConfirmPassword('');
+    } catch (err) {
+      alert(err.response?.data?.message || err.message || 'Could not reset password.');
+    } finally {
+      setResettingPassword(false);
+    }
   };
 
   const handleRescoreGameweek = async () => {
@@ -416,6 +444,29 @@ export default function FantasyManagement() {
         >
           Reset fantasy to GW1
         </button>
+        <div className="card admin-fantasy-password-reset">
+          <h3>Reset manager password</h3>
+          <p className="admin-fantasy-password-reset__lead">
+            Fallback when email reset is unavailable. Sets a new password for a fantasy account.
+          </p>
+          <form className="admin-fantasy-password-reset__form" onSubmit={handleAdminPasswordReset}>
+            <label className="admin-fantasy-password-reset__field">
+              <span>Manager email</span>
+              <input type="email" value={resetEmail} onChange={(e) => setResetEmail(e.target.value)} required />
+            </label>
+            <label className="admin-fantasy-password-reset__field">
+              <span>New password</span>
+              <input type="password" value={resetPassword} onChange={(e) => setResetPassword(e.target.value)} required minLength={8} />
+            </label>
+            <label className="admin-fantasy-password-reset__field">
+              <span>Confirm password</span>
+              <input type="password" value={resetConfirmPassword} onChange={(e) => setResetConfirmPassword(e.target.value)} required minLength={8} />
+            </label>
+            <button type="submit" className="btn btn-secondary btn-small" disabled={resettingPassword}>
+              {resettingPassword ? 'Updating…' : 'Reset password'}
+            </button>
+          </form>
+        </div>
         </div>
       </div>
       </div>

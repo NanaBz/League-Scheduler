@@ -11,8 +11,19 @@ const FantasyUserSchema = new mongoose.Schema({
   },
   password: {
     type: String,
-    required: true,
-    minlength: 8
+    minlength: 8,
+    default: null,
+  },
+  googleId: {
+    type: String,
+    default: null,
+    sparse: true,
+    unique: true,
+  },
+  authProvider: {
+    type: String,
+    enum: ['local', 'google'],
+    default: 'local',
   },
   teamName: {
     type: String,
@@ -53,7 +64,7 @@ const FantasyUserSchema = new mongoose.Schema({
 });
 
 FantasyUserSchema.pre('save', async function(next) {
-  if (!this.isModified('password')) return next();
+  if (!this.isModified('password') || !this.password) return next();
   try {
     const salt = await bcrypt.genSalt(12);
     this.password = await bcrypt.hash(this.password, salt);
@@ -64,7 +75,12 @@ FantasyUserSchema.pre('save', async function(next) {
 });
 
 FantasyUserSchema.methods.comparePassword = async function(candidate) {
+  if (!this.password) return false;
   return bcrypt.compare(candidate, this.password);
+};
+
+FantasyUserSchema.methods.hasPasswordLogin = function() {
+  return Boolean(this.password);
 };
 
 FantasyUserSchema.methods.setVerificationCode = async function(code, ttlMinutes = 10) {

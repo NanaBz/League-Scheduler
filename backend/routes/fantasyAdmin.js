@@ -30,6 +30,8 @@ const {
   computeManagerOfTheWeek,
   computeTopManager,
 } = require('../utils/fantasyManagerAwards');
+const FantasyUser = require('../models/FantasyUser');
+const { validatePasswordStrength } = require('../middleware/fantasyAuth');
 
 async function afterMatchPerformanceUpdate(match) {
   await syncFantasyPerformanceFromMatchEvents(match._id);
@@ -498,6 +500,55 @@ router.post('/rescore-gameweek/:matchweek', authenticateAdmin, async (req, res) 
       backfilled,
       eventSynced,
       complete: isMatchweekComplete(matches, mw),
+    });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// POST /api/fantasy/admin/users/reset-password — admin fallback when email reset is unavailable
+router.post('/users/reset-password', authenticateAdmin, async (req, res) => {
+  try {
+    const email = String(req.body.email || '').trim().toLowerCase();
+    const { newPassword, confirmPassword } = req.body;
+
+    if (!email || !newPassword || !confirmPassword) {
+      return res.status(400).json({
+        success: false,
+        message: 'Email, new password, and confirmation are required.',
+      });
+    }
+    if (newPassword !== confirmPassword) {
+      return res.status(400).json({ success: false, message: 'Passwords do not match.' });
+    }
+
+    const passwordValidation = validatePasswordStrength(newPassword);
+    if (!passwordValidation.isValid) {
+      return res.status(400).json({
+        success: false,
+        message: 'Password is too weak.',
+        errors: passwordValidation.errors,
+      });
+    }
+
+    const user = await FantasyUser.findOne({ email });
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'Fantasy account not found.' });
+    }
+
+    user.password = newPassword;
+    user.authProvider = 'local';
+    user.clearPasswordResetToken();
+    await user.save();
+
+    await logAdminAction(req, 'fantasy_password_reset_admin', {
+      fantasyUserId: String(user._id),
+      email: user.email,
+    });
+
+    return res.json({
+      success: true,
+      message: `Password updated for ${user.teamName} (${user.email}).`,
     });
   } catch (err) {
     return res.status(500).json({ success: false, message: err.message });
