@@ -184,9 +184,17 @@ router.post('/register', async (req, res) => {
     return res.json({ success: true, message: 'Registration received. Check your email for the 6-digit verification code.' });
   } catch (err) {
     if (err.code === 11000) {
+      console.error('Fantasy register duplicate key:', err.keyPattern, err.keyValue);
       const duplicateUser = await findUserByEmail(req.body?.email);
       if (duplicateUser) {
         return await respondAccountAlreadyExists(res, duplicateUser, normalizeEmail(req.body?.email));
+      }
+      if (err.keyPattern?.googleId != null) {
+        return res.status(503).json({
+          success: false,
+          registrationBlocked: true,
+          message: 'Registration is temporarily blocked by a database configuration issue. The league admin must run the googleId index fix script, then try again.',
+        });
       }
       return res.status(409).json({
         success: false,

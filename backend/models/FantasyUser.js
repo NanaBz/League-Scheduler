@@ -16,7 +16,6 @@ const FantasyUserSchema = new mongoose.Schema({
   },
   googleId: {
     type: String,
-    default: null,
     sparse: true,
     unique: true,
   },
