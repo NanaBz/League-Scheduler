@@ -111,6 +111,7 @@ db.once('open', async () => {
 console.log('JWT_SECRET at startup:', process.env.JWT_SECRET ? '[SET]' : '[NOT SET]');
 
 // Routes
+app.use('/api/health', require('./routes/health'));
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/fantasy/auth', require('./routes/fantasyAuth'));
 app.use('/api/fantasy/admin', require('./routes/fantasyAdmin'));
