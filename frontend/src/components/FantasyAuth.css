@@ -36,6 +36,10 @@
   border-radius: 10px;
 }
 
+.fantasy-auth-tabs--three {
+  grid-template-columns: 1fr 1fr 1fr;
+}
+
 .fantasy-tab {
   padding: 10px 14px;
   background: transparent;

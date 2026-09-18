@@ -50,22 +50,40 @@ async function sendPasswordResetForUser(user, normalizedEmail, audience = 'ACFPL
   await sendPasswordResetEmail(normalizedEmail, resetUrl, { audience });
 }
 
-function respondAccountAlreadyExists(res, existingUser) {
-  if (existingUser.authProvider === 'google') {
+async function respondAccountAlreadyExists(res, existingUser, normalizedEmail) {
+  const email = normalizedEmail || existingUser?.email || '';
+  let recoveryEmailSent = false;
+
+  if (existingUser && passwordResetViaEmailEnabled()) {
+    try {
+      await sendPasswordResetForUser(existingUser, email);
+      recoveryEmailSent = true;
+    } catch (err) {
+      console.error('Fantasy recovery email error:', err.message);
+    }
+  }
+
+  if (existingUser?.authProvider === 'google') {
     return res.status(409).json({
       success: false,
       accountExists: true,
+      recoveryEmailSent,
       useGoogleSignIn: googleSignInEnabled(),
-      message: 'An account with this email already exists via Google Sign-In. Please sign in with Google instead of registering again.',
+      message: recoveryEmailSent
+        ? 'An account with this email already exists. We emailed you a link to set a password, or you can continue with Google below.'
+        : 'An account with this email already exists via Google Sign-In. Continue with Google below, or contact the league admin for help.',
     });
   }
 
   return res.status(409).json({
     success: false,
     accountExists: true,
-    suggestForgotPassword: true,
-    suggestLoginWithSamePassword: true,
-    message: 'An account with this email already exists. If you just tried to register, sign in with the same password. Otherwise use Forgot password.',
+    recoveryEmailSent,
+    suggestForgotPassword: !recoveryEmailSent,
+    suggestLoginWithSamePassword: !recoveryEmailSent,
+    message: recoveryEmailSent
+      ? 'An account with this email already exists. We emailed you a link to set or reset your password. Check your inbox and spam folder, then sign in.'
+      : 'An account with this email already exists. Sign in with the same password from your first attempt, or use Recover account below.',
   });
 }
 
@@ -125,7 +143,7 @@ router.post('/register', async (req, res) => {
     }
 
     if (existingUser?.isVerified) {
-      return respondAccountAlreadyExists(res, existingUser);
+      return await respondAccountAlreadyExists(res, existingUser, normalizedEmail);
     }
 
     let user = existingUser;
@@ -168,7 +186,7 @@ router.post('/register', async (req, res) => {
     if (err.code === 11000) {
       const duplicateUser = await findUserByEmail(req.body?.email);
       if (duplicateUser) {
-        return respondAccountAlreadyExists(res, duplicateUser);
+        return await respondAccountAlreadyExists(res, duplicateUser, normalizeEmail(req.body?.email));
       }
       return res.status(409).json({
         success: false,
@@ -432,6 +450,55 @@ router.delete('/account', authenticateFantasyUser, async (req, res) => {
     return res.json({ success: true, message: 'Account deleted successfully.' });
   } catch (err) {
     console.error('Fantasy account delete error:', err.message);
+    return res.status(500).json({ success: false, message: 'Server error. Please try again.' });
+  }
+});
+
+router.post('/recover-account', async (req, res) => {
+  try {
+    const { email } = req.body;
+    if (!email) {
+      return res.status(400).json({ success: false, message: 'Email is required.' });
+    }
+
+    const normalizedEmail = normalizeEmail(email);
+    const user = await findUserByEmail(normalizedEmail);
+    const adminContactEmail = getFantasyAdminContactEmail();
+    const alternatives = {
+      googleSignIn: googleSignInEnabled(),
+      adminContactEmail,
+    };
+
+    if (!user) {
+      return res.json({
+        success: true,
+        emailSent: false,
+        message: 'If an account exists for that email, a recovery link has been sent.',
+        alternatives,
+      });
+    }
+
+    if (!passwordResetViaEmailEnabled()) {
+      return res.json({
+        success: true,
+        emailSent: false,
+        message: adminContactEmail
+          ? `Email recovery is unavailable. Try Google Sign-In if you used it, or contact the league admin at ${adminContactEmail}.`
+          : 'Email recovery is unavailable. Try Google Sign-In if you used it, or contact the league admin for help.',
+        alternatives,
+      });
+    }
+
+    await sendPasswordResetForUser(user, normalizedEmail);
+
+    return res.json({
+      success: true,
+      emailSent: true,
+      message: 'We sent a link to set or reset your password. Check your inbox and spam folder.',
+      alternatives,
+    });
+  } catch (err) {
+    console.error('Fantasy recover-account error:', err.message);
     return res.status(500).json({ success: false, message: 'Server error. Please try again.' });
   }
 });

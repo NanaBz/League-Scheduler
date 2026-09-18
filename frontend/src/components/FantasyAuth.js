@@ -9,6 +9,7 @@ import LeaguesAndCups from './LeaguesAndCups';
 import FantasyInfoPage from './FantasyInfoPage';
 import FantasyAccountSettings from './FantasyAccountSettings';
 import FantasyGoogleSignIn from './FantasyGoogleSignIn';
+import { FANTASY_PASSWORD_HINT, validateFantasyPassword } from '../utils/fantasyPasswordRules';
 import './FantasyAuth.css';
 
 const TOKEN_KEY = 'fantasyToken';
@@ -25,7 +26,7 @@ export default function FantasyAuth() {
   });
   const [user, setUser] = useState(null);
   const [loadingMe, setLoadingMe] = useState(!!localStorage.getItem(TOKEN_KEY));
-  const [tab, setTab] = useState(() => (resetTokenFromUrl ? 'reset' : 'login')); // login | register | verify | forgot | reset
+  const [tab, setTab] = useState(() => (resetTokenFromUrl ? 'reset' : 'login')); // login | register | verify | forgot | recover | reset
   const [subView, setSubView] = useState(null); // null | pick | transfers | leagues | info
   const [authConfig, setAuthConfig] = useState(null);
   const [managerProfileOpen, setManagerProfileOpen] = useState(false);
@@ -48,6 +49,8 @@ export default function FantasyAuth() {
 
   const [forgotEmail, setForgotEmail] = useState('');
   const [forgotLoading, setForgotLoading] = useState(false);
+  const [recoverEmail, setRecoverEmail] = useState('');
+  const [recoverLoading, setRecoverLoading] = useState(false);
   const [resetToken, setResetToken] = useState(resetTokenFromUrl);
   const [resetPassword, setResetPassword] = useState('');
   const [resetConfirmPassword, setResetConfirmPassword] = useState('');
@@ -158,6 +161,11 @@ export default function FantasyAuth() {
         setRegEmail(loginEmail.trim());
       } else if (d?.useGoogleSignIn) {
         setError(`${d?.message || 'Login failed.'} Use Continue with Google below.`);
+      } else if (d?.suggestForgotPassword) {
+        setForgotEmail(loginEmail.trim());
+        setRecoverEmail(loginEmail.trim());
+        setError(d?.message || 'Incorrect password.');
+        setMessage('Use Recover account below to get a password link by email.');
       } else {
         setError(d?.message || err.message || 'Login failed');
       }
@@ -174,6 +182,11 @@ export default function FantasyAuth() {
     setRegisterConflict(false);
     if (regPassword !== regConfirmPassword) {
       setError('Passwords do not match.');
+      return;
+    }
+    const passwordValidation = validateFantasyPassword(regPassword);
+    if (!passwordValidation.isValid) {
+      setError(passwordValidation.errors.join(' '));
       return;
     }
     setRegisterLoading(true);
@@ -206,18 +219,25 @@ export default function FantasyAuth() {
         setLoginEmail(regEmail.trim());
         setLoginPassword(regPassword);
         setForgotEmail(regEmail.trim());
-        setError(d?.message || 'An account with this email already exists.');
-        if (d?.suggestLoginWithSamePassword) {
-          setMessage('Your account may already exist from an earlier attempt. Try signing in with the same password below.');
-        }
-        if (d?.useGoogleSignIn || d?.suggestForgotPassword) {
-          setTab('login');
+        setRecoverEmail(regEmail.trim());
+        if (d?.recoveryEmailSent) {
+          setError('');
+          setMessage(d?.message || 'We emailed you a link to set or reset your password. Check your inbox and spam folder.');
+          setTab('recover');
+        } else {
+          setError(d?.message || 'An account with this email already exists.');
+          if (d?.suggestLoginWithSamePassword) {
+            setMessage('Your account may already exist from an earlier attempt. Try signing in with the same password below.');
+          }
+          if (d?.useGoogleSignIn || d?.suggestForgotPassword) {
+            setTab('login');
+          }
         }
       } else if (!err.response) {
-        setError('Registration timed out or lost connection. If you already tried once, go to Sign in with the same email and password instead of registering again.');
-        setLoginEmail(regEmail.trim());
-        setLoginPassword(regPassword);
-        setTab('login');
+        setRecoverEmail(regEmail.trim());
+        setError('');
+        setMessage('Registration may have timed out. If you already tried once, open Recover and we will email you a sign-in link.');
+        setTab('recover');
       } else {
         setError(d?.message || err.message || 'Registration failed');
       }
@@ -279,6 +299,24 @@ export default function FantasyAuth() {
     }
   };
 
+  const handleRecoverAccount = async (e) => {
+    e.preventDefault();
+    setError('');
+    setMessage('');
+    setRecoverLoading(true);
+    try {
+      const { data } = await api.post('/fantasy/auth/recover-account', { email: recoverEmail.trim() });
+      setMessage(data?.message || 'If an account exists for that email, a recovery link has been sent.');
+      if (data?.alternatives?.googleSignIn) {
+        setMessage((prev) => `${prev} You can also sign in with Google if your account uses it.`);
+      }
+    } catch (err) {
+      setError(err.response?.data?.message || err.message || 'Could not send recovery email.');
+    } finally {
+      setRecoverLoading(false);
+    }
+  };
+
   const handleForgotPassword = async (e) => {
     e.preventDefault();
     setError('');
@@ -307,6 +345,11 @@ export default function FantasyAuth() {
     setMessage('');
     if (resetPassword !== resetConfirmPassword) {
       setError('Passwords do not match.');
+      return;
+    }
+    const passwordValidation = validateFantasyPassword(resetPassword);
+    if (!passwordValidation.isValid) {
+      setError(passwordValidation.errors.join(' '));
       return;
     }
     setResetLoading(true);
@@ -414,12 +457,15 @@ export default function FantasyAuth() {
   return (
     <div className="fantasy-auth-container fantasy-section">
       {tab !== 'verify' && tab !== 'forgot' && tab !== 'reset' && (
-        <div className="fantasy-auth-tabs">
+        <div className="fantasy-auth-tabs fantasy-auth-tabs--three">
           <button type="button" className={`fantasy-tab ${tab === 'login' ? 'active' : ''}`} onClick={() => { setTab('login'); setError(''); setMessage(''); setRegisterConflict(false); }}>
             Sign in
           </button>
           <button type="button" className={`fantasy-tab ${tab === 'register' ? 'active' : ''}`} onClick={() => { setTab('register'); setError(''); setMessage(''); setRegisterConflict(false); }}>
             Register
+          </button>
+          <button type="button" className={`fantasy-tab ${tab === 'recover' ? 'active' : ''}`} onClick={() => { setTab('recover'); setError(''); setMessage(''); setRegisterConflict(false); }}>
+            Recover
           </button>
         </div>
       )}
@@ -452,12 +498,42 @@ export default function FantasyAuth() {
               <button type="submit" className="fantasy-btn fantasy-btn-primary" disabled={loginLoading}>
                 {loginLoading ? 'Signing in…' : 'Sign in'}
               </button>
-              <button type="button" className="fantasy-btn fantasy-btn-text" onClick={() => { setTab('forgot'); setError(''); setMessage(''); }}>
-                Forgot password?
+              <button type="button" className="fantasy-btn fantasy-btn-text" onClick={() => { setRecoverEmail(loginEmail.trim()); setTab('recover'); setError(''); setMessage(''); }}>
+                Recover account
               </button>
             </div>
           </form>
         </>
+      )}
+
+      {tab === 'recover' && (
+        <form className="fantasy-form" onSubmit={handleRecoverAccount}>
+          <p className="fantasy-form-lead">
+            Already tried registering but cannot sign in? Enter your email and we will send a link to set or reset your password.
+          </p>
+          {showGoogleSignIn ? (
+            <>
+              <FantasyGoogleSignIn
+                onCredential={handleGoogleCredential}
+                onError={setError}
+                label="Sign in with Google"
+              />
+              <div className="fantasy-auth-divider"><span>or recover with email</span></div>
+            </>
+          ) : null}
+          <div className="fantasy-form-group">
+            <label className="fantasy-label" htmlFor="fa-recover-email">Email</label>
+            <input id="fa-recover-email" className="fantasy-input" type="email" autoComplete="email" value={recoverEmail} onChange={(e) => setRecoverEmail(e.target.value)} required />
+          </div>
+          <div className="fantasy-actions">
+            <button type="submit" className="fantasy-btn fantasy-btn-primary" disabled={recoverLoading}>
+              {recoverLoading ? 'Sending…' : 'Email me a recovery link'}
+            </button>
+            <button type="button" className="fantasy-btn fantasy-btn-secondary" onClick={() => { setTab('login'); setError(''); setMessage(''); }}>
+              Back to sign in
+            </button>
+          </div>
+        </form>
       )}
 
       {tab === 'forgot' && (
@@ -501,6 +577,7 @@ export default function FantasyAuth() {
           <div className="fantasy-form-group">
             <label className="fantasy-label" htmlFor="fa-reset-pass">New password</label>
             <input id="fa-reset-pass" className="fantasy-input" type="password" autoComplete="new-password" value={resetPassword} onChange={(e) => setResetPassword(e.target.value)} required minLength={8} />
+            <p className="fantasy-form-note">{FANTASY_PASSWORD_HINT}</p>
           </div>
           <div className="fantasy-form-group">
             <label className="fantasy-label" htmlFor="fa-reset-confirm">Confirm new password</label>
@@ -526,6 +603,7 @@ export default function FantasyAuth() {
           <div className="fantasy-form-group">
             <label className="fantasy-label" htmlFor="fa-reg-pass">Password</label>
             <input id="fa-reg-pass" className="fantasy-input" type="password" autoComplete="new-password" value={regPassword} onChange={(e) => setRegPassword(e.target.value)} required minLength={8} />
+            <p className="fantasy-form-note">{FANTASY_PASSWORD_HINT}</p>
           </div>
           <div className="fantasy-form-group">
             <label className="fantasy-label" htmlFor="fa-reg-confirm-pass">Confirm password</label>
@@ -540,14 +618,16 @@ export default function FantasyAuth() {
             <input id="fa-reg-mgr" className="fantasy-input" type="text" value={regManager} onChange={(e) => setRegManager(e.target.value)} required />
           </div>
           <div className="fantasy-actions">
-            <button type="submit" className="fantasy-btn fantasy-btn-primary">Create account</button>
+            <button type="submit" className="fantasy-btn fantasy-btn-primary" disabled={registerLoading}>
+              {registerLoading ? 'Creating account…' : 'Create account'}
+            </button>
             {registerConflict ? (
               <>
                 <button type="button" className="fantasy-btn fantasy-btn-secondary" onClick={() => { setTab('login'); setRegisterConflict(false); setMessage('This email already has an account. Sign in with your password.'); }}>
                   Go to sign in
                 </button>
-                <button type="button" className="fantasy-btn fantasy-btn-text" onClick={() => { setTab('forgot'); setRegisterConflict(false); setError(''); setMessage(''); }}>
-                  Forgot password?
+                <button type="button" className="fantasy-btn fantasy-btn-text" onClick={() => { setRecoverEmail(regEmail.trim()); setTab('recover'); setRegisterConflict(false); setError(''); setMessage(''); }}>
+                  Recover account
                 </button>
               </>
             ) : null}
