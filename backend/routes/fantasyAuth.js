@@ -25,18 +25,10 @@ const {
   serializeFantasyUser,
 } = require('../utils/fantasyProfileValidation');
 const { deleteFantasyAccount } = require('../utils/fantasyAccountDelete');
+const { normalizeEmail, findUserByEmail } = require('../utils/fantasyUserLookup');
+const { resolveRegisterDuplicateKeyResponse } = require('../utils/fantasyRegisterDuplicateKey');
 
-const normalizeEmail = (email) => (email || '').trim().toLowerCase();
 const generateCode = () => `${Math.floor(100000 + Math.random() * 900000)}`;
-
-async function findUserByEmail(email) {
-  const normalizedEmail = normalizeEmail(email);
-  const exactMatch = await FantasyUser.findOne({ email: normalizedEmail });
-  if (exactMatch) return exactMatch;
-
-  const escaped = normalizedEmail.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  return FantasyUser.findOne({ email: { $regex: new RegExp(`^${escaped}$`, 'i') } });
-}
 
 async function sendPasswordResetForUser(user, normalizedEmail, audience = 'ACFPL Fantasy') {
   const token = generateResetToken();
@@ -183,28 +175,19 @@ router.post('/register', async (req, res) => {
     await sendVerificationEmail(normalizedEmail, code);
     return res.json({ success: true, message: 'Registration received. Check your email for the 6-digit verification code.' });
   } catch (err) {
-    if (err.code === 11000) {
-      console.error('Fantasy register duplicate key:', err.keyPattern, err.keyValue);
-      const duplicateUser = await findUserByEmail(req.body?.email);
-      if (duplicateUser) {
-        return await respondAccountAlreadyExists(res, duplicateUser, normalizeEmail(req.body?.email));
+    const duplicateKeyResponse = await resolveRegisterDuplicateKeyResponse(err, req.body?.email, {
+      findUserByEmail,
+      respondAccountAlreadyExists: (duplicateUser, email) =>
+        respondAccountAlreadyExists(res, duplicateUser, normalizeEmail(email)),
+    });
+    if (duplicateKeyResponse) {
+      if (duplicateKeyResponse.type === 'accountExists') {
+        return await duplicateKeyResponse.handler();
       }
-      if (err.keyPattern?.googleId != null) {
-        return res.status(503).json({
-          success: false,
-          registrationBlocked: true,
-          message: 'Registration is temporarily blocked by a database configuration issue. The league admin must run the googleId index fix script, then try again.',
-        });
-      }
-      return res.status(409).json({
-        success: false,
-        accountExists: true,
-        suggestForgotPassword: true,
-        message: 'An account with this email already exists. Sign in with your password, or use Forgot password if you do not remember it.',
-      });
+      return res.status(duplicateKeyResponse.status).json(duplicateKeyResponse.body);
     }
     console.error('Fantasy register error:', err);
-    return res.status(500).json({ success: false, message: err.message || 'Server error. Please try again.' });
+    return res.status(500).json({ success: false, message: 'Server error. Please try again.' });
   }
 });
 

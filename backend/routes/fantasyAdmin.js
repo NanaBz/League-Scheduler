@@ -19,6 +19,7 @@ const Player = require('../models/Player');
 const Match = require('../models/Match');
 const { FANTASY_MATCH_COMPETITION, assertFantasyLeagueMatch } = require('../utils/fantasyLeagueScope');
 const { resetFantasySeasonData } = require('../utils/resetFantasySeason');
+const { resetFantasyFull } = require('../utils/resetFantasyFull');
 const { deriveCurrentGameweekFromMatches } = require('../utils/fantasyGameweek');
 const FantasyMatchweek = require('../models/FantasyMatchweek');
 const { getLiveSeasonStatsNumber } = require('../utils/seasonContext');
@@ -32,6 +33,7 @@ const {
 } = require('../utils/fantasyManagerAwards');
 const FantasyUser = require('../models/FantasyUser');
 const { validatePasswordStrength } = require('../middleware/fantasyAuth');
+const { findUserByEmail } = require('../utils/fantasyUserLookup');
 
 async function afterMatchPerformanceUpdate(match) {
   await syncFantasyPerformanceFromMatchEvents(match._id);
@@ -506,10 +508,34 @@ router.post('/rescore-gameweek/:matchweek', authenticateAdmin, async (req, res) 
   }
 });
 
+// POST /api/fantasy/admin/reset-full — wipe all fantasy accounts + live gameplay (ACPL data untouched)
+router.post('/reset-full', authenticateAdmin, async (req, res) => {
+  try {
+    if (req.body.confirmation !== 'RESET_ALL_FANTASY') {
+      return res.status(400).json({
+        success: false,
+        message: 'Type RESET_ALL_FANTASY to confirm a full fantasy reset.',
+      });
+    }
+
+    const cleared = await resetFantasyFull({ deleteUsers: true });
+    await logAdminAction(req, 'fantasy_full_reset', cleared);
+
+    return res.json({
+      success: true,
+      message:
+        'Full fantasy reset complete. All fantasy accounts and live gameplay state were removed. ACPL league data was not changed.',
+      cleared,
+    });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+});
+
 // POST /api/fantasy/admin/users/reset-password — admin fallback when email reset is unavailable
 router.post('/users/reset-password', authenticateAdmin, async (req, res) => {
   try {
-    const email = String(req.body.email || '').trim().toLowerCase();
+    const email = String(req.body.email || '').trim();
     const { newPassword, confirmPassword } = req.body;
 
     if (!email || !newPassword || !confirmPassword) {
@@ -531,7 +557,7 @@ router.post('/users/reset-password', authenticateAdmin, async (req, res) => {
       });
     }
 
-    const user = await FantasyUser.findOne({ email });
+    const user = await findUserByEmail(email);
     if (!user) {
       return res.status(404).json({ success: false, message: 'Fantasy account not found.' });
     }
