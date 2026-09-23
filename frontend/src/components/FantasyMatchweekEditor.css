@@ -237,6 +237,113 @@
   padding: 8px 0;
 }
 
+.fme-empty-inline {
+  margin: 0 0 8px;
+  font-size: 0.8125rem;
+}
+
+.fme-search-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 12px;
+}
+
+.fme-search-label {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #475569;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.fme-search {
+  width: 100%;
+  max-width: 320px;
+  padding: 8px 10px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  background: #fff;
+  color: #0f172a;
+}
+
+.fme-search:focus {
+  outline: 2px solid #3b82f6;
+  outline-offset: 1px;
+  border-color: #93c5fd;
+}
+
+.fme-appearance-filter {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.fme-appearance-filter-btn {
+  padding: 5px 10px;
+  border: 1px solid #cbd5e1;
+  border-radius: 999px;
+  background: #fff;
+  color: #475569;
+  font-size: 0.75rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.fme-appearance-filter-btn.active {
+  background: #eff6ff;
+  border-color: #93c5fd;
+  color: #1d4ed8;
+}
+
+.fme-appearance {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  min-width: 0;
+}
+
+.fme-appearance-btn {
+  padding: 4px 8px;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  background: #fff;
+  color: #475569;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  line-height: 1.2;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.fme-appearance-btn.active {
+  background: #1d4ed8;
+  border-color: #1d4ed8;
+  color: #fff;
+}
+
+.fme-appearance-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.fme-col-appearance {
+  min-width: 220px;
+}
+
+.fme-field-label,
+.fme-player-card-fields--appearance .fme-field-label {
+  display: block;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  color: #64748b;
+  margin-bottom: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
 /* ── Pick lists (matchweek / match) ── */
 .fme-pick-list {
   list-style: none;

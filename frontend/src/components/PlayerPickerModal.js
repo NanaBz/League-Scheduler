@@ -20,8 +20,11 @@ const BUDGET_RANGES = [
   { label: '≤ AC 7.0m', min: null, max: 7.0 },
 ];
 const SORT_OPTIONS = [
-  { value: 'price', label: 'Price (high)' },
-  { value: 'points', label: 'Points (high)' },
+  { value: 'default', label: 'Default' },
+  { value: 'price-asc', label: 'Price: Low → High' },
+  { value: 'price', label: 'Price: High → Low' },
+  { value: 'points-asc', label: 'Points: Low → High' },
+  { value: 'points', label: 'Points: High → Low' },
 ];
 
 export default function PlayerPickerModal({
@@ -36,8 +39,8 @@ export default function PlayerPickerModal({
   const [budgetLabel, setBudgetLabel] = useState('Unlimited');
   const [minPrice, setMinPrice] = useState(null);
   const [maxPrice, setMaxPrice] = useState(null);
-  const [sortBy, setSortBy] = useState('price');
-  const [sortLabel, setSortLabel] = useState('Price (high)');
+  const [sortBy, setSortBy] = useState('default');
+  const [sortLabel, setSortLabel] = useState('Default');
   const [teams, setTeams] = useState([]);
   const [selectedTeams, setSelectedTeams] = useState([]);
   const [clubLabel, setClubLabel] = useState('All Clubs');
@@ -134,7 +137,16 @@ export default function PlayerPickerModal({
     if (sortBy === 'points') {
       return list.sort((a, b) => (Number(b.totalPoints) || 0) - (Number(a.totalPoints) || 0));
     }
-    return list.sort((a, b) => (Number(b.fantasyPrice) || 0) - (Number(a.fantasyPrice) || 0));
+    if (sortBy === 'points-asc') {
+      return list.sort((a, b) => (Number(a.totalPoints) || 0) - (Number(b.totalPoints) || 0));
+    }
+    if (sortBy === 'price-asc') {
+      return list.sort((a, b) => (Number(a.fantasyPrice) || 0) - (Number(b.fantasyPrice) || 0));
+    }
+    if (sortBy === 'price') {
+      return list.sort((a, b) => (Number(b.fantasyPrice) || 0) - (Number(a.fantasyPrice) || 0));
+    }
+    return list;
   }, [players, sortBy]);
 
   return (

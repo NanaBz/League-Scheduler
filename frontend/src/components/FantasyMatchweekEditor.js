@@ -1,6 +1,23 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Check, ChevronLeft, ChevronRight } from 'lucide-react';
 import api from '../utils/api';
+import { filterPlayersBySearch } from '../utils/filterPlayersBySearch';
+import {
+  bonusAssignmentsFromState,
+  validateMatchBonusAssignments,
+} from '../utils/fantasyBonusValidation';
+import {
+  APPEARANCE_45PLUS,
+  APPEARANCE_UNDER45,
+  appearanceLabel,
+  appearancesFromLegacyMinutes,
+  appearancesFromPerformances,
+  buildSparseMinutesPayload,
+  countPlayedAppearances,
+  filterPlayersByAppearance,
+  hasScoringEventStats,
+  validateAppearancesBeforeSave,
+} from '../utils/fantasyAppearance';
 import ValidationModal from './ValidationModal';
 import './FantasyMatchweekEditor.css';
 
@@ -13,14 +30,13 @@ const STEPS = [
 
 const EMPTY_BONUS = { bp3: null, bp2: null, bp1: null };
 const EMPTY_SPECIAL = { playerId: '', points: 0, reason: '' };
-const FANTASY_MIN_MINUTES = 0;
-const FANTASY_MAX_MINUTES = 70;
-
-function clampFantasyMinutesInput(value) {
-  const n = Number(value);
-  if (!Number.isFinite(n)) return FANTASY_MIN_MINUTES;
-  return Math.min(FANTASY_MAX_MINUTES, Math.max(FANTASY_MIN_MINUTES, Math.trunc(n)));
-}
+const APPEARANCE_FILTER_OPTIONS = [
+  { value: 'all', label: 'All' },
+  { value: 'played', label: 'Played' },
+  { value: 'dnp', label: 'Did Not Play' },
+  { value: 'under45', label: '<45' },
+  { value: '45plus', label: '45+' },
+];
 
 function performanceMapFromMatchPlayers(matchPlayers) {
   const map = {};
@@ -75,40 +91,19 @@ function specialFromPerformances(performances) {
   };
 }
 
-function minutesFromPerformances(performances) {
-  const map = {};
-  (performances || []).forEach((row) => {
-    const id = row.player?._id || row.player;
-    if (id) map[String(id)] = defaultMinutesForPerformance(row);
-  });
-  return map;
-}
-
-function hasScoringEventStats(perf) {
-  if (!perf) return false;
-  return (
-    (perf.goals || 0) > 0 ||
-    (perf.assists || 0) > 0 ||
-    (perf.ownGoals || 0) > 0 ||
-    (perf.yellowCards || 0) > 0 ||
-    (perf.redCards || 0) > 0
-  );
-}
-
-function defaultMinutesForPerformance(row) {
-  const played = clampFantasyMinutesInput(Number(row?.minutesPlayed) || 0);
-  if (played > 0) return played;
-  if (hasScoringEventStats(row)) return 1;
-  return 0;
-}
-
 function matchLabel(match) {
   if (!match) return '';
   return `${match.homeTeam?.name || 'Home'} vs ${match.awayTeam?.name || 'Away'}`;
 }
 
-function draftSnapshot(minutes, bonus, special) {
-  return JSON.stringify({ minutes, bonus, special });
+function draftSnapshot(appearances, bonus, special) {
+  return JSON.stringify({ appearances, bonus, special });
+}
+
+function resolveDraftAppearances(draft, loadedAppearances) {
+  if (draft?.playerAppearances) return draft.playerAppearances;
+  if (draft?.playerMinutes) return appearancesFromLegacyMinutes(draft.playerMinutes);
+  return loadedAppearances;
 }
 
 export default function FantasyMatchweekEditor({ matchweeks, onBackToDashboard }) {
@@ -117,7 +112,7 @@ export default function FantasyMatchweekEditor({ matchweeks, onBackToDashboard }
   const [matches, setMatches] = useState([]);
   const [selectedMatch, setSelectedMatch] = useState(null);
   const [matchPlayers, setMatchPlayers] = useState(null);
-  const [playerMinutes, setPlayerMinutes] = useState({});
+  const [playerAppearances, setPlayerAppearances] = useState({});
   const [bonusAssignments, setBonusAssignments] = useState(EMPTY_BONUS);
   const [specialPoints, setSpecialPoints] = useState(EMPTY_SPECIAL);
   const [savedMatchIds, setSavedMatchIds] = useState(() => new Set());
@@ -127,6 +122,9 @@ export default function FantasyMatchweekEditor({ matchweeks, onBackToDashboard }
   const [successMessage, setSuccessMessage] = useState('');
   const [cancelModalOpen, setCancelModalOpen] = useState(false);
   const [pendingNav, setPendingNav] = useState(null);
+  const [perfPhase, setPerfPhase] = useState('minutes');
+  const [playerSearch, setPlayerSearch] = useState('');
+  const [appearanceFilter, setAppearanceFilter] = useState('all');
 
   const baselineRef = useRef('');
   const historyTrapRef = useRef(false);
@@ -141,34 +139,44 @@ export default function FantasyMatchweekEditor({ matchweeks, onBackToDashboard }
     return [...(matchPlayers.homePlayers || []), ...(matchPlayers.awayPlayers || [])];
   }, [matchPlayers]);
 
+  const filteredHomePlayers = useMemo(() => {
+    const searched = filterPlayersBySearch(matchPlayers?.homePlayers || [], playerSearch);
+    return filterPlayersByAppearance(searched, playerAppearances, appearanceFilter);
+  }, [matchPlayers, playerSearch, playerAppearances, appearanceFilter]);
+
+  const filteredAwayPlayers = useMemo(() => {
+    const searched = filterPlayersBySearch(matchPlayers?.awayPlayers || [], playerSearch);
+    return filterPlayersByAppearance(searched, playerAppearances, appearanceFilter);
+  }, [matchPlayers, playerSearch, playerAppearances, appearanceFilter]);
+
   const currentDraftKey = selectedMatch?._id ? String(selectedMatch._id) : null;
 
   const isDirty = useMemo(() => {
     if (step < 3 || !currentDraftKey) return false;
-    return draftSnapshot(playerMinutes, bonusAssignments, specialPoints) !== baselineRef.current;
-  }, [step, currentDraftKey, playerMinutes, bonusAssignments, specialPoints]);
+    return draftSnapshot(playerAppearances, bonusAssignments, specialPoints) !== baselineRef.current;
+  }, [step, currentDraftKey, playerAppearances, bonusAssignments, specialPoints]);
 
   const persistDraft = useCallback(() => {
     if (!currentDraftKey) return;
     setMatchDrafts((prev) => ({
       ...prev,
       [currentDraftKey]: {
-        playerMinutes,
+        playerAppearances,
         bonusAssignments,
         specialPoints,
       },
     }));
-  }, [currentDraftKey, playerMinutes, bonusAssignments, specialPoints]);
+  }, [currentDraftKey, playerAppearances, bonusAssignments, specialPoints]);
 
-  const applyDraftOrLoaded = useCallback((matchId, loadedMinutes, loadedBonus, loadedSpecial) => {
+  const applyDraftOrLoaded = useCallback((matchId, loadedAppearances, loadedBonus, loadedSpecial) => {
     const draft = matchDrafts[matchId];
-    const minutes = draft?.playerMinutes ?? loadedMinutes;
+    const appearances = resolveDraftAppearances(draft, loadedAppearances);
     const bonus = draft?.bonusAssignments ?? loadedBonus;
     const special = draft?.specialPoints ?? loadedSpecial;
-    setPlayerMinutes(minutes);
+    setPlayerAppearances(appearances);
     setBonusAssignments(bonus);
     setSpecialPoints(special);
-    baselineRef.current = draftSnapshot(minutes, bonus, special);
+    baselineRef.current = draftSnapshot(appearances, bonus, special);
   }, [matchDrafts]);
 
   const resetEditorState = useCallback(() => {
@@ -177,11 +185,14 @@ export default function FantasyMatchweekEditor({ matchweeks, onBackToDashboard }
     setMatches([]);
     setSelectedMatch(null);
     setMatchPlayers(null);
-    setPlayerMinutes({});
+    setPlayerAppearances({});
     setBonusAssignments(EMPTY_BONUS);
     setSpecialPoints(EMPTY_SPECIAL);
     setSavedMatchIds(new Set());
     setMatchDrafts({});
+    setPerfPhase('minutes');
+    setPlayerSearch('');
+    setAppearanceFilter('all');
     setError('');
     setSuccessMessage('');
     baselineRef.current = '';
@@ -213,6 +224,9 @@ export default function FantasyMatchweekEditor({ matchweeks, onBackToDashboard }
   const handleSelectMatch = async (match) => {
     setSelectedMatch(match);
     setStep(3);
+    setPerfPhase('minutes');
+    setPlayerSearch('');
+    setAppearanceFilter('all');
     setLoading(true);
     setError('');
     setSuccessMessage('');
@@ -220,10 +234,10 @@ export default function FantasyMatchweekEditor({ matchweeks, onBackToDashboard }
       const { data } = await api.get(`/fantasy/admin/matches/${match._id}/players`);
       const payload = data.data;
       setMatchPlayers(payload);
-      const loadedMinutes = minutesFromPerformances(payload.performances);
+      const loadedAppearances = appearancesFromPerformances(payload.performances);
       const loadedBonus = bonusFromPerformances(payload.performances);
       const loadedSpecial = specialFromPerformances(payload.performances);
-      applyDraftOrLoaded(String(match._id), loadedMinutes, loadedBonus, loadedSpecial);
+      applyDraftOrLoaded(String(match._id), loadedAppearances, loadedBonus, loadedSpecial);
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to load players');
       setStep(2);
@@ -233,17 +247,17 @@ export default function FantasyMatchweekEditor({ matchweeks, onBackToDashboard }
     }
   };
 
-  const handleMinutesChange = (playerId, value, perf) => {
-    if (value === '') {
-      setPlayerMinutes((prev) => ({ ...prev, [playerId]: '' }));
-      setError('');
-      return;
-    }
-    let next = clampFantasyMinutesInput(value);
-    if (hasScoringEventStats(perf) && next < 1) {
-      next = 1;
-    }
-    setPlayerMinutes((prev) => ({ ...prev, [playerId]: next }));
+  const handleAppearanceChange = (playerId, appearance) => {
+    const id = String(playerId);
+    setPlayerAppearances((prev) => {
+      const next = { ...prev };
+      if (!appearance) {
+        delete next[id];
+      } else {
+        next[id] = appearance;
+      }
+      return next;
+    });
     setError('');
   };
 
@@ -263,39 +277,95 @@ export default function FantasyMatchweekEditor({ matchweeks, onBackToDashboard }
       if (next.bp2 === id) next.bp2 = null;
       if (next.bp1 === id) next.bp1 = null;
       if (level === '3') {
-      next.bp3 = id;
-    } else if (level === '2') {
-      next.bp2 = id;
-    } else if (level === '1') {
-      next.bp1 = id;
-    }
+        next.bp3 = id;
+      } else if (level === '2') {
+        next.bp2 = id;
+      } else if (level === '1') {
+        next.bp1 = id;
+      }
+      return next;
+    });
     setError('');
-    return next;
-  });
-};
+  };
+
+  const buildMinutesPayload = useCallback(
+    () => buildSparseMinutesPayload(allPlayers, playerAppearances),
+    [allPlayers, playerAppearances]
+  );
+
+  const handleSaveMinutes = async () => {
+    if (!selectedMatch || !selectedMatchweek) return false;
+    const validation = validateAppearancesBeforeSave(
+      allPlayers,
+      playerAppearances,
+      performanceByPlayer
+    );
+    if (!validation.ok) {
+      setError(validation.message);
+      return false;
+    }
+    setLoading(true);
+    setError('');
+    try {
+      await api.post(`/fantasy/admin/matches/${selectedMatch._id}/minutes`, {
+        matchweek: selectedMatchweek.number,
+        playerMinutes: buildMinutesPayload(),
+        persistOnly: true,
+      });
+      persistDraft();
+      setPerfPhase('bonus');
+      setPlayerSearch('');
+      setSuccessMessage('');
+      return true;
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to save minutes. Please retry.');
+      return false;
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleSpecialChange = (field, value) => {
     setSpecialPoints((prev) => ({ ...prev, [field]: value }));
     setError('');
   };
 
-  const handleContinue = () => {
-    if (step === 3) {
-      persistDraft();
-      setStep(4);
+  const handleContinue = async () => {
+    if (step === 3 && perfPhase === 'minutes') {
+      await handleSaveMinutes();
       return;
+    }
+    if (step === 3 && perfPhase === 'bonus') {
+      const validation = validateMatchBonusAssignments(bonusAssignments);
+      if (!validation.ok) {
+        setError(validation.message);
+        return;
+      }
+      persistDraft();
+      setError('');
+      setStep(4);
     }
   };
 
   const handleBack = () => {
     if (step === 4) {
       setStep(3);
+      setPerfPhase('bonus');
+      return;
+    }
+    if (step === 3 && perfPhase === 'bonus') {
+      persistDraft();
+      setPerfPhase('minutes');
+      setPlayerSearch('');
+      setError('');
       return;
     }
     if (step === 3) {
       persistDraft();
       setSelectedMatch(null);
       setMatchPlayers(null);
+      setPerfPhase('minutes');
+      setPlayerSearch('');
       setStep(2);
       return;
     }
@@ -322,23 +392,24 @@ export default function FantasyMatchweekEditor({ matchweeks, onBackToDashboard }
 
   const handleSaveMatch = async () => {
     if (!selectedMatch || !selectedMatchweek) return;
+    const bonusValidation = validateMatchBonusAssignments(bonusAssignments);
+    if (!bonusValidation.ok) {
+      setError(bonusValidation.message);
+      setStep(3);
+      setPerfPhase('bonus');
+      return;
+    }
     setLoading(true);
     setError('');
     setSuccessMessage('');
     try {
-      const playerMinutesArray = Object.entries(playerMinutes).map(([playerId, minutes]) => ({
-        playerId,
-        minutes: minutes === '' ? 0 : clampFantasyMinutesInput(minutes),
-      }));
       await api.post(`/fantasy/admin/matches/${selectedMatch._id}/minutes`, {
         matchweek: selectedMatchweek.number,
-        playerMinutes: playerMinutesArray,
+        playerMinutes: buildMinutesPayload(),
+        persistOnly: true,
       });
 
-      const assignments = [];
-      if (bonusAssignments.bp3) assignments.push({ playerId: bonusAssignments.bp3, bonusPoints: 3 });
-      if (bonusAssignments.bp2) assignments.push({ playerId: bonusAssignments.bp2, bonusPoints: 2 });
-      if (bonusAssignments.bp1) assignments.push({ playerId: bonusAssignments.bp1, bonusPoints: 1 });
+      const assignments = bonusAssignmentsFromState(bonusAssignments);
       await api.post(`/fantasy/admin/matches/${selectedMatch._id}/bonus`, { bonusAssignments: assignments });
 
       if (specialPoints.playerId && specialPoints.points) {
@@ -357,7 +428,7 @@ export default function FantasyMatchweekEditor({ matchweeks, onBackToDashboard }
         delete next[String(selectedMatch._id)];
         return next;
       });
-      baselineRef.current = draftSnapshot(playerMinutes, bonusAssignments, specialPoints);
+      baselineRef.current = draftSnapshot(playerAppearances, bonusAssignments, specialPoints);
       setSuccessMessage(`Match data saved successfully for ${matchLabel(selectedMatch)}.`);
       setSelectedMatch(null);
       setMatchPlayers(null);
@@ -441,120 +512,234 @@ export default function FantasyMatchweekEditor({ matchweeks, onBackToDashboard }
             <strong>{matchLabel(selectedMatch)}</strong>
           </span>
         ) : null}
-        <span className="fme-context-step">Step {step} of 4</span>
+        <span className="fme-context-step">
+          Step {step} of 4
+          {step === 3 ? ` · ${perfPhase === 'minutes' ? '1 of 2 — Appearances' : '2 of 2 — Bonus'}` : ''}
+        </span>
         {isDirty ? <span className="fme-unsaved-pill">Unsaved changes</span> : null}
       </div>
     );
   };
 
-  const renderPlayerRows = (players, teamName) => (
-    <div className="fme-team-block" key={teamName}>
-      <h4 className="fme-team-title">{teamName}</h4>
-      <div className="fme-player-table-wrap">
-        <table className="fme-player-table">
-          <thead>
-            <tr>
-              <th>Player</th>
-              <th>Pos</th>
-              <th className="fme-col-events">Events</th>
-              <th>Min</th>
-              <th>Bonus</th>
-            </tr>
-          </thead>
-          <tbody>
-            {players.map((player) => {
-              const perf = performanceByPlayer[String(player._id)];
-              const eventLabel = formatEventStatsLabel(perf, player.position);
-              const minMinutes = hasScoringEventStats(perf) ? 1 : 0;
-              return (
-                <tr key={player._id}>
-                  <td className="fme-col-player" data-label="Player">{player.name}</td>
-                  <td data-label="Pos">{player.position}</td>
-                  <td className="fme-col-events" data-label="Events">
-                    {eventLabel ? (
-                      <span className="fme-events-ok" title="From match events">{eventLabel}</span>
-                    ) : (
-                      <span className="fme-events-none">—</span>
-                    )}
-                  </td>
-                  <td data-label="Min">
-                    <input
-                      type="number"
-                      className="fme-input fme-input-min"
-                      min={minMinutes}
-                      max={FANTASY_MAX_MINUTES}
-                      step="1"
-                      value={playerMinutes[player._id] ?? ''}
-                      onChange={(e) => handleMinutesChange(player._id, e.target.value, perf)}
-                      aria-label={`Minutes for ${player.name}`}
-                    />
-                  </td>
-                  <td data-label="Bonus">
+  const renderPlayerSearch = () => (
+    <label className="fme-search-wrap">
+      <span className="fme-search-label">Search players</span>
+      <input
+        type="search"
+        className="fme-search"
+        placeholder="Search players…"
+        value={playerSearch}
+        onChange={(e) => setPlayerSearch(e.target.value)}
+        aria-label="Search players by name"
+      />
+    </label>
+  );
+
+  const renderAppearanceFilter = () => (
+    <div className="fme-appearance-filter" role="toolbar" aria-label="Filter by appearance">
+      {APPEARANCE_FILTER_OPTIONS.map((option) => (
+        <button
+          key={option.value}
+          type="button"
+          className={`fme-appearance-filter-btn${appearanceFilter === option.value ? ' active' : ''}`}
+          onClick={() => setAppearanceFilter(option.value)}
+          aria-pressed={appearanceFilter === option.value}
+        >
+          {option.label}
+        </button>
+      ))}
+    </div>
+  );
+
+  const renderAppearanceControl = (player, perf) => {
+    const id = String(player._id);
+    const selected = playerAppearances[id] || null;
+    const eventsBlockDnp = hasScoringEventStats(perf);
+    const setAppearance = (appearance) => {
+      if (!appearance && eventsBlockDnp) {
+        setError(`${player.name} has match events and must be marked as Played <45 or 45+.`);
+        return;
+      }
+      handleAppearanceChange(id, appearance);
+    };
+
+    return (
+      <div className="fme-appearance" role="group" aria-label={`Appearance for ${player.name}`}>
+        <button
+          type="button"
+          className={`fme-appearance-btn${!selected ? ' active' : ''}`}
+          onClick={() => setAppearance(null)}
+          disabled={eventsBlockDnp}
+          title={eventsBlockDnp ? 'Players with match events cannot be marked Did Not Play' : undefined}
+        >
+          Did Not Play
+        </button>
+        <button
+          type="button"
+          className={`fme-appearance-btn${selected === APPEARANCE_UNDER45 ? ' active' : ''}`}
+          onClick={() => setAppearance(APPEARANCE_UNDER45)}
+        >
+          &lt;45
+        </button>
+        <button
+          type="button"
+          className={`fme-appearance-btn${selected === APPEARANCE_45PLUS ? ' active' : ''}`}
+          onClick={() => setAppearance(APPEARANCE_45PLUS)}
+        >
+          45+
+        </button>
+      </div>
+    );
+  };
+
+  const renderMinutesRows = (players, teamName) => {
+    if (!players.length) {
+      return playerSearch ? (
+        <p className="fme-empty fme-empty-inline" key={`${teamName}-empty`}>No matching players in {teamName}.</p>
+      ) : null;
+    }
+    return (
+      <div className="fme-team-block" key={teamName}>
+        <h4 className="fme-team-title">{teamName}</h4>
+        <div className="fme-player-table-wrap">
+          <table className="fme-player-table">
+            <thead>
+              <tr>
+                <th>Player</th>
+                <th>Pos</th>
+                <th className="fme-col-events">Events</th>
+                <th>Appearance</th>
+              </tr>
+            </thead>
+            <tbody>
+              {players.map((player) => {
+                const perf = performanceByPlayer[String(player._id)];
+                const eventLabel = formatEventStatsLabel(perf, player.position);
+                return (
+                  <tr key={player._id}>
+                    <td className="fme-col-player" data-label="Player">{player.name}</td>
+                    <td data-label="Pos">{player.position}</td>
+                    <td className="fme-col-events" data-label="Events">
+                      {eventLabel ? (
+                        <span className="fme-events-ok" title="From match events">{eventLabel}</span>
+                      ) : (
+                        <span className="fme-events-none">—</span>
+                      )}
+                    </td>
+                    <td data-label="Appearance" className="fme-col-appearance">
+                      {renderAppearanceControl(player, perf)}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+        <div className="fme-player-cards">
+          {players.map((player) => {
+            const perf = performanceByPlayer[String(player._id)];
+            const eventLabel = formatEventStatsLabel(perf, player.position);
+            return (
+              <article key={player._id} className="fme-player-card">
+                <div className="fme-player-card-head">
+                  <span className="fme-player-card-name">{player.name}</span>
+                  <span className="fme-player-card-pos">{player.position}</span>
+                </div>
+                <div className="fme-player-card-events">
+                  {eventLabel || 'No match events'}
+                </div>
+                <div className="fme-player-card-fields fme-player-card-fields--appearance">
+                  <span className="fme-field-label">Appearance</span>
+                  {renderAppearanceControl(player, perf)}
+                </div>
+              </article>
+            );
+          })}
+        </div>
+      </div>
+    );
+  };
+
+  const renderBonusRows = (players, teamName) => {
+    if (!players.length) {
+      return playerSearch ? (
+        <p className="fme-empty fme-empty-inline" key={`${teamName}-empty`}>No matching players in {teamName}.</p>
+      ) : null;
+    }
+    return (
+      <div className="fme-team-block" key={teamName}>
+        <h4 className="fme-team-title">{teamName}</h4>
+        <div className="fme-player-table-wrap">
+          <table className="fme-player-table">
+            <thead>
+              <tr>
+                <th>Player</th>
+                <th>Pos</th>
+                <th>Appearance</th>
+                <th>Bonus</th>
+              </tr>
+            </thead>
+            <tbody>
+              {players.map((player) => {
+                const appearance = playerAppearances[String(player._id)];
+                return (
+                  <tr key={player._id}>
+                    <td className="fme-col-player" data-label="Player">{player.name}</td>
+                    <td data-label="Pos">{player.position}</td>
+                    <td data-label="Appearance">{appearanceLabel(appearance)}</td>
+                    <td data-label="Bonus">
+                      <select
+                        className="fme-input fme-input-bonus"
+                        value={getPlayerBonusValue(player._id)}
+                        onChange={(e) => handlePlayerBonusChange(player._id, e.target.value)}
+                        aria-label={`Bonus for ${player.name}`}
+                      >
+                        <option value="">—</option>
+                        <option value="3">+3</option>
+                        <option value="2">+2</option>
+                        <option value="1">+1</option>
+                      </select>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+        <div className="fme-player-cards">
+          {players.map((player) => {
+            const appearance = playerAppearances[String(player._id)];
+            return (
+              <article key={player._id} className="fme-player-card">
+                <div className="fme-player-card-head">
+                  <span className="fme-player-card-name">{player.name}</span>
+                  <span className="fme-player-card-pos">{player.position}</span>
+                </div>
+                <div className="fme-player-card-events">
+                  Appearance: {appearanceLabel(appearance)}
+                </div>
+                <div className="fme-player-card-fields">
+                  <label className="fme-field">
+                    <span>Bonus</span>
                     <select
-                      className="fme-input fme-input-bonus"
+                      className="fme-input"
                       value={getPlayerBonusValue(player._id)}
                       onChange={(e) => handlePlayerBonusChange(player._id, e.target.value)}
-                      aria-label={`Bonus for ${player.name}`}
                     >
                       <option value="">—</option>
                       <option value="3">+3</option>
                       <option value="2">+2</option>
                       <option value="1">+1</option>
                     </select>
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
+                  </label>
+                </div>
+              </article>
+            );
+          })}
+        </div>
       </div>
-      <div className="fme-player-cards">
-        {players.map((player) => {
-          const perf = performanceByPlayer[String(player._id)];
-          const eventLabel = formatEventStatsLabel(perf, player.position);
-          const minMinutes = hasScoringEventStats(perf) ? 1 : 0;
-          return (
-            <article key={player._id} className="fme-player-card">
-              <div className="fme-player-card-head">
-                <span className="fme-player-card-name">{player.name}</span>
-                <span className="fme-player-card-pos">{player.position}</span>
-              </div>
-              <div className="fme-player-card-events">
-                {eventLabel || 'No match events'}
-              </div>
-              <div className="fme-player-card-fields">
-                <label className="fme-field">
-                  <span>Minutes</span>
-                  <input
-                    type="number"
-                    className="fme-input"
-                    min={minMinutes}
-                    max={FANTASY_MAX_MINUTES}
-                    step="1"
-                    value={playerMinutes[player._id] ?? ''}
-                    onChange={(e) => handleMinutesChange(player._id, e.target.value, perf)}
-                  />
-                </label>
-                <label className="fme-field">
-                  <span>Bonus</span>
-                  <select
-                    className="fme-input"
-                    value={getPlayerBonusValue(player._id)}
-                    onChange={(e) => handlePlayerBonusChange(player._id, e.target.value)}
-                  >
-                    <option value="">—</option>
-                    <option value="3">+3</option>
-                    <option value="2">+2</option>
-                    <option value="1">+1</option>
-                  </select>
-                </label>
-              </div>
-            </article>
-          );
-        })}
-      </div>
-    </div>
-  );
+    );
+  };
 
   const renderStepContent = () => {
     if (step === 1) {
@@ -621,16 +806,73 @@ export default function FantasyMatchweekEditor({ matchweeks, onBackToDashboard }
     }
 
     if (step === 3 && selectedMatch && matchPlayers) {
+      if (perfPhase === 'minutes') {
+        return (
+          <div className="fme-step">
+            <h3 className="fme-step-title">Record player appearances</h3>
+            <p className="fme-step-desc">
+              Step 1 of 2 — Select &lt;45 for players who played 1–44 minutes and 45+ for players who played at least 45 minutes.
+              Players left unselected are treated as not having played (0 appearance points).
+              Goals, assists, clean sheets, and cards are pulled from match events automatically.
+              Players with a goal, assist, card, or own goal must be marked as &lt;45 or 45+.
+            </p>
+            {renderPlayerSearch()}
+            {renderAppearanceFilter()}
+            {renderMinutesRows(filteredHomePlayers, matchPlayers.match.homeTeam.name)}
+            {renderMinutesRows(filteredAwayPlayers, matchPlayers.match.awayTeam.name)}
+          </div>
+        );
+      }
       return (
         <div className="fme-step">
-          <h3 className="fme-step-title">Player performance</h3>
+          <h3 className="fme-step-title">Assign bonus points</h3>
           <p className="fme-step-desc">
-            Goals, assists, clean sheets, and cards are pulled from match events automatically.
-            Enter minutes and bonus below. Minutes: 0–70 per player (1–44 = +1 appearance, 45+ = +2). Players with a goal, assist, card, or own goal must have at least 1 minute.
+            Step 2 of 2 — Assign +3, +2, and +1 bonus to three different players. All three slots are required before you can finalize this match.
           </p>
-          {renderPlayerRows(matchPlayers.homePlayers, matchPlayers.match.homeTeam.name)}
-          {renderPlayerRows(matchPlayers.awayPlayers, matchPlayers.match.awayTeam.name)}
+          {renderPlayerSearch()}
+          {renderBonusRows(filteredHomePlayers, matchPlayers.match.homeTeam.name)}
+          {renderBonusRows(filteredAwayPlayers, matchPlayers.match.awayTeam.name)}
+        </div>
+      );
+    }
 
+    if (step === 4 && selectedMatch && matchPlayers) {
+      const bonusSummary = [
+        bonusAssignments.bp3 ? `3 pts — ${playerName(bonusAssignments.bp3)}` : null,
+        bonusAssignments.bp2 ? `2 pts — ${playerName(bonusAssignments.bp2)}` : null,
+        bonusAssignments.bp1 ? `1 pt — ${playerName(bonusAssignments.bp1)}` : null,
+      ].filter(Boolean);
+
+      return (
+        <div className="fme-step">
+          <h3 className="fme-step-title">Review &amp; save</h3>
+          <p className="fme-step-desc">
+            Confirm data for <strong>{matchLabel(selectedMatch)}</strong> before saving.
+          </p>
+          <div className="fme-review-grid">
+            <div className="fme-review-card">
+              <span className="fme-review-label">Matchweek</span>
+              <span className="fme-review-value">{selectedMatchweek.number}</span>
+            </div>
+            <div className="fme-review-card">
+              <span className="fme-review-label">Players who played</span>
+              <span className="fme-review-value">
+                {countPlayedAppearances(playerAppearances)}
+              </span>
+            </div>
+            <div className="fme-review-card fme-review-card-wide">
+              <span className="fme-review-label">Bonus points</span>
+              <span className="fme-review-value">{bonusSummary.length ? bonusSummary.join(' · ') : 'None assigned'}</span>
+            </div>
+            <div className="fme-review-card fme-review-card-wide">
+              <span className="fme-review-label">Special points</span>
+              <span className="fme-review-value">
+                {specialPoints.playerId && specialPoints.points
+                  ? `${specialPoints.points} pts — ${playerName(specialPoints.playerId)}${specialPoints.reason ? ` (${specialPoints.reason})` : ''}`
+                  : 'None'}
+              </span>
+            </div>
+          </div>
           <div className="fme-special-block">
             <h4 className="fme-special-title">Special points (optional)</h4>
             <p className="fme-special-desc">For rare cases such as an outfield player keeping a clean sheet as GK.</p>
@@ -669,47 +911,6 @@ export default function FantasyMatchweekEditor({ matchweeks, onBackToDashboard }
               </label>
             </div>
           </div>
-        </div>
-      );
-    }
-
-    if (step === 4 && selectedMatch && matchPlayers) {
-      const bonusSummary = [
-        bonusAssignments.bp3 ? `3 pts — ${playerName(bonusAssignments.bp3)}` : null,
-        bonusAssignments.bp2 ? `2 pts — ${playerName(bonusAssignments.bp2)}` : null,
-        bonusAssignments.bp1 ? `1 pt — ${playerName(bonusAssignments.bp1)}` : null,
-      ].filter(Boolean);
-
-      return (
-        <div className="fme-step">
-          <h3 className="fme-step-title">Review &amp; save</h3>
-          <p className="fme-step-desc">
-            Confirm data for <strong>{matchLabel(selectedMatch)}</strong> before saving.
-          </p>
-          <div className="fme-review-grid">
-            <div className="fme-review-card">
-              <span className="fme-review-label">Matchweek</span>
-              <span className="fme-review-value">{selectedMatchweek.number}</span>
-            </div>
-            <div className="fme-review-card">
-              <span className="fme-review-label">Players with minutes</span>
-              <span className="fme-review-value">
-                {Object.values(playerMinutes).filter((m) => Number(m) > 0).length}
-              </span>
-            </div>
-            <div className="fme-review-card fme-review-card-wide">
-              <span className="fme-review-label">Bonus points</span>
-              <span className="fme-review-value">{bonusSummary.length ? bonusSummary.join(' · ') : 'None assigned'}</span>
-            </div>
-            <div className="fme-review-card fme-review-card-wide">
-              <span className="fme-review-label">Special points</span>
-              <span className="fme-review-value">
-                {specialPoints.playerId && specialPoints.points
-                  ? `${specialPoints.points} pts — ${playerName(specialPoints.playerId)}${specialPoints.reason ? ` (${specialPoints.reason})` : ''}`
-                  : 'None'}
-              </span>
-            </div>
-          </div>
           <p className="fme-review-note">
             Saving will update fantasy performance, rescore gameweek {selectedMatchweek.number}, and return you to the match list.
           </p>
@@ -722,6 +923,9 @@ export default function FantasyMatchweekEditor({ matchweeks, onBackToDashboard }
 
   const showBack = step > 1;
   const showContinue = step === 3;
+  const continueLabel = step === 3 && perfPhase === 'minutes'
+    ? (loading ? 'Saving appearances…' : 'Save appearances & continue')
+    : 'Continue';
   const showSave = step === 4;
 
   return (
@@ -756,7 +960,7 @@ export default function FantasyMatchweekEditor({ matchweeks, onBackToDashboard }
         </button>
         {showContinue ? (
           <button type="button" className="fme-btn fme-btn-primary" onClick={handleContinue} disabled={loading}>
-            Continue
+            {continueLabel}
             <ChevronRight size={16} aria-hidden="true" />
           </button>
         ) : null}

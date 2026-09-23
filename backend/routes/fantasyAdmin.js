@@ -34,6 +34,9 @@ const {
 const FantasyUser = require('../models/FantasyUser');
 const { validatePasswordStrength } = require('../middleware/fantasyAuth');
 const { findUserByEmail } = require('../utils/fantasyUserLookup');
+const { liveFantasyPlayerFilter } = require('../utils/fantasyLivePlayers');
+const { validateMatchBonusAssignments } = require('../utils/fantasyBonusValidation');
+const { appearanceToMinutes } = require('../utils/fantasyAppearance');
 
 async function afterMatchPerformanceUpdate(match) {
   await syncFantasyPerformanceFromMatchEvents(match._id);
@@ -306,9 +309,14 @@ router.get('/matches/:matchId/players', authenticateAdmin, async (req, res) => {
 
     await syncFantasyPerformanceFromMatchEvents(req.params.matchId);
 
-    // Get all players from both teams
-    const homePlayers = await Player.find({ team: match.homeTeam._id }).select('name number position team');
-    const awayPlayers = await Player.find({ team: match.awayTeam._id }).select('name number position team');
+    // Live season only — exclude deactivated/removed players from admin entry UI
+    const liveFilter = liveFantasyPlayerFilter();
+    const homePlayers = await Player.find({ team: match.homeTeam._id, ...liveFilter })
+      .select('name number position team active')
+      .sort({ name: 1 });
+    const awayPlayers = await Player.find({ team: match.awayTeam._id, ...liveFilter })
+      .select('name number position team active')
+      .sort({ name: 1 });
 
     // Get existing performance data if any
     const performances = await FantasyMatchPerformance.find({ match: req.params.matchId }).populate('player');
@@ -339,24 +347,27 @@ router.post('/matches/:matchId/minutes', authenticateAdmin, async (req, res) => 
     const match = await Match.findById(req.params.matchId);
     if (!assertFantasyLeagueMatch(match, res)) return;
 
-    // Appearance: 1–44 min = 1 pt, 45+ min = 2 pts (max 70 per player)
-    for (const { playerId, minutes } of playerMinutes) {
-      if (!playerId) {
-        return res.status(400).json({ success: false, message: 'Each entry must include playerId' });
-      }
+    const liveFilter = liveFantasyPlayerFilter();
+    const eligiblePlayers = await Player.find({
+      team: { $in: [match.homeTeam, match.awayTeam] },
+      ...liveFilter,
+    }).select('_id name').lean();
 
-      const parsed = parseFantasyMinutes(minutes);
-      if (!parsed.ok) {
-        return res.status(400).json({ success: false, message: parsed.error });
-      }
+    const submittedIds = new Set();
+    const eventValidationMessage =
+      'Players with a goal, assist, card, or own goal must be marked as having played (<45 or 45+ minutes).';
 
-      let minutesPlayed = parsed.minutes;
+    async function upsertMinutesForPlayer(playerId, minutesPlayed) {
       const existing = await FantasyMatchPerformance.findOne({
         match: req.params.matchId,
         player: playerId,
       }).lean();
       if (performanceHasScoringEventStats(existing) && minutesPlayed < 1) {
-        minutesPlayed = 1;
+        const playerLabel = eligiblePlayers.find((p) => String(p._id) === String(playerId))?.name || 'Player';
+        return {
+          ok: false,
+          message: `${eventValidationMessage} (${playerLabel})`,
+        };
       }
       const minutesPoints = calculateMinutesPoints(minutesPlayed);
       await FantasyMatchPerformance.findOneAndUpdate(
@@ -370,15 +381,58 @@ router.post('/matches/:matchId/minutes', authenticateAdmin, async (req, res) => 
         },
         { upsert: true, new: true, runValidators: true }
       );
+      return { ok: true };
+    }
+
+    // Appearance: 1–44 min = 1 pt, 45+ min = 2 pts (max 70 per player)
+    for (const { playerId, minutes, appearance } of playerMinutes) {
+      if (!playerId) {
+        return res.status(400).json({ success: false, message: 'Each entry must include playerId' });
+      }
+
+      let minutesPlayed;
+      if (appearance === 'under45' || appearance === '45plus') {
+        minutesPlayed = appearanceToMinutes(appearance);
+      } else {
+        const parsed = parseFantasyMinutes(minutes);
+        if (!parsed.ok) {
+          return res.status(400).json({ success: false, message: parsed.error });
+        }
+        minutesPlayed = parsed.minutes;
+      }
+
+      const result = await upsertMinutesForPlayer(playerId, minutesPlayed);
+      if (!result.ok) {
+        return res.status(400).json({ success: false, message: result.message });
+      }
+      submittedIds.add(String(playerId));
+    }
+
+    // Unlisted eligible players default to Did Not Play (0 minutes)
+    for (const player of eligiblePlayers) {
+      const playerId = String(player._id);
+      if (submittedIds.has(playerId)) continue;
+      const result = await upsertMinutesForPlayer(player._id, 0);
+      if (!result.ok) {
+        return res.status(400).json({ success: false, message: result.message });
+      }
     }
 
     const updatedMatch = await Match.findById(req.params.matchId);
-    await afterMatchPerformanceUpdate(updatedMatch);
+    if (!req.body.persistOnly) {
+      await afterMatchPerformanceUpdate(updatedMatch);
+    }
     await logAdminAction(req, 'fantasy_minutes_updated', {
       matchId: req.params.matchId,
       matchweek: updatedMatch?.matchweek,
+      persistOnly: Boolean(req.body.persistOnly),
     });
-    return res.json({ success: true, message: 'Minutes assigned successfully' });
+    return res.json({
+      success: true,
+      message: req.body.persistOnly
+        ? 'Minutes saved. Continue to bonus points.'
+        : 'Minutes assigned successfully',
+    });
   } catch (err) {
     return res.status(500).json({ success: false, message: err.message });
   }
@@ -387,15 +441,30 @@ router.post('/matches/:matchId/minutes', authenticateAdmin, async (req, res) => 
 // POST /api/fantasy/admin/matches/:matchId/bonus - Assign bonus points
 router.post('/matches/:matchId/bonus', authenticateAdmin, async (req, res) => {
   try {
-    const { bonusAssignments } = req.body; // [{ playerId, bonusPoints: 3|2|1 }]
-    if (!Array.isArray(bonusAssignments)) {
-      return res.status(400).json({ success: false, message: 'bonusAssignments array required' });
+    const { bonusAssignments, persistOnly } = req.body; // [{ playerId, bonusPoints: 3|2|1 }]
+    const validation = validateMatchBonusAssignments(bonusAssignments);
+    if (!validation.ok) {
+      return res.status(400).json({ success: false, message: validation.message });
     }
     const match = await Match.findById(req.params.matchId);
     if (!assertFantasyLeagueMatch(match, res)) return;
     const mw = match.matchweek;
 
+    const liveFilter = liveFantasyPlayerFilter();
+    const eligibleIds = new Set(
+      (await Player.find({
+        team: { $in: [match.homeTeam, match.awayTeam] },
+        ...liveFilter,
+      }).select('_id')).map((p) => String(p._id))
+    );
+
     for (const { playerId, bonusPoints } of bonusAssignments) {
+      if (!eligibleIds.has(String(playerId))) {
+        return res.status(400).json({
+          success: false,
+          message: 'Bonus points can only be assigned to active players in this match.',
+        });
+      }
       await FantasyMatchPerformance.findOneAndUpdate(
         { match: req.params.matchId, player: playerId },
         { $set: { bonusPoints, matchweek: mw } },
@@ -403,14 +472,29 @@ router.post('/matches/:matchId/bonus', authenticateAdmin, async (req, res) => {
       );
     }
 
+    // Clear bonus from other performance rows in this match (preserve 0 explicitly)
+    await FantasyMatchPerformance.updateMany(
+      {
+        match: req.params.matchId,
+        player: { $nin: bonusAssignments.map((a) => a.playerId) },
+      },
+      { $set: { bonusPoints: 0 } }
+    );
+
     const updatedMatch = await Match.findById(req.params.matchId);
-    await afterMatchPerformanceUpdate(updatedMatch);
+    if (!persistOnly) {
+      await afterMatchPerformanceUpdate(updatedMatch);
+    }
     await logAdminAction(req, 'fantasy_bonus_assigned', {
       matchId: req.params.matchId,
       matchweek: mw,
       assignmentCount: bonusAssignments.length,
+      persistOnly: Boolean(persistOnly),
     });
-    return res.json({ success: true, message: 'Bonus points assigned' });
+    return res.json({
+      success: true,
+      message: persistOnly ? 'Bonus points saved.' : 'Bonus points assigned',
+    });
   } catch (err) {
     return res.status(500).json({ success: false, message: err.message });
   }
