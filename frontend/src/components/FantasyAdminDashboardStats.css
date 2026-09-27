@@ -305,9 +305,18 @@
   min-width: 0;
 }
 
-.admin-fantasy-action-group--rescore {
+.admin-fantasy-action-group--rescore,
+.admin-fantasy-action-group--repair {
   padding-top: 12px;
   border-top: 1px solid #e2e8f0;
+}
+
+.admin-fantasy-action-hint {
+  margin: 8px 0 0;
+  font-size: 0.8rem;
+  line-height: 1.4;
+  color: #64748b;
+  max-width: 36rem;
 }
 
 .admin-fantasy-action-label {

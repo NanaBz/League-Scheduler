@@ -253,6 +253,13 @@ export default function FantasyManagement() {
     }
   };
 
+  const formatApiError = (err, fallback) => {
+    if (err.code === 'ECONNABORTED') {
+      return 'The server took too long to respond (timeout). Try again — or use “Fix debut transfer hits” below, which is faster.';
+    }
+    return err.response?.data?.message || err.message || fallback;
+  };
+
   const handleRescoreGameweek = async () => {
     const mw = Number(rescoreWeek);
     if (!Number.isFinite(mw) || mw < 1) {
@@ -261,15 +268,53 @@ export default function FantasyManagement() {
     }
     setLoading(true);
     try {
-      const { data } = await api.post(`/fantasy/admin/rescore-gameweek/${mw}`);
+      const { data } = await api.post(
+        `/fantasy/admin/rescore-gameweek/${mw}`,
+        { skipEventSync: true },
+        { timeout: 120000 }
+      );
       alert(
         data?.message ||
           `Gameweek ${mw} rescored.${data?.backfilled ? ` ${data.backfilled} team snapshot(s) backfilled.` : ''}`
       );
       await fetchDashboard();
     } catch (err) {
-      const msg = err.response?.data?.message || 'Failed to rescore gameweek';
-      alert(msg);
+      alert(formatApiError(err, 'Failed to rescore gameweek'));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCheckDebutTransferHits = async () => {
+    setLoading(true);
+    try {
+      const { data } = await api.post(
+        '/fantasy/admin/repair-initial-setup-transfers',
+        { dryRun: true },
+        { timeout: 120000 }
+      );
+      const count = data?.anomalyCount ?? 0;
+      const names = (data?.anomalies || [])
+        .map((a) => a.managerLabel || a.fantasyUserId)
+        .join(', ');
+      if (count === 0) {
+        alert('No managers found with a bogus transfer hit on their first Fantasy gameweek.');
+        return;
+      }
+      const detail = names ? `\n\nAffected: ${names}` : '';
+      const apply = window.confirm(
+        `Found ${count} manager(s) who were charged a transfer hit when they first created their squad.${detail}\n\nApply the fix now? This recalculates their gameweek points (safe to run once).`
+      );
+      if (!apply) return;
+      const { data: fixed } = await api.post(
+        '/fantasy/admin/repair-initial-setup-transfers',
+        { dryRun: false },
+        { timeout: 120000 }
+      );
+      alert(fixed?.message || 'Repair complete.');
+      await fetchDashboard();
+    } catch (err) {
+      alert(formatApiError(err, 'Could not check or repair debut transfer hits.'));
     } finally {
       setLoading(false);
     }
@@ -326,6 +371,24 @@ export default function FantasyManagement() {
                 Rescore gameweek
               </button>
             </div>
+            <p className="admin-fantasy-action-hint">
+              Recalculates all manager scores for that gameweek. Skips slow match-event sync (player stats unchanged).
+            </p>
+          </div>
+
+          <div className="admin-fantasy-action-group admin-fantasy-action-group--repair">
+            <span className="admin-fantasy-action-label">First-squad transfer hit fix</span>
+            <button
+              type="button"
+              className="btn btn-primary admin-fantasy-repair-debut-btn"
+              onClick={handleCheckDebutTransferHits}
+              disabled={loading}
+            >
+              Fix debut transfer hits
+            </button>
+            <p className="admin-fantasy-action-hint">
+              Use this if a manager joined after GW1 and was wrongly charged a large transfer hit (e.g. −48) on their first squad.
+            </p>
           </div>
         </div>
 

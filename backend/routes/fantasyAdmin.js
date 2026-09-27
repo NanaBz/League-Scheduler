@@ -583,8 +583,35 @@ router.post('/rescore-gameweek/:matchweek', authenticateAdmin, async (req, res) 
     console.error('[fantasy-admin] rescore-gameweek failed:', err);
     return res.status(500).json({
       success: false,
-      message: 'Could not rescore gameweek. Please try again.',
+      message: err.message || 'Could not rescore gameweek. Please try again.',
       code: 'FANTASY_RESCORE_FAILED',
+    });
+  }
+});
+
+// POST /api/fantasy/admin/repair-initial-setup-transfers — fix bogus debut-GW transfer hits
+router.post('/repair-initial-setup-transfers', authenticateAdmin, async (req, res) => {
+  try {
+    const dryRun = req.body?.dryRun !== false;
+    const result = await repairInitialSetupTransferAnomalies(dryRun);
+    await logAdminAction(req, 'fantasy_initial_setup_transfer_repair', {
+      dryRun,
+      anomalyCount: result.anomalyCount,
+    });
+    return res.json({
+      success: true,
+      dryRun,
+      ...result,
+      message: dryRun
+        ? `Check complete: ${result.anomalyCount} manager(s) may need repair.`
+        : `Repaired ${result.anomalyCount} manager(s) and rescored affected gameweeks.`,
+    });
+  } catch (err) {
+    console.error('[fantasy-admin] repair-initial-setup-transfers failed:', err);
+    return res.status(500).json({
+      success: false,
+      message: err.message || 'Could not repair initial setup transfer hits.',
+      code: 'FANTASY_INITIAL_SETUP_REPAIR_FAILED',
     });
   }
 });
