@@ -19,6 +19,12 @@ function run() {
   ];
   assert.strictEqual(detectPhantomGw1FromSnapshots(real), false);
 
+  const notPhantomAfterRepair = [
+    { matchweek: 1, transfersIn: [], transfersOut: [], points: 88 },
+    { matchweek: 2, transfersIn: [], transfersOut: [], points: 0 },
+  ];
+  assert.strictEqual(detectPhantomGw1FromSnapshots(notPhantomAfterRepair), false);
+
   console.log('fantasySquadEstablishment tests passed');
 }
 

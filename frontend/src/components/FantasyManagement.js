@@ -295,20 +295,27 @@ export default function FantasyManagement() {
       );
       const count = data?.anomalyCount ?? 0;
       const phantomCount = data?.phantomGw1Count ?? 0;
+      const companionCount = data?.companionGw1Count ?? 0;
       const names = (data?.anomalies || [])
         .map((a) => a.managerLabel || a.fantasyUserId)
         .join(', ');
+      const phantomNames = (data?.phantomGw1Rows || [])
+        .map((p) => p.managerLabel || p.fantasyUserId)
+        .join(', ');
       if (count === 0 && phantomCount === 0) {
-        alert('No debut transfer hits or phantom GW1 squads found.');
+        alert('No debut transfer hits or related GW1 cleanup found.');
         return;
       }
-      const detail = names ? `\n\nAffected: ${names}` : '';
+      const detail = names ? `\n\nDebut transfer fix: ${names}` : '';
       const phantomNote =
         phantomCount > 0
-          ? `\n\nAlso ${phantomCount} manager(s) have a mistaken GW1 squad (from backfill) inflating overall points — those GW1 rows will be removed.`
+          ? `\n\nGW1 cleanup (${phantomCount} row(s), only late joiners / debut-fix managers): ${phantomNames}`
           : '';
       const apply = window.confirm(
-        `Found ${count} debut transfer hit issue(s) and ${phantomCount} phantom GW1 squad(s).${detail}${phantomNote}\n\nApply the fix now? This recalculates affected gameweeks (safe to run once).`
+        `Apply fix for ${count} debut transfer hit(s)?${detail}${phantomNote}\n\n` +
+          `This will NOT touch normal GW1 managers. ` +
+          `${companionCount ? `Up to ${companionCount} mistaken GW1 row(s) tied to those debut fixes may be removed (e.g. inflated overall like 88 with GW2 = 0).` : ''}\n\n` +
+          'Continue? (Safe to run once.)'
       );
       if (!apply) return;
       const { data: fixed } = await api.post(

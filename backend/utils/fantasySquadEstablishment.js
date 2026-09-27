@@ -27,10 +27,9 @@ function detectPhantomGw1FromSnapshots(squads) {
 
   if (g1ins !== 0 || g1outs !== 0) return false;
 
+  // GW2+ joiner signature: entire first squad mistaken as transfers (GW1 never records transfers).
   if (g2ins >= FULL_SQUAD_SIZE && g2outs === 0) return true;
   if (g2ins >= FULL_SQUAD_SIZE && g2outs >= FULL_SQUAD_SIZE) return true;
-  // Transfers cleared by repair but GW1 was still wrongly scored
-  if (g2ins === 0 && g2outs === 0 && (gw1.points || 0) > 0) return true;
 
   return false;
 }
@@ -135,7 +134,8 @@ function looksLikeMisclassifiedInitialSetup(snapshot, debutGw) {
   return false;
 }
 
-async function findPhantomGw1SquadRows() {
+/** Strict scan — GW2 initial-squad transfer signature only (small set). */
+async function findStrictPhantomGw1SquadRows() {
   const gw1Rows = await FantasySquad.find({
     matchweek: 1,
     lineup: { $ne: null },
@@ -151,8 +151,42 @@ async function findPhantomGw1SquadRows() {
         fantasyUserId: String(gw1.fantasyUser),
         squadId: String(gw1._id),
         points: gw1.points || 0,
+        reason: 'gw2_initial_squad_transfer_signature',
       });
     }
+  }
+  return phantoms;
+}
+
+/**
+ * GW1 rows to drop for managers receiving debut transfer repair (late GW2+ joiners).
+ * Does not scan the whole league — only users already flagged for debut transfer fix.
+ */
+async function findPhantomGw1RowsForDebutRepairs(debutAnomalyUserIds) {
+  const ids = [...new Set((debutAnomalyUserIds || []).map(String))];
+  if (!ids.length) return [];
+
+  const phantoms = [];
+  for (const fantasyUserId of ids) {
+    const gw1 = await FantasySquad.findOne({
+      fantasyUser: fantasyUserId,
+      matchweek: 1,
+      lineup: { $ne: null },
+    })
+      .select('_id points transfersIn transfersOut')
+      .lean();
+    if (!gw1) continue;
+
+    const g1ins = gw1.transfersIn?.length || 0;
+    const g1outs = gw1.transfersOut?.length || 0;
+    if (g1ins !== 0 || g1outs !== 0) continue;
+
+    phantoms.push({
+      fantasyUserId,
+      squadId: String(gw1._id),
+      points: gw1.points || 0,
+      reason: 'debut_repair_companion_gw1',
+    });
   }
   return phantoms;
 }
@@ -168,5 +202,6 @@ module.exports = {
   resolveTransfersMadeForPenalty,
   isManagerBuildingFirstSquad,
   looksLikeMisclassifiedInitialSetup,
-  findPhantomGw1SquadRows,
+  findStrictPhantomGw1SquadRows,
+  findPhantomGw1RowsForDebutRepairs,
 };
