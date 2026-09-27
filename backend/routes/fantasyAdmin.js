@@ -43,6 +43,7 @@ const {
   recalculateGameweeks,
   repairDuplicateSquads,
 } = require('../utils/fantasyIntegrityAudit');
+const { repairInitialSetupTransferAnomalies } = require('../utils/fantasyInitialSetupTransferRepair');
 
 async function afterMatchPerformanceUpdate(match) {
   await syncFantasyPerformanceFromMatchEvents(match._id);
@@ -609,10 +610,16 @@ router.post('/integrity-repair', authenticateAdmin, async (req, res) => {
     const matchweeks = Array.isArray(req.body?.matchweeks) ? req.body.matchweeks.map(Number) : [];
     const dryRun = req.body?.dryRun !== false;
     const repairDuplicates = req.body?.repairDuplicates === true;
+    const repairInitialSetupTransfers = req.body?.repairInitialSetupTransfers === true;
 
     const repair = repairDuplicates
       ? await repairDuplicateSquads(dryRun)
       : await repairDuplicateSquads(true);
+
+    let initialSetupRepair = null;
+    if (repairInitialSetupTransfers) {
+      initialSetupRepair = await repairInitialSetupTransferAnomalies(dryRun);
+    }
 
     let recalc = null;
     if (!dryRun && matchweeks.length) {
@@ -622,6 +629,7 @@ router.post('/integrity-repair', authenticateAdmin, async (req, res) => {
     await logAdminAction(req, 'fantasy_integrity_repair', {
       dryRun,
       repairDuplicates,
+      repairInitialSetupTransfers,
       matchweeks,
     });
 
@@ -629,6 +637,7 @@ router.post('/integrity-repair', authenticateAdmin, async (req, res) => {
       success: true,
       dryRun,
       repair,
+      initialSetupRepair,
       recalc,
       message: dryRun
         ? 'Dry run complete. Set dryRun:false to apply repairs and rescore.'

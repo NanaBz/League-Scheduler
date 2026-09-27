@@ -48,6 +48,7 @@ const {
   getTransferCostForGameweek,
 } = require('../utils/fantasyFreeTransfers');
 const { recordGameweekTransfers, mergeTransferInOrder } = require('../utils/fantasyTransferTracking');
+const { shouldRecordSquadTransfers } = require('../utils/fantasySquadEstablishment');
 const { latestCompletedMatchweek, isMatchweekComplete } = require('../utils/fantasyMatchweek');
 const { upsertGameweekSnapshot } = require('../utils/fantasyGameweekSnapshot');
 const {
@@ -682,7 +683,19 @@ router.put('/my-squad', authenticateFantasyUser, async (req, res) => {
     ).lean();
 
     if (squadChanged && currentGameweek > 1) {
-      await recordGameweekTransfers(req.fantasyUser._id, currentGameweek, transfersIn, transfersOut);
+      const recordTransfers = await shouldRecordSquadTransfers(
+        req.fantasyUser._id,
+        currentGameweek,
+        existingCount
+      );
+      if (recordTransfers) {
+        await recordGameweekTransfers(
+          req.fantasyUser._id,
+          currentGameweek,
+          transfersIn,
+          transfersOut
+        );
+      }
     }
 
     const financialSummary = buildFinancialSummary(

@@ -1,4 +1,9 @@
 const FantasySquad = require('../models/FantasySquad');
+const {
+  getFirstLineupGameweek,
+  resolveTransfersMadeForPenalty,
+  isManagerBuildingFirstSquad,
+} = require('./fantasySquadEstablishment');
 
 const MAX_FREE_TRANSFERS = 2;
 const BASE_FREE_TRANSFER = 1;
@@ -81,11 +86,18 @@ async function getTransferStateForUser(fantasyUserId, currentGameweek, chipState
     .select('transfersIn transfersOut chipUsed')
     .lean();
 
-  const transfersMade = unlimitedTransfers ? 0 : countTransfersFromSnapshot(currentSnap);
+  const firstLineupGw = await getFirstLineupGameweek(fantasyUserId);
+  const transfersMade = unlimitedTransfers
+    ? 0
+    : resolveTransfersMadeForPenalty(
+        currentSnap ? { ...currentSnap, matchweek: gw } : null,
+        firstLineupGw
+      );
   const extraTransfers = unlimitedTransfers
     ? 0
     : Math.max(0, transfersMade - freeTransfers);
   const transferCost = computeTransferHitPoints(transfersMade, freeTransfers, unlimitedTransfers);
+  const isInitialSquadSetup = await isManagerBuildingFirstSquad(fantasyUserId, gw);
 
   return {
     freeTransfers: unlimitedTransfers ? null : freeTransfers,
@@ -93,6 +105,7 @@ async function getTransferStateForUser(fantasyUserId, currentGameweek, chipState
     transfersMade,
     extraTransfers,
     transferCost,
+    isInitialSquadSetup,
   };
 }
 
@@ -110,9 +123,10 @@ async function getTransferCostForGameweek(fantasyUserId, matchweek) {
   if (!snap) return 0;
   if (isUnlimitedTransferChip(snap.chipUsed)) return 0;
 
+  const firstLineupGw = await getFirstLineupGameweek(fantasyUserId);
   const priorSnapshots = await loadPriorTransferSnapshots(fantasyUserId, mw);
   const freeAllowance = computeFreeTransferBankAtGameweek(priorSnapshots, mw);
-  const transfersMade = countTransfersFromSnapshot(snap);
+  const transfersMade = resolveTransfersMadeForPenalty(snap, firstLineupGw);
   return computeTransferHitPoints(transfersMade, freeAllowance, false);
 }
 

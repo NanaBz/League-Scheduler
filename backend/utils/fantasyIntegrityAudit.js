@@ -2,6 +2,7 @@ const FantasyMatchPerformance = require('../models/FantasyMatchPerformance');
 const FantasySquad = require('../models/FantasySquad');
 const FantasyUser = require('../models/FantasyUser');
 const { runGameweekRescore } = require('./fantasyRescoreGameweek');
+const { findInitialSetupTransferAnomalies } = require('./fantasyInitialSetupTransferRepair');
 
 async function findDuplicatePerformances() {
   return FantasyMatchPerformance.aggregate([
@@ -73,11 +74,13 @@ async function repairDuplicateSquads(dryRun = true) {
 }
 
 async function buildIntegrityAuditReport() {
-  const [duplicatePerformances, duplicateSquads, userCount] = await Promise.all([
-    findDuplicatePerformances(),
-    findDuplicateSquads(),
-    FantasyUser.countDocuments({}),
-  ]);
+  const [duplicatePerformances, duplicateSquads, userCount, initialSetupTransferAnomalies] =
+    await Promise.all([
+      findDuplicatePerformances(),
+      findDuplicateSquads(),
+      FantasyUser.countDocuments({}),
+      findInitialSetupTransferAnomalies(),
+    ]);
 
   return {
     generatedAt: new Date().toISOString(),
@@ -86,6 +89,8 @@ async function buildIntegrityAuditReport() {
     duplicatePerformanceRows: duplicatePerformances,
     duplicateSquadGroups: duplicateSquads.length,
     duplicateSquadRows: duplicateSquads,
+    initialSetupTransferAnomalies,
+    initialSetupTransferAnomalyCount: initialSetupTransferAnomalies.length,
   };
 }
 

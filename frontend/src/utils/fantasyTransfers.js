@@ -69,6 +69,15 @@ export function previewTransferSummary(transferState, pendingTransfers = 0) {
     };
   }
 
+  if (transferState.isInitialSquadSetup) {
+    return {
+      freeTransfersLabel: '—',
+      transfersThisGameweek: 0,
+      extraTransfers: 0,
+      transferCost: 0,
+    };
+  }
+
   const freeTransfers = transferState.freeTransfers ?? 1;
   const transfersThisGameweek = (transferState.transfersMade ?? 0) + pendingTransfers;
   const extraTransfers = Math.max(0, transfersThisGameweek - freeTransfers);
