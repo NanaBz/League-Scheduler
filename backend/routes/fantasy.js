@@ -919,10 +919,15 @@ router.get('/managers/:fantasyUserId/team-view', authenticateFantasyUser, async 
       autoSubOutIds,
     });
 
-    const transferHitPoints =
-      gwDoc.transferHitPoints ?? (await getTransferCostForGameweek(targetId, viewGameweek));
+    const transferHitPoints = await getTransferCostForGameweek(targetId, viewGameweek);
     const rawPoints = scored.total;
     const netPoints = Math.max(0, rawPoints - transferHitPoints);
+    const lineupPointsSum = [...(scored.display.gk || []),
+      ...(scored.display.def || []),
+      ...(scored.display.mid || []),
+      ...(scored.display.fwd || []),
+      ...(scored.display.bench || []),
+    ].reduce((sum, p) => sum + (p?.points || 0), 0);
 
     const benchPoints = (scored.display.bench || []).reduce((s, p) => s + (p.points || 0), 0);
     const starterPoints = rawPoints - benchPoints;
@@ -936,6 +941,7 @@ router.get('/managers/:fantasyUserId/team-view', authenticateFantasyUser, async 
       points: netPoints,
       rawPoints,
       transferHitPoints,
+      lineupPointsSum,
       starterPoints,
       benchPoints,
       chipUsed: gwDoc.chipUsed || null,

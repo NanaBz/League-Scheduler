@@ -105,6 +105,15 @@ db.once('open', async () => {
   } catch (e) {
     console.warn('[season] Could not sync season flags:', e.message);
   }
+  try {
+    const FantasySquad = require('./models/FantasySquad');
+    const FantasyMatchPerformance = require('./models/FantasyMatchPerformance');
+    await FantasySquad.syncIndexes();
+    await FantasyMatchPerformance.syncIndexes();
+    console.log('[fantasy] Synced Fantasy indexes');
+  } catch (e) {
+    console.warn('[fantasy] Could not sync Fantasy indexes:', e.message);
+  }
 });
 
 // Debug log for JWT_SECRET

@@ -1471,11 +1471,19 @@ router.post('/:id/events', authenticateAdmin, async (req, res) => {
     }
     await match.save();
 
+    let fantasySync = { ok: true, skipped: true };
     if (match.competition === 'league' && (match.isPlayed || match.matchState === 'ft')) {
       try {
         await finalizeFantasyMatchScoring(match._id);
+        fantasySync = { ok: true, skipped: false };
       } catch (fantasyErr) {
         console.error('Fantasy sync after match events:', fantasyErr);
+        fantasySync = {
+          ok: false,
+          skipped: false,
+          code: 'FANTASY_SYNC_FAILED',
+          message: 'Match events saved, but Fantasy scoring sync failed. Re-save or rescore the gameweek.',
+        };
       }
     }
 
@@ -1483,10 +1491,29 @@ router.post('/:id/events', authenticateAdmin, async (req, res) => {
       matchId: match._id,
       competition: match.competition,
       eventsCount: events.length,
+      fantasySyncOk: fantasySync.ok,
     });
-    res.json({ message: 'Match events updated', matchId: match._id, eventsCount: events.length });
+
+    if (!fantasySync.ok) {
+      return res.status(502).json({
+        message: fantasySync.message,
+        code: fantasySync.code,
+        matchId: match._id,
+        eventsCount: events.length,
+        eventsSaved: true,
+        fantasySync,
+      });
+    }
+
+    res.json({
+      message: 'Match events updated',
+      matchId: match._id,
+      eventsCount: events.length,
+      fantasySync,
+    });
   } catch (error) {
-    res.status(400).json({ message: error.message });
+    console.error('[matches] save events failed:', error);
+    res.status(400).json({ message: error.message || 'Could not save match events.' });
   }
 });
 

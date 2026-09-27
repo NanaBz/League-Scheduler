@@ -128,6 +128,7 @@ export default function FantasyMatchweekEditor({ matchweeks, onBackToDashboard }
 
   const baselineRef = useRef('');
   const historyTrapRef = useRef(false);
+  const saveInFlightRef = useRef(false);
 
   const performanceByPlayer = useMemo(
     () => performanceMapFromMatchPlayers(matchPlayers),
@@ -391,7 +392,7 @@ export default function FantasyMatchweekEditor({ matchweeks, onBackToDashboard }
   };
 
   const handleSaveMatch = async () => {
-    if (!selectedMatch || !selectedMatchweek) return;
+    if (!selectedMatch || !selectedMatchweek || saveInFlightRef.current) return;
     const bonusValidation = validateMatchBonusAssignments(bonusAssignments);
     if (!bonusValidation.ok) {
       setError(bonusValidation.message);
@@ -400,6 +401,7 @@ export default function FantasyMatchweekEditor({ matchweeks, onBackToDashboard }
       return;
     }
     setLoading(true);
+    saveInFlightRef.current = true;
     setError('');
     setSuccessMessage('');
     try {
@@ -410,13 +412,17 @@ export default function FantasyMatchweekEditor({ matchweeks, onBackToDashboard }
       });
 
       const assignments = bonusAssignmentsFromState(bonusAssignments);
-      await api.post(`/fantasy/admin/matches/${selectedMatch._id}/bonus`, { bonusAssignments: assignments });
+      await api.post(`/fantasy/admin/matches/${selectedMatch._id}/bonus`, {
+        bonusAssignments: assignments,
+        persistOnly: true,
+      });
 
       if (specialPoints.playerId && specialPoints.points) {
         await api.post(`/fantasy/admin/matches/${selectedMatch._id}/special`, {
           playerId: specialPoints.playerId,
           specialPoints: specialPoints.points,
           reason: specialPoints.reason,
+          persistOnly: true,
         });
       }
 
@@ -434,8 +440,18 @@ export default function FantasyMatchweekEditor({ matchweeks, onBackToDashboard }
       setMatchPlayers(null);
       setStep(2);
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to save match data. Your entries are still here — please retry.');
+      if (process.env.NODE_ENV !== 'production') {
+        console.error('[FantasyMatchweekEditor] save failed:', err.response?.data || err.message);
+      }
+      const apiMessage = err.response?.data?.message;
+      const apiCode = err.response?.data?.code;
+      setError(
+        apiMessage
+          ? `${apiMessage}${apiCode ? ` (${apiCode})` : ''}`
+          : 'Could not save match performance. Please try again.'
+      );
     } finally {
+      saveInFlightRef.current = false;
       setLoading(false);
     }
   };

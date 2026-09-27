@@ -131,6 +131,17 @@ export default function OverallTeamPitchModal({ team, onClose, latestCompletedGa
     0
   );
 
+  const teamPointsLabel = useMemo(() => {
+    if (viewData?.points == null) return '';
+    const net = viewData.points;
+    const raw = viewData.rawPoints;
+    const hit = viewData.transferHitPoints || 0;
+    if (hit > 0 && raw != null && net !== raw) {
+      return ` · ${net} pts total (${raw} on pitch − ${hit} transfer hit)`;
+    }
+    return ` · ${net} pts total`;
+  }, [viewData]);
+
   if (!team) return null;
 
   const chipMeta = chipUsed ? CHIP_META[chipUsed] : null;
@@ -147,7 +158,7 @@ export default function OverallTeamPitchModal({ team, onClose, latestCompletedGa
           </div>
           <p className="pv-sub">
             {team.user} · GW {gw} · {formation.label}
-            {viewData?.points != null ? ` · ${viewData.points} pts total` : ''}
+            {teamPointsLabel}
           </p>
         </div>
 

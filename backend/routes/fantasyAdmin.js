@@ -37,6 +37,12 @@ const { findUserByEmail } = require('../utils/fantasyUserLookup');
 const { liveFantasyPlayerFilter } = require('../utils/fantasyLivePlayers');
 const { validateMatchBonusAssignments } = require('../utils/fantasyBonusValidation');
 const { appearanceToMinutes } = require('../utils/fantasyAppearance');
+const { runGameweekRescore } = require('../utils/fantasyRescoreGameweek');
+const {
+  buildIntegrityAuditReport,
+  recalculateGameweeks,
+  repairDuplicateSquads,
+} = require('../utils/fantasyIntegrityAudit');
 
 async function afterMatchPerformanceUpdate(match) {
   await syncFantasyPerformanceFromMatchEvents(match._id);
@@ -515,7 +521,9 @@ router.post('/matches/:matchId/special', authenticateAdmin, async (req, res) => 
     );
 
     const updatedMatch = await Match.findById(req.params.matchId);
-    await afterMatchPerformanceUpdate(updatedMatch);
+    if (!req.body.persistOnly) {
+      await afterMatchPerformanceUpdate(updatedMatch);
+    }
     await logAdminAction(req, 'fantasy_special_assigned', {
       matchId: req.params.matchId,
       matchweek: mw,
@@ -532,63 +540,87 @@ router.post('/matches/:matchId/special', authenticateAdmin, async (req, res) => 
 router.post('/rescore-gameweek/:matchweek', authenticateAdmin, async (req, res) => {
   try {
     const mw = Number(req.params.matchweek);
-    if (!Number.isFinite(mw) || mw < 1) {
-      return res.status(400).json({ success: false, message: 'Invalid matchweek.' });
+    const result = await runGameweekRescore(mw, { forceAutosubRecalc: true });
+    if (!result.ok) {
+      return res.status(400).json({ success: false, message: result.message });
     }
-
-    // Clean up orphaned FantasySquad records with null or undefined matchweek before rescoring
-    // This prevents E11000 duplicate key errors during upsert
-    await FantasySquad.deleteMany({ 
-      $or: [
-        { matchweek: null },
-        { matchweek: undefined },
-        { matchweek: { $exists: false } }
-      ]
-    });
-
-    // Drop both old (gameweek) and new (matchweek) indexes to clear stale state
-    // Database may have old index from when field was called "gameweek"
-    try {
-      await FantasySquad.collection.dropIndex('fantasyUser_1_gameweek_1');
-    } catch (err) {
-      // Index might not exist with old name, that's okay
-    }
-    
-    try {
-      await FantasySquad.collection.dropIndex('fantasyUser_1_matchweek_1');
-    } catch (err) {
-      // Index might not exist with new name, that's okay
-    }
-    
-    // Recreate the unique index with correct field name
-    await FantasySquad.collection.createIndex({ fantasyUser: 1, matchweek: 1 }, { unique: true });
-
-    const matches = await Match.find({
-      competition: FANTASY_MATCH_COMPETITION,
-      isPublished: true,
-    })
-      .select('matchweek isPlayed matchState isVoided competition isPublished')
-      .lean();
-
-    const backfilled = await backfillMissingSnapshotsForGameweek(mw);
-    const eventSynced = await syncFantasyPerformanceForGameweek(mw);
-    await rescoreGameweek(mw, matches, { forceAutosubRecalc: true });
 
     await logAdminAction(req, 'fantasy_gameweek_rescored', {
       matchweek: mw,
-      backfilled,
-      eventSynced,
+      backfilled: result.backfilled,
+      eventSynced: result.eventSynced,
     });
     return res.json({
       success: true,
       message: `Gameweek ${mw} rescored.`,
       matchweek: mw,
-      backfilled,
-      eventSynced,
-      complete: isMatchweekComplete(matches, mw),
+      backfilled: result.backfilled,
+      eventSynced: result.eventSynced,
+      complete: result.complete,
     });
   } catch (err) {
-    return res.status(500).json({ success: false, message: err.message });
+    console.error('[fantasy-admin] rescore-gameweek failed:', err);
+    return res.status(500).json({
+      success: false,
+      message: 'Could not rescore gameweek. Please try again.',
+      code: 'FANTASY_RESCORE_FAILED',
+    });
+  }
+});
+
+// GET /api/fantasy/admin/integrity-audit — duplicate performance/squad detection (read-only)
+router.get('/integrity-audit', authenticateAdmin, async (req, res) => {
+  try {
+    const report = await buildIntegrityAuditReport();
+    return res.json({ success: true, data: report });
+  } catch (err) {
+    console.error('[fantasy-admin] integrity-audit failed:', err);
+    return res.status(500).json({
+      success: false,
+      message: 'Could not run integrity audit.',
+      code: 'FANTASY_INTEGRITY_AUDIT_FAILED',
+    });
+  }
+});
+
+// POST /api/fantasy/admin/integrity-repair — merge duplicate squads + deterministic rescore
+router.post('/integrity-repair', authenticateAdmin, async (req, res) => {
+  try {
+    const matchweeks = Array.isArray(req.body?.matchweeks) ? req.body.matchweeks.map(Number) : [];
+    const dryRun = req.body?.dryRun !== false;
+    const repairDuplicates = req.body?.repairDuplicates === true;
+
+    const repair = repairDuplicates
+      ? await repairDuplicateSquads(dryRun)
+      : await repairDuplicateSquads(true);
+
+    let recalc = null;
+    if (!dryRun && matchweeks.length) {
+      recalc = await recalculateGameweeks(matchweeks);
+    }
+
+    await logAdminAction(req, 'fantasy_integrity_repair', {
+      dryRun,
+      repairDuplicates,
+      matchweeks,
+    });
+
+    return res.json({
+      success: true,
+      dryRun,
+      repair,
+      recalc,
+      message: dryRun
+        ? 'Dry run complete. Set dryRun:false to apply repairs and rescore.'
+        : 'Integrity repair applied.',
+    });
+  } catch (err) {
+    console.error('[fantasy-admin] integrity-repair failed:', err);
+    return res.status(500).json({
+      success: false,
+      message: 'Could not run integrity repair.',
+      code: 'FANTASY_INTEGRITY_REPAIR_FAILED',
+    });
   }
 });
 

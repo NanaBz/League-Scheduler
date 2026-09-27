@@ -578,8 +578,17 @@ const AdminPanel = ({ onDataChange, isAdmin }) => {
       
     } catch (error) {
       console.error('❌ Error saving match:', error.response?.data || error.message);
-      const msg = error.response?.data?.message || error.message;
-      alert('Error saving match: ' + msg);
+      const data = error.response?.data;
+      const msg = data?.message || error.message;
+      const code = data?.code ? ` (${data.code})` : '';
+      if (data?.eventsSaved && data?.fantasySync?.ok === false) {
+        alert(
+          `${msg}${code}\n\nMatch events were saved, but Fantasy scoring did not sync. `
+          + 'Use Fantasy Management → rescore gameweek after fixing the issue.'
+        );
+      } else {
+        alert(`Error saving match: ${msg}${code}`);
+      }
     } finally {
       setSavingMatches(prev => {
         const newSaving = new Set(prev);
