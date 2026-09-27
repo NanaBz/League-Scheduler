@@ -9,9 +9,7 @@ const {
   computeTopManager,
   isUserManagerOfTheWeek,
 } = require('./fantasyManagerAwards');
-const { rescoreGameweek } = require('./fantasyScoring');
 const { backfillMissingSnapshotsForGameweek } = require('./fantasyGameweekSnapshot');
-const { syncFantasyPerformanceForGameweek } = require('./fantasyMatchEventsSync');
 
 async function loadFantasyLeagueMatches() {
   return Match.find({
@@ -46,9 +44,7 @@ async function buildDashboardSummary(fantasyUserId) {
     };
   }
 
-  await backfillMissingSnapshotsForGameweek(displayGameweek);
-  await syncFantasyPerformanceForGameweek(displayGameweek);
-  await rescoreGameweek(displayGameweek, matches);
+  await backfillMissingSnapshotsForGameweek(displayGameweek, { currentGameweek });
 
   const squads = await FantasySquad.find({ matchweek: displayGameweek })
     .select('fantasyUser points lineup')

@@ -130,8 +130,28 @@
 }
 
 .ol-delta {
-  color: rgba(255, 255, 255, 0.55);
-  font-size: 0.85rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  flex-shrink: 0;
+}
+
+.ol-delta--up {
+  background: #10b981;
+  color: #fff;
+}
+
+.ol-delta--down {
+  background: #ef4444;
+  color: #fff;
+}
+
+.ol-delta--same {
+  background: rgba(255, 255, 255, 0.14);
+  color: rgba(255, 255, 255, 0.85);
 }
 
 .ol-user-sub {

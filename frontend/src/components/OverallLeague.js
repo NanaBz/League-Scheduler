@@ -1,4 +1,5 @@
 import React from 'react';
+import { ChevronDown, ChevronUp, Minus } from 'lucide-react';
 import './OverallLeague.css';
 
 export default function OverallLeague({
@@ -84,8 +85,23 @@ export default function OverallLeague({
                         <span className="ol-season-badge ol-season-badge--runner-up">Runner-Up</span>
                       ) : null}
                       {row.pos != null && !seasonComplete ? (
-                        <span className="ol-delta" aria-hidden>
-                          {row.delta === 'up' ? '▲' : row.delta === 'down' ? '▼' : '–'}
+                        <span
+                          className={`ol-delta ol-delta--${row.delta === 'up' ? 'up' : row.delta === 'down' ? 'down' : 'same'}`}
+                          aria-label={
+                            row.delta === 'up'
+                              ? 'Rank up'
+                              : row.delta === 'down'
+                                ? 'Rank down'
+                                : 'Rank unchanged'
+                          }
+                        >
+                          {row.delta === 'up' ? (
+                            <ChevronUp size={14} strokeWidth={3} aria-hidden />
+                          ) : row.delta === 'down' ? (
+                            <ChevronDown size={14} strokeWidth={3} aria-hidden />
+                          ) : (
+                            <Minus size={12} strokeWidth={3} aria-hidden />
+                          )}
                         </span>
                       ) : null}
                     </div>

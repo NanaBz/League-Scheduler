@@ -16,6 +16,92 @@ function formatSeasonResult(entry) {
   };
 }
 
+async function gwPointsByUser(userIds, matchweek) {
+  const mw = Number(matchweek);
+  if (!mw || !userIds?.length) return new Map();
+  const squads = await FantasySquad.find({
+    fantasyUser: { $in: userIds },
+    matchweek: mw,
+  })
+    .select('fantasyUser points')
+    .lean();
+  const map = new Map(userIds.map((id) => [String(id), 0]));
+  for (const row of squads) {
+    map.set(String(row.fantasyUser), row.points || 0);
+  }
+  return map;
+}
+
+async function cumulativePointsByUser(userIds, throughGameweek) {
+  const through = Number(throughGameweek);
+  const map = new Map(userIds.map((id) => [String(id), 0]));
+  if (!through || through < 1 || !userIds?.length) return map;
+
+  const rows = await FantasySquad.aggregate([
+    {
+      $match: {
+        fantasyUser: { $in: userIds },
+        matchweek: { $gte: 1, $lte: through },
+      },
+    },
+    { $group: { _id: '$fantasyUser', total: { $sum: '$points' } } },
+  ]);
+  for (const row of rows) {
+    map.set(String(row._id), row.total || 0);
+  }
+  return map;
+}
+
+function rankUsersByTotals(users, cumulativeMap, gwTiebreakMap) {
+  const sorted = users
+    .map((u) => {
+      const id = String(u._id);
+      return {
+        id,
+        total: cumulativeMap.get(id) || 0,
+        gw: gwTiebreakMap.get(id) || 0,
+        team: u.teamName || '',
+      };
+    })
+    .sort((a, b) => b.total - a.total || b.gw - a.gw || a.team.localeCompare(b.team));
+
+  const ranks = new Map();
+  sorted.forEach((row, index) => ranks.set(row.id, index + 1));
+  return ranks;
+}
+
+/** Rank movement after the latest completed gameweek vs the prior week. */
+async function computeRankDeltaByUser(users, latestCompletedGameweek) {
+  const deltaMap = new Map(users.map((u) => [String(u._id), 'same']));
+  const L = Number(latestCompletedGameweek);
+  if (!L || L < 2 || !users.length) return deltaMap;
+
+  const userIds = users.map((u) => u._id);
+  const [cumL, cumPrev, gwL, gwPrev] = await Promise.all([
+    cumulativePointsByUser(userIds, L),
+    cumulativePointsByUser(userIds, L - 1),
+    gwPointsByUser(userIds, L),
+    gwPointsByUser(userIds, L - 1),
+  ]);
+
+  const rankL = rankUsersByTotals(users, cumL, gwL);
+  const rankPrev = rankUsersByTotals(users, cumPrev, gwPrev);
+
+  for (const u of users) {
+    const id = String(u._id);
+    const now = rankL.get(id);
+    const prev = rankPrev.get(id);
+    if (now == null || prev == null || now === prev) {
+      deltaMap.set(id, 'same');
+    } else if (now < prev) {
+      deltaMap.set(id, 'up');
+    } else {
+      deltaMap.set(id, 'down');
+    }
+  }
+  return deltaMap;
+}
+
 function deriveSeasonResults(entries, seasonComplete) {
   if (!seasonComplete || !entries.length) {
     return { champion: null, runnerUp: null };
@@ -39,8 +125,8 @@ async function buildOverallLeagueEntries() {
 
   const currentGameweek = deriveCurrentGameweekFromMatches(matches);
   const latestCompletedGameweek = latestCompletedMatchweek(matches);
-  const gwForColumn = latestCompletedGameweek || currentGameweek;
   const preseason = !leagueHasFinishedMatches(matches);
+  const gwForColumn = latestCompletedGameweek || (preseason ? 0 : currentGameweek);
   const seasonComplete =
     !preseason && latestCompletedGameweek >= FANTASY_MAX_MATCHWEEK;
 
@@ -65,14 +151,19 @@ async function buildOverallLeagueEntries() {
 
   const userIds = users.map((u) => u._id);
 
-  const [totalAgg, gwSquads] = await Promise.all([
+  const [totalAgg, gwSquads, rankDeltaByUser] = await Promise.all([
     FantasySquad.aggregate([
       { $match: { fantasyUser: { $in: userIds } } },
       { $group: { _id: '$fantasyUser', total: { $sum: '$points' } } },
     ]),
-    FantasySquad.find({ fantasyUser: { $in: userIds }, matchweek: gwForColumn })
-      .select('fantasyUser points')
-      .lean(),
+    gwForColumn
+      ? FantasySquad.find({ fantasyUser: { $in: userIds }, matchweek: gwForColumn })
+          .select('fantasyUser points')
+          .lean()
+      : Promise.resolve([]),
+    !preseason && latestCompletedGameweek
+      ? computeRankDeltaByUser(users, latestCompletedGameweek)
+      : Promise.resolve(new Map()),
   ]);
 
   const totalByUser = new Map(totalAgg.map((r) => [String(r._id), r.total || 0]));
@@ -89,7 +180,7 @@ async function buildOverallLeagueEntries() {
       gw,
       total,
       pos: null,
-      delta: 'same',
+      delta: rankDeltaByUser.get(id) || 'same',
     };
   });
 
@@ -115,4 +206,8 @@ async function buildOverallLeagueEntries() {
   };
 }
 
-module.exports = { buildOverallLeagueEntries };
+module.exports = {
+  buildOverallLeagueEntries,
+  computeRankDeltaByUser,
+  cumulativePointsByUser,
+};

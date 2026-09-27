@@ -252,13 +252,12 @@ export default function FantasyDashboardCard({ user, onPickTeam, onTransfers, on
       <div className="divider" />
 
       <div className="gw-header">
-        {loading ? 'Loading gameweek…' : (
-          upcomingInfo.week ? `Gameweek ${upcomingInfo.week}` : 'Gameweek —'
-        )}
+        {summaryLoading ? 'Loading scores…' : displayGameweek
+          ? `Gameweek ${displayGameweek}`
+          : 'Gameweek —'}
       </div>
-
-      {displayGameweek && displayGameweek !== upcomingInfo.week ? (
-        <div className="gw-stats-note">Gameweek {displayGameweek} scores</div>
+      {!summaryLoading && displayGameweek && upcomingInfo.week && displayGameweek !== upcomingInfo.week ? (
+        <div className="gw-stats-note">Latest completed gameweek</div>
       ) : null}
 
       <div className="metrics">
