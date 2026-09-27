@@ -68,3 +68,23 @@ describe('squadsEqual', () => {
     expect(isStagedSquadDirty(savedWithSlots, moved)).toBe(true);
   });
 });
+
+describe('previewTransferSummary', () => {
+  it('shows no transfer hit while building first squad', () => {
+    const summary = previewTransferSummary(
+      { isInitialSquadSetup: true, freeTransfers: 1, transfersMade: 0 },
+      5
+    );
+    expect(summary.transferCost).toBe(0);
+    expect(summary.extraTransfers).toBe(0);
+  });
+
+  it('applies normal hit preview for established managers', () => {
+    const summary = previewTransferSummary(
+      { isInitialSquadSetup: false, freeTransfers: 1, transfersMade: 1 },
+      1
+    );
+    expect(summary.transferCost).toBe(4);
+    expect(summary.extraTransfers).toBe(1);
+  });
+});
