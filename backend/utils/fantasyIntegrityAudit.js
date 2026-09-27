@@ -65,7 +65,7 @@ async function repairDuplicateSquads(dryRun = true) {
       removeIds: toRemove.map((d) => String(d._id)),
     });
     if (!dryRun) {
-      await FantasySquad.deleteMany({ _id: { $in: toRemove.map((d) => d._id) } } });
+      await FantasySquad.deleteMany({ _id: { $in: toRemove.map((d) => d._id) } });
     }
   }
 
