@@ -47,6 +47,7 @@ const {
   getTransferStateForUser,
   getTransferCostForGameweek,
 } = require('../utils/fantasyFreeTransfers');
+const { computeGameweekNetPoints } = require('../utils/fantasyGameweekNetPoints');
 const { recordGameweekTransfers, mergeTransferInOrder } = require('../utils/fantasyTransferTracking');
 const { shouldRecordSquadTransfers } = require('../utils/fantasySquadEstablishment');
 const { latestCompletedMatchweek, isMatchweekComplete } = require('../utils/fantasyMatchweek');
@@ -934,7 +935,7 @@ router.get('/managers/:fantasyUserId/team-view', authenticateFantasyUser, async 
 
     const transferHitPoints = await getTransferCostForGameweek(targetId, viewGameweek);
     const rawPoints = scored.total;
-    const netPoints = Math.max(0, rawPoints - transferHitPoints);
+    const netPoints = computeGameweekNetPoints(rawPoints, transferHitPoints);
     const lineupPointsSum = [...(scored.display.gk || []),
       ...(scored.display.def || []),
       ...(scored.display.mid || []),

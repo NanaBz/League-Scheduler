@@ -4,6 +4,7 @@ const Player = require('../models/Player');
 const { isMatchweekComplete } = require('./fantasyMatchweek');
 const { lineupWithResolvedCaptains } = require('./fantasyCaptainRoles');
 const { getTransferCostForGameweek } = require('./fantasyFreeTransfers');
+const { computeGameweekNetPoints } = require('./fantasyGameweekNetPoints');
 const { resolveScoringCaptainId } = require('./fantasyCaptainScoring');
 const {
   applyAutoSubstitutions,
@@ -283,7 +284,7 @@ async function rescoreGameweek(matchweek, matches, options = {}) {
       doc.autoSubstitutions = substitutions.length ? substitutions : null;
     }
     doc.transferHitPoints = transferHitPoints;
-    doc.points = Math.max(0, total - transferHitPoints);
+    doc.points = computeGameweekNetPoints(total, transferHitPoints);
     if (complete) doc.isLocked = true;
     await doc.save();
   }
