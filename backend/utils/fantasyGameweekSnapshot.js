@@ -35,8 +35,9 @@ async function upsertGameweekSnapshot(fantasyUserId, matchweek, { slots, lineupP
 }
 
 /** Copy saved draft lineups into GW snapshots where missing (e.g. before snapshot feature existed). */
-async function backfillMissingSnapshotsForGameweek(matchweek) {
+async function backfillMissingSnapshotsForGameweek(matchweek, options = {}) {
   const mw = Number(matchweek);
+  const currentGameweek = Number(options.currentGameweek) || null;
   
   // Validate matchweek to prevent null/undefined operations
   if (!Number.isFinite(mw) || mw < 1) {
@@ -50,6 +51,15 @@ async function backfillMissingSnapshotsForGameweek(matchweek) {
   for (const draft of drafts) {
     const existing = await FantasySquad.findOne({ fantasyUser: draft.fantasyUser, matchweek: mw }).lean();
     if (existing?.isLocked || existing?.lineup) continue;
+
+    const earliest = await FantasySquad.findOne({ fantasyUser: draft.fantasyUser })
+      .sort({ matchweek: 1 })
+      .select('matchweek')
+      .lean();
+    if (earliest && Number(earliest.matchweek) > mw) continue;
+
+    const hasAnySquad = await FantasySquad.exists({ fantasyUser: draft.fantasyUser });
+    if (!hasAnySquad && currentGameweek && mw < currentGameweek) continue;
 
     let lineupPayload = draft.lineup;
     if (!lineupPayload && countSquadSlots(draft.slots) === 13) {

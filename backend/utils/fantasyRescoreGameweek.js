@@ -2,6 +2,7 @@ const Match = require('../models/Match');
 const FantasySquad = require('../models/FantasySquad');
 const { FANTASY_MATCH_COMPETITION } = require('./fantasyLeagueScope');
 const { isMatchweekComplete } = require('./fantasyMatchweek');
+const { deriveCurrentGameweekFromMatches } = require('./fantasyGameweek');
 const { rescoreGameweek } = require('./fantasyScoring');
 const { backfillMissingSnapshotsForGameweek } = require('./fantasyGameweekSnapshot');
 const { syncFantasyPerformanceForGameweek } = require('./fantasyMatchEventsSync');
@@ -37,7 +38,8 @@ async function runGameweekRescore(matchweek, options = {}) {
     .select('matchweek isPlayed matchState isVoided competition isPublished')
     .lean();
 
-  const backfilled = await backfillMissingSnapshotsForGameweek(mw);
+  const currentGameweek = deriveCurrentGameweekFromMatches(matches);
+  const backfilled = await backfillMissingSnapshotsForGameweek(mw, { currentGameweek });
   let eventSynced = 0;
   if (!skipEventSync) {
     eventSynced = await syncFantasyPerformanceForGameweek(mw);

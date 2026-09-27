@@ -294,16 +294,21 @@ export default function FantasyManagement() {
         { timeout: 120000 }
       );
       const count = data?.anomalyCount ?? 0;
+      const phantomCount = data?.phantomGw1Count ?? 0;
       const names = (data?.anomalies || [])
         .map((a) => a.managerLabel || a.fantasyUserId)
         .join(', ');
-      if (count === 0) {
-        alert('No managers found with a bogus transfer hit on their first Fantasy gameweek.');
+      if (count === 0 && phantomCount === 0) {
+        alert('No debut transfer hits or phantom GW1 squads found.');
         return;
       }
       const detail = names ? `\n\nAffected: ${names}` : '';
+      const phantomNote =
+        phantomCount > 0
+          ? `\n\nAlso ${phantomCount} manager(s) have a mistaken GW1 squad (from backfill) inflating overall points — those GW1 rows will be removed.`
+          : '';
       const apply = window.confirm(
-        `Found ${count} manager(s) who were charged a transfer hit when they first created their squad.${detail}\n\nApply the fix now? This recalculates their gameweek points (safe to run once).`
+        `Found ${count} debut transfer hit issue(s) and ${phantomCount} phantom GW1 squad(s).${detail}${phantomNote}\n\nApply the fix now? This recalculates affected gameweeks (safe to run once).`
       );
       if (!apply) return;
       const { data: fixed } = await api.post(

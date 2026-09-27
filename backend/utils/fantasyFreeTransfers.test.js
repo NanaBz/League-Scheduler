@@ -23,6 +23,15 @@ function run() {
   assert.strictEqual(resolveTransfersMadeForPenalty(misclassified, 2), 0);
   assert.strictEqual(resolveTransfersMadeForPenalty(misclassified, null), 0);
 
+  // Phantom GW1 backfill: debut is GW2 even if first lineup row is GW1
+  const gw2WithHit = {
+    matchweek: 2,
+    transfersIn: new Array(FULL_SQUAD_SIZE).fill('p'),
+    transfersOut: [],
+  };
+  assert.strictEqual(resolveTransfersMadeForPenalty(gw2WithHit, 2), 0);
+  assert.strictEqual(resolveTransfersMadeForPenalty(gw2WithHit, 1), 13);
+
   const realGw2Transfers = {
     matchweek: 2,
     transfersIn: ['a', 'b'],

@@ -2,39 +2,45 @@ const FantasySquad = require('../models/FantasySquad');
 
 const FULL_SQUAD_SIZE = 13;
 
-/**
- * Whether squad changes in this gameweek should be recorded as transfers (GW2+).
- * Initial first-ever squad setup is never recorded as transfers.
- */
-async function shouldRecordSquadTransfers(fantasyUserId, gameweek, existingDraftPlayerCount) {
-  const mw = Number(gameweek);
-  if (mw <= 1) return false;
-  return managerHadEstablishedSquadBeforeSave(fantasyUserId, mw, existingDraftPlayerCount);
+async function loadLineupSnapshotsSorted(fantasyUserId) {
+  return FantasySquad.find({
+    fantasyUser: fantasyUserId,
+    lineup: { $ne: null },
+  })
+    .sort({ matchweek: 1 })
+    .select('matchweek transfersIn transfersOut points')
+    .lean();
 }
 
 /**
- * Established = prior-GW lineup snapshot, current-GW lineup already saved, or draft already held 13 players.
+ * GW1 snapshot backfilled from a GW2+ joiner's draft — not a real GW1 team.
  */
-async function managerHadEstablishedSquadBeforeSave(fantasyUserId, gameweek, existingDraftPlayerCount) {
-  const mw = Number(gameweek);
+function detectPhantomGw1FromSnapshots(squads) {
+  const gw1 = squads.find((s) => Number(s.matchweek) === 1);
+  const gw2 = squads.find((s) => Number(s.matchweek) === 2);
+  if (!gw1 || !gw2) return false;
 
-  const priorGwLineup = await FantasySquad.exists({
-    fantasyUser: fantasyUserId,
-    matchweek: { $lt: mw },
-    lineup: { $ne: null },
-  });
-  if (priorGwLineup) return true;
+  const g1ins = gw1.transfersIn?.length || 0;
+  const g1outs = gw1.transfersOut?.length || 0;
+  const g2ins = gw2.transfersIn?.length || 0;
+  const g2outs = gw2.transfersOut?.length || 0;
 
-  const currentGwLineup = await FantasySquad.exists({
-    fantasyUser: fantasyUserId,
-    matchweek: mw,
-    lineup: { $ne: null },
-  });
-  if (currentGwLineup) return true;
+  if (g1ins !== 0 || g1outs !== 0) return false;
 
-  if (Number(existingDraftPlayerCount) >= FULL_SQUAD_SIZE) return true;
+  if (g2ins >= FULL_SQUAD_SIZE && g2outs === 0) return true;
+  if (g2ins >= FULL_SQUAD_SIZE && g2outs >= FULL_SQUAD_SIZE) return true;
+  // Transfers cleared by repair but GW1 was still wrongly scored
+  if (g2ins === 0 && g2outs === 0 && (gw1.points || 0) > 0) return true;
 
   return false;
+}
+
+/** First gameweek the manager actually entered Fantasy (ignores backfilled GW1). */
+async function getManagerDebutGameweekForTransfers(fantasyUserId) {
+  const squads = await loadLineupSnapshotsSorted(fantasyUserId);
+  if (!squads.length) return null;
+  if (detectPhantomGw1FromSnapshots(squads)) return 2;
+  return Number(squads[0].matchweek);
 }
 
 async function getFirstLineupGameweek(fantasyUserId) {
@@ -49,10 +55,48 @@ async function getFirstLineupGameweek(fantasyUserId) {
   return Number(first.matchweek);
 }
 
+async function hasRealLineupBeforeGameweek(fantasyUserId, gameweek) {
+  const squads = await loadLineupSnapshotsSorted(fantasyUserId);
+  const mw = Number(gameweek);
+  const phantomGw1 = detectPhantomGw1FromSnapshots(squads);
+
+  for (const snap of squads) {
+    const smw = Number(snap.matchweek);
+    if (smw >= mw) break;
+    if (phantomGw1 && smw === 1) continue;
+    return true;
+  }
+  return false;
+}
+
+async function shouldRecordSquadTransfers(fantasyUserId, gameweek, existingDraftPlayerCount) {
+  const mw = Number(gameweek);
+  if (mw <= 1) return false;
+  return managerHadEstablishedSquadBeforeSave(fantasyUserId, mw, existingDraftPlayerCount);
+}
+
+async function managerHadEstablishedSquadBeforeSave(fantasyUserId, gameweek, existingDraftPlayerCount) {
+  const mw = Number(gameweek);
+
+  if (await hasRealLineupBeforeGameweek(fantasyUserId, mw)) return true;
+
+  const currentGwLineup = await FantasySquad.exists({
+    fantasyUser: fantasyUserId,
+    matchweek: mw,
+    lineup: { $ne: null },
+  });
+  if (currentGwLineup) return true;
+
+  if (Number(existingDraftPlayerCount) >= FULL_SQUAD_SIZE) return true;
+
+  return false;
+}
+
 /**
  * Transfers that count toward a hit (excludes misclassified initial squad construction).
+ * Uses debut gameweek, not raw first lineup row (which may be a phantom GW1 backfill).
  */
-function resolveTransfersMadeForPenalty(snapshot, firstLineupGameweek) {
+function resolveTransfersMadeForPenalty(snapshot, debutGameweek) {
   if (!snapshot) return 0;
   const ins = snapshot.transfersIn?.length || 0;
   const outs = snapshot.transfersOut?.length || 0;
@@ -60,24 +104,18 @@ function resolveTransfersMadeForPenalty(snapshot, firstLineupGameweek) {
   if (raw === 0) return 0;
 
   const mw = Number(snapshot.matchweek);
-  if (firstLineupGameweek == null) {
+  if (debutGameweek == null) {
     return looksLikeMisclassifiedInitialSetup({ ...snapshot, matchweek: mw }, mw) ? 0 : 0;
   }
-  if (mw === firstLineupGameweek && looksLikeMisclassifiedInitialSetup(snapshot, firstLineupGameweek)) {
+  if (mw === debutGameweek && looksLikeMisclassifiedInitialSetup(snapshot, debutGameweek)) {
     return 0;
   }
   return raw;
 }
 
-/** UI hint: manager has not yet established a squad this season (no saved pick-team). */
 async function isManagerBuildingFirstSquad(fantasyUserId, gameweek) {
   const mw = Number(gameweek);
-  const priorGwLineup = await FantasySquad.exists({
-    fantasyUser: fantasyUserId,
-    matchweek: { $lt: mw },
-    lineup: { $ne: null },
-  });
-  if (priorGwLineup) return false;
+  if (await hasRealLineupBeforeGameweek(fantasyUserId, mw)) return false;
 
   const currentGwLineup = await FantasySquad.exists({
     fantasyUser: fantasyUserId,
@@ -87,10 +125,9 @@ async function isManagerBuildingFirstSquad(fantasyUserId, gameweek) {
   return !currentGwLineup;
 }
 
-/** Legacy rows: full initial squad mistaken for transfers (e.g. 13 players in, 0 out). */
-function looksLikeMisclassifiedInitialSetup(snapshot, firstLineupGw) {
-  if (!snapshot || firstLineupGw == null) return false;
-  if (Number(snapshot.matchweek) !== firstLineupGw) return false;
+function looksLikeMisclassifiedInitialSetup(snapshot, debutGw) {
+  if (!snapshot || debutGw == null) return false;
+  if (Number(snapshot.matchweek) !== debutGw) return false;
   const ins = snapshot.transfersIn?.length || 0;
   const outs = snapshot.transfersOut?.length || 0;
   if (ins >= FULL_SQUAD_SIZE && outs === 0) return true;
@@ -98,12 +135,38 @@ function looksLikeMisclassifiedInitialSetup(snapshot, firstLineupGw) {
   return false;
 }
 
+async function findPhantomGw1SquadRows() {
+  const gw1Rows = await FantasySquad.find({
+    matchweek: 1,
+    lineup: { $ne: null },
+  })
+    .select('fantasyUser transfersIn transfersOut points')
+    .lean();
+
+  const phantoms = [];
+  for (const gw1 of gw1Rows) {
+    const squads = await loadLineupSnapshotsSorted(gw1.fantasyUser);
+    if (detectPhantomGw1FromSnapshots(squads)) {
+      phantoms.push({
+        fantasyUserId: String(gw1.fantasyUser),
+        squadId: String(gw1._id),
+        points: gw1.points || 0,
+      });
+    }
+  }
+  return phantoms;
+}
+
 module.exports = {
   FULL_SQUAD_SIZE,
   shouldRecordSquadTransfers,
   managerHadEstablishedSquadBeforeSave,
   getFirstLineupGameweek,
+  getManagerDebutGameweekForTransfers,
+  detectPhantomGw1FromSnapshots,
+  hasRealLineupBeforeGameweek,
   resolveTransfersMadeForPenalty,
   isManagerBuildingFirstSquad,
   looksLikeMisclassifiedInitialSetup,
+  findPhantomGw1SquadRows,
 };

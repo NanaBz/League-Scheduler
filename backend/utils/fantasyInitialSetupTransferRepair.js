@@ -1,18 +1,15 @@
 const FantasySquad = require('../models/FantasySquad');
 const FantasyUser = require('../models/FantasyUser');
 const {
-  getFirstLineupGameweek,
+  getManagerDebutGameweekForTransfers,
   looksLikeMisclassifiedInitialSetup,
+  findPhantomGw1SquadRows,
 } = require('./fantasySquadEstablishment');
 const { runGameweekRescore } = require('./fantasyRescoreGameweek');
 
-/**
- * Managers whose first lineup GW was charged a transfer hit for initial squad construction.
- */
 async function findInitialSetupTransferAnomalies() {
   const squads = await FantasySquad.find({
     matchweek: { $gte: 2 },
-    transferHitPoints: { $gt: 0 },
   })
     .select('fantasyUser matchweek transferHitPoints transfersIn transfersOut lineup points')
     .lean();
@@ -26,20 +23,23 @@ async function findInitialSetupTransferAnomalies() {
 
   const anomalies = [];
   for (const [fantasyUserId, rows] of byUser) {
-    const firstLineupGw = await getFirstLineupGameweek(fantasyUserId);
-    if (firstLineupGw == null || firstLineupGw <= 1) continue;
+    const debutGw = await getManagerDebutGameweekForTransfers(fantasyUserId);
+    if (debutGw == null || debutGw <= 1) continue;
 
-    const debutRow = rows.find((r) => Number(r.matchweek) === firstLineupGw);
+    const debutRow = rows.find((r) => Number(r.matchweek) === debutGw);
     if (!debutRow) continue;
-    if (!looksLikeMisclassifiedInitialSetup(debutRow, firstLineupGw)) continue;
-    if ((debutRow.transferHitPoints || 0) <= 0) continue;
+    if (!looksLikeMisclassifiedInitialSetup(debutRow, debutGw)) continue;
+
+    const hit = debutRow.transferHitPoints || 0;
+    const ins = debutRow.transfersIn?.length || 0;
+    if (hit <= 0 && ins < 13) continue;
 
     anomalies.push({
       fantasyUserId,
-      matchweek: firstLineupGw,
-      transferHitPoints: debutRow.transferHitPoints,
+      matchweek: debutGw,
+      transferHitPoints: hit,
       points: debutRow.points,
-      transfersInCount: debutRow.transfersIn?.length || 0,
+      transfersInCount: ins,
       transfersOutCount: debutRow.transfersOut?.length || 0,
       squadId: String(debutRow._id),
     });
@@ -49,17 +49,14 @@ async function findInitialSetupTransferAnomalies() {
 }
 
 async function repairInitialSetupTransferAnomalies(dryRun = true) {
-  const anomalies = await findInitialSetupTransferAnomalies();
-  const actions = [];
+  const [anomalies, phantomGw1Rows] = await Promise.all([
+    findInitialSetupTransferAnomalies(),
+    findPhantomGw1SquadRows(),
+  ]);
   const gameweeksToRescore = new Set();
 
   for (const row of anomalies) {
-    actions.push({
-      ...row,
-      action: dryRun ? 'would_clear_transfers_and_rescore' : 'clear_transfers_and_rescore',
-    });
     gameweeksToRescore.add(row.matchweek);
-
     if (!dryRun) {
       await FantasySquad.updateOne(
         { _id: row.squadId },
@@ -68,31 +65,49 @@ async function repairInitialSetupTransferAnomalies(dryRun = true) {
     }
   }
 
+  for (const phantom of phantomGw1Rows) {
+    gameweeksToRescore.add(2);
+    if (!dryRun) {
+      await FantasySquad.deleteOne({ _id: phantom.squadId });
+    }
+  }
+
   const rescoreResults = [];
   if (!dryRun) {
     for (const mw of [...gameweeksToRescore].sort((a, b) => a - b)) {
-      rescoreResults.push(await runGameweekRescore(mw, { forceAutosubRecalc: true }));
+      rescoreResults.push(
+        await runGameweekRescore(mw, { forceAutosubRecalc: true, skipEventSync: true })
+      );
     }
   }
 
   const userLabels = {};
-  if (anomalies.length) {
-    const users = await FantasyUser.find({
-      _id: { $in: anomalies.map((a) => a.fantasyUserId) },
-    })
-      .select('email displayName teamName')
+  const userIds = [
+    ...new Set([
+      ...anomalies.map((a) => a.fantasyUserId),
+      ...phantomGw1Rows.map((p) => p.fantasyUserId),
+    ]),
+  ];
+  if (userIds.length) {
+    const users = await FantasyUser.find({ _id: { $in: userIds } })
+      .select('email displayName teamName managerName')
       .lean();
     for (const u of users) {
-      userLabels[String(u._id)] = u.displayName || u.teamName || u.email;
+      userLabels[String(u._id)] = u.managerName || u.displayName || u.teamName || u.email;
     }
   }
 
   return {
     dryRun,
     anomalyCount: anomalies.length,
+    phantomGw1Count: phantomGw1Rows.length,
     anomalies: anomalies.map((a) => ({
       ...a,
       managerLabel: userLabels[a.fantasyUserId] || a.fantasyUserId,
+    })),
+    phantomGw1Rows: phantomGw1Rows.map((p) => ({
+      ...p,
+      managerLabel: userLabels[p.fantasyUserId] || p.fantasyUserId,
     })),
     rescoreResults,
   };
