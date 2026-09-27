@@ -121,6 +121,12 @@ export function parseApiErrorMessage(err, fallback = 'Request failed.') {
     );
   }
   if (status === 401) return 'Your session expired. Sign out and sign in again.';
+  if (err.code === 'ECONNABORTED') {
+    return (
+      'Request timed out. The server may still be working — wait a minute, refresh, and use '
+      + 'Fantasy Management → Rescore gameweek if points look wrong.'
+    );
+  }
   if (status) return `${fallback} (HTTP ${status})`;
   return `${fallback} Check your connection and that the backend is running.`;
 }

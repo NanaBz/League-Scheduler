@@ -536,11 +536,31 @@ router.post('/matches/:matchId/special', authenticateAdmin, async (req, res) => 
   }
 });
 
+// POST /api/fantasy/admin/matches/:matchId/recalc-performance — sync events + totals for one fixture
+router.post('/matches/:matchId/recalc-performance', authenticateAdmin, async (req, res) => {
+  try {
+    const match = await Match.findById(req.params.matchId);
+    if (!assertFantasyLeagueMatch(match, res)) return;
+    await syncFantasyPerformanceFromMatchEvents(match._id);
+    await recalcPerformanceTotalsForMatch(match._id);
+    await logAdminAction(req, 'fantasy_match_recalc', { matchId: match._id, matchweek: match.matchweek });
+    return res.json({ success: true, message: 'Match performance recalculated.' });
+  } catch (err) {
+    console.error('[fantasy-admin] recalc-performance failed:', err);
+    return res.status(500).json({
+      success: false,
+      message: err.message || 'Could not recalculate match performance.',
+      code: 'FANTASY_MATCH_RECALC_FAILED',
+    });
+  }
+});
+
 // POST /api/fantasy/admin/rescore-gameweek/:matchweek — backfill snapshots and recalculate points
 router.post('/rescore-gameweek/:matchweek', authenticateAdmin, async (req, res) => {
   try {
     const mw = Number(req.params.matchweek);
-    const result = await runGameweekRescore(mw, { forceAutosubRecalc: true });
+    const skipEventSync = Boolean(req.body?.skipEventSync);
+    const result = await runGameweekRescore(mw, { forceAutosubRecalc: true, skipEventSync });
     if (!result.ok) {
       return res.status(400).json({ success: false, message: result.message });
     }

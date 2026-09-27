@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Check, ChevronLeft, ChevronRight } from 'lucide-react';
-import api from '../utils/api';
+import api, { parseApiErrorMessage } from '../utils/api';
 import { filterPlayersBySearch } from '../utils/filterPlayersBySearch';
 import {
   bonusAssignmentsFromState,
@@ -319,7 +319,7 @@ export default function FantasyMatchweekEditor({ matchweeks, onBackToDashboard }
       setSuccessMessage('');
       return true;
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to save minutes. Please retry.');
+      setError(parseApiErrorMessage(err, 'Failed to save minutes. Please retry.'));
       return false;
     } finally {
       setLoading(false);
@@ -400,25 +400,38 @@ export default function FantasyMatchweekEditor({ matchweeks, onBackToDashboard }
       setPerfPhase('bonus');
       return;
     }
+    const appearanceValidation = validateAppearancesBeforeSave(
+      allPlayers,
+      playerAppearances,
+      performanceByPlayer
+    );
+    if (!appearanceValidation.ok) {
+      setError(appearanceValidation.message);
+      setStep(3);
+      setPerfPhase('minutes');
+      return;
+    }
     setLoading(true);
     saveInFlightRef.current = true;
     setError('');
     setSuccessMessage('');
+    const matchId = selectedMatch._id;
+    const mw = selectedMatchweek.number;
     try {
-      await api.post(`/fantasy/admin/matches/${selectedMatch._id}/minutes`, {
-        matchweek: selectedMatchweek.number,
+      await api.post(`/fantasy/admin/matches/${matchId}/minutes`, {
+        matchweek: mw,
         playerMinutes: buildMinutesPayload(),
         persistOnly: true,
       });
 
       const assignments = bonusAssignmentsFromState(bonusAssignments);
-      await api.post(`/fantasy/admin/matches/${selectedMatch._id}/bonus`, {
+      await api.post(`/fantasy/admin/matches/${matchId}/bonus`, {
         bonusAssignments: assignments,
         persistOnly: true,
       });
 
       if (specialPoints.playerId && specialPoints.points) {
-        await api.post(`/fantasy/admin/matches/${selectedMatch._id}/special`, {
+        await api.post(`/fantasy/admin/matches/${matchId}/special`, {
           playerId: specialPoints.playerId,
           specialPoints: specialPoints.points,
           reason: specialPoints.reason,
@@ -426,12 +439,37 @@ export default function FantasyMatchweekEditor({ matchweeks, onBackToDashboard }
         });
       }
 
-      await api.post(`/fantasy/admin/rescore-gameweek/${selectedMatchweek.number}`);
+      await api.post(`/fantasy/admin/matches/${matchId}/recalc-performance`);
 
-      setSavedMatchIds((prev) => new Set([...prev, String(selectedMatch._id)]));
+      try {
+        await api.post(
+          `/fantasy/admin/rescore-gameweek/${mw}`,
+          { skipEventSync: true },
+          { timeout: 120000 }
+        );
+      } catch (rescoreErr) {
+        console.error('[FantasyMatchweekEditor] rescore failed:', rescoreErr.response?.data || rescoreErr.message);
+        setSavedMatchIds((prev) => new Set([...prev, String(matchId)]));
+        setMatchDrafts((prev) => {
+          const next = { ...prev };
+          delete next[String(matchId)];
+          return next;
+        });
+        baselineRef.current = draftSnapshot(playerAppearances, bonusAssignments, specialPoints);
+        setError(
+          `${parseApiErrorMessage(rescoreErr, 'Gameweek rescore failed.')} `
+          + `Match minutes and bonus were saved — use Fantasy Management → Rescore gameweek ${mw}.`
+        );
+        setSelectedMatch(null);
+        setMatchPlayers(null);
+        setStep(2);
+        return;
+      }
+
+      setSavedMatchIds((prev) => new Set([...prev, String(matchId)]));
       setMatchDrafts((prev) => {
         const next = { ...prev };
-        delete next[String(selectedMatch._id)];
+        delete next[String(matchId)];
         return next;
       });
       baselineRef.current = draftSnapshot(playerAppearances, bonusAssignments, specialPoints);
@@ -440,16 +478,8 @@ export default function FantasyMatchweekEditor({ matchweeks, onBackToDashboard }
       setMatchPlayers(null);
       setStep(2);
     } catch (err) {
-      if (process.env.NODE_ENV !== 'production') {
-        console.error('[FantasyMatchweekEditor] save failed:', err.response?.data || err.message);
-      }
-      const apiMessage = err.response?.data?.message;
-      const apiCode = err.response?.data?.code;
-      setError(
-        apiMessage
-          ? `${apiMessage}${apiCode ? ` (${apiCode})` : ''}`
-          : 'Could not save match performance. Please try again.'
-      );
+      console.error('[FantasyMatchweekEditor] save failed:', err.response?.data || err.message);
+      setError(parseApiErrorMessage(err, 'Could not save match performance. Please try again.'));
     } finally {
       saveInFlightRef.current = false;
       setLoading(false);

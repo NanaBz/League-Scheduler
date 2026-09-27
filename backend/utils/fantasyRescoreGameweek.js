@@ -27,7 +27,7 @@ async function runGameweekRescore(matchweek, options = {}) {
     return { ok: false, message: 'Invalid matchweek.' };
   }
 
-  const { forceAutosubRecalc = true } = options;
+  const { forceAutosubRecalc = true, skipEventSync = false } = options;
   await cleanupOrphanFantasySquads();
 
   const matches = await Match.find({
@@ -38,7 +38,10 @@ async function runGameweekRescore(matchweek, options = {}) {
     .lean();
 
   const backfilled = await backfillMissingSnapshotsForGameweek(mw);
-  const eventSynced = await syncFantasyPerformanceForGameweek(mw);
+  let eventSynced = 0;
+  if (!skipEventSync) {
+    eventSynced = await syncFantasyPerformanceForGameweek(mw);
+  }
   await rescoreGameweek(mw, matches, { forceAutosubRecalc });
 
   return {
