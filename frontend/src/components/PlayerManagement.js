@@ -260,9 +260,11 @@ export default function PlayerManagement({ onDataChange = () => {} }) {
     setDeletingPlayer(true);
     setError('');
     try {
-      const permanent = deletePreview.canPermanentDelete;
+      const permanent = deletePreview.canPermanentDelete === true;
       await api.delete(`/players/${deleteTargetId}${permanent ? '?permanent=true' : ''}`);
-      setPlayers((prev) => prev.filter((p) => p._id !== deleteTargetId));
+      setPlayers((prev) =>
+        permanent ? prev.filter((p) => p._id !== deleteTargetId) : prev.map((p) => (p._id === deleteTargetId ? { ...p, active: false } : p))
+      );
       setSavedSnapshots((prev) => {
         const next = { ...prev };
         delete next[deleteTargetId];

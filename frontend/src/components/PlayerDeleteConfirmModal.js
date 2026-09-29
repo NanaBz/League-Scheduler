@@ -25,15 +25,8 @@ export default function PlayerDeleteConfirmModal({
 
   const player = preview?.player;
   const totals = preview?.totals || {};
-  const allZero =
-    preview &&
-    !preview.statsRowCount &&
-    !preview.matchEventCount &&
-    (totals.goals || 0) === 0 &&
-    (totals.assists || 0) === 0 &&
-    (totals.yellowCards || 0) === 0 &&
-    (totals.redCards || 0) === 0 &&
-    (totals.fantasyPoints || 0) === 0;
+  const canPermanentDelete = preview?.canPermanentDelete === true;
+  const fantasySquadReference = preview?.fantasySquadReference === true;
 
   const title = player?.name ? `Remove ${player.name}?` : 'Remove player?';
 
@@ -69,17 +62,21 @@ export default function PlayerDeleteConfirmModal({
                 <StatRow label="Red cards" value={totals.redCards ?? 0} />
                 <StatRow label="Fantasy points" value={totals.fantasyPoints ?? 0} />
               </div>
-              {allZero ? (
+              {canPermanentDelete ? (
                 <p className="player-delete-modal__safe">
-                  All totals are zero — safe to remove. This duplicate will be permanently deleted and will not appear in fantasy transfers.
+                  No stats, events, fantasy points, or fantasy squads reference this player — they can be
+                  permanently removed from the database.
                 </p>
               ) : (
                 <p className="player-delete-modal__warn">
-                  Marking inactive removes them from future Fantasy selection but does not remove them from
-                  existing Fantasy squads, locked gameweeks, or historical records. Managers can sell them
-                  when the next transfer window opens.
+                  {fantasySquadReference
+                    ? 'This player appears in at least one Fantasy squad or gameweek snapshot. Use Mark inactive — they will leave the transfer market but stay on existing squads until managers remove them.'
+                    : 'This player has recorded data or Fantasy history. Use Mark inactive — they will be hidden from new Fantasy picks but existing squads and history stay intact.'}
                 </p>
               )}
+              {preview.player?.active === false ? (
+                <p className="player-delete-modal__meta">This player is already marked inactive.</p>
+              ) : null}
             </>
           )}
         </div>
@@ -94,7 +91,11 @@ export default function PlayerDeleteConfirmModal({
             onClick={onConfirm}
             disabled={loading || deleting || !!error || !preview}
           >
-            {deleting ? 'Removing…' : allZero ? 'Permanently remove' : 'Mark inactive'}
+            {deleting
+              ? 'Removing…'
+              : canPermanentDelete
+                ? 'Permanently remove'
+                : 'Mark inactive'}
           </button>
         </div>
       </div>

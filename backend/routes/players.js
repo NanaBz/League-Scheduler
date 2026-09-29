@@ -111,7 +111,8 @@ router.get('/:id/removal-preview', authenticateAdmin, async (req, res) => {
     const player = await Player.findById(req.params.id).populate('team', 'name logo').lean();
     if (!player) return res.status(404).json({ message: 'Player not found' });
 
-    const [statsAgg, fantasyAgg, statsRowCount, matchEventCount] = await Promise.all([
+    const [statsAgg, fantasyAgg, statsRowCount, matchEventCount, fantasyPerformanceRows, fantasySquadRef] =
+      await Promise.all([
       PlayerStats.aggregate([
         { $match: { player: player._id } },
         {
@@ -130,6 +131,8 @@ router.get('/:id/removal-preview', authenticateAdmin, async (req, res) => {
       ]),
       PlayerStats.countDocuments({ player: player._id }),
       Match.countDocuments({ 'events.player': player._id }),
+      FantasyMatchPerformance.countDocuments({ player: player._id }),
+      playerReferencedInFantasySquads(player._id),
     ]);
 
     const totals = {
@@ -140,7 +143,13 @@ router.get('/:id/removal-preview', authenticateAdmin, async (req, res) => {
       fantasyPoints: fantasyAgg[0]?.fantasyPoints || 0,
     };
 
-    const canPermanentDelete = statsRowCount === 0 && matchEventCount === 0 && totals.fantasyPoints === 0;
+    const fantasyPerformanceRows = await FantasyMatchPerformance.countDocuments({ player: player._id });
+    const canPermanentDelete =
+      statsRowCount === 0 &&
+      matchEventCount === 0 &&
+      totals.fantasyPoints === 0 &&
+      fantasyPerformanceRows === 0 &&
+      !fantasySquadRef;
 
     res.json({
       player: {
@@ -149,11 +158,14 @@ router.get('/:id/removal-preview', authenticateAdmin, async (req, res) => {
         number: player.number,
         position: player.position,
         team: player.team,
+        active: player.active !== false,
       },
       totals,
       statsRowCount,
       matchEventCount,
+      fantasySquadReference: Boolean(fantasySquadRef),
       canPermanentDelete,
+      recommendedAction: canPermanentDelete ? 'permanent_delete' : 'mark_inactive',
     });
   } catch (error) {
     res.status(500).json({ message: error.message });
