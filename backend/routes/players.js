@@ -143,7 +143,6 @@ router.get('/:id/removal-preview', authenticateAdmin, async (req, res) => {
       fantasyPoints: fantasyAgg[0]?.fantasyPoints || 0,
     };
 
-    const fantasyPerformanceRows = await FantasyMatchPerformance.countDocuments({ player: player._id });
     const canPermanentDelete =
       statsRowCount === 0 &&
       matchEventCount === 0 &&
