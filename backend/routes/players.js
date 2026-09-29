@@ -8,6 +8,7 @@ const FantasyMatchPerformance = require('../models/FantasyMatchPerformance');
 const mongoose = require('mongoose');
 const { authenticateAdmin } = require('../middleware/auth');
 const { logAdminAction } = require('../utils/adminAuditLog');
+const { playerReferencedInFantasySquads } = require('../utils/fantasyPlayerFantasyReferences');
 
 // List players (optionally by team)
 // List players (optionally by team, and optionally include inactive)
@@ -170,9 +171,11 @@ router.delete('/:id', authenticateAdmin, async (req, res) => {
       const statsCount = await PlayerStats.countDocuments({ player: player._id });
       const matchEventCount = await Match.countDocuments({ 'events.player': player._id });
       const fantasyRows = await FantasyMatchPerformance.countDocuments({ player: player._id });
-      if (statsCount > 0 || matchEventCount > 0 || fantasyRows > 0) {
+      const fantasySquadRef = await playerReferencedInFantasySquads(player._id);
+      if (statsCount > 0 || matchEventCount > 0 || fantasyRows > 0 || fantasySquadRef) {
         return res.status(400).json({
-          message: 'Cannot permanently delete player with linked stats, match events, or fantasy points. They will be marked inactive instead.',
+          message:
+            'Cannot permanently delete this player while stats, match events, fantasy points, or fantasy squads reference them. Mark inactive instead — existing squads and history stay intact.',
         });
       }
       await player.deleteOne();

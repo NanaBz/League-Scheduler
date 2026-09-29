@@ -75,7 +75,9 @@ export default function PlayerDeleteConfirmModal({
                 </p>
               ) : (
                 <p className="player-delete-modal__warn">
-                  This player has recorded data. They will be marked inactive (hidden from fantasy transfers) but their stats history will remain in the database.
+                  Marking inactive removes them from future Fantasy selection but does not remove them from
+                  existing Fantasy squads, locked gameweeks, or historical records. Managers can sell them
+                  when the next transfer window opens.
                 </p>
               )}
             </>

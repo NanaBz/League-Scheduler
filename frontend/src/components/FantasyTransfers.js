@@ -22,7 +22,11 @@ import {
   freeTransfersDisplay,
   transferChipDisplayLabel,
 } from '../utils/fantasyChips';
-import { validateSquadClubLimits } from '../utils/fantasySquadValidation';
+import {
+  validateSquadClubLimitTransition,
+  squadHasInactivePlayers,
+  squadHasMissingPlayers,
+} from '../utils/fantasySquadValidation';
 import {
   countPendingTransfers,
   isStagedSquadDirty,
@@ -381,7 +385,16 @@ export default function FantasyTransfers({ user, onBack, onGoToPickTeam }) {
     arr[pickerLock.index] = player;
     newSquad[pickerLock.position] = arr;
 
-    const teamLimitCheck = validateSquadClubLimits(newSquad);
+    if (player?.active === false || player?.fantasyAvailability === 'inactive') {
+      setValidationError({
+        title: 'Player unavailable',
+        message: `${player.name || 'This player'} is inactive and cannot be added to your squad.`,
+        type: 'error',
+      });
+      return;
+    }
+
+    const teamLimitCheck = validateSquadClubLimitTransition(savedBaseline, newSquad);
     if (!teamLimitCheck.valid) {
       setValidationError({ title: 'Team Limit Exceeded', message: teamLimitCheck.message, type: 'error' });
       return;
@@ -453,6 +466,19 @@ export default function FantasyTransfers({ user, onBack, onGoToPickTeam }) {
   }, [squad]);
 
   const squadSelectedCount = Object.values(squad).flat().filter(Boolean).length;
+
+  const squadNeedsInactiveRemoval = useMemo(
+    () => !deadlinePassed && squadHasInactivePlayers(squad),
+    [squad, deadlinePassed]
+  );
+  const squadHasMissing = useMemo(() => squadHasMissingPlayers(squad), [squad]);
+
+  const playerAvailabilityLabel = (player) => {
+    if (!player) return null;
+    if (player.fantasyAvailability === 'missing') return 'Unavailable';
+    if (player.fantasyAvailability === 'inactive') return 'Inactive';
+    return null;
+  };
 
   const commitStagedSquad = useCallback(
     async ({ showFeedback = false, quiet = false } = {}) => {
@@ -600,6 +626,19 @@ export default function FantasyTransfers({ user, onBack, onGoToPickTeam }) {
         </div>
       ) : null}
 
+      {!squadLoading && squadNeedsInactiveRemoval ? (
+        <div className="transfers-chip-banner transfers-chip-banner--warn" role="alert">
+          One or more players in your squad are <strong>inactive</strong>. Remove them and save before
+          making other transfers.
+        </div>
+      ) : null}
+
+      {!squadLoading && squadHasMissing ? (
+        <div className="transfers-chip-banner transfers-chip-banner--warn" role="alert">
+          One or more squad slots reference a player who no longer exists. Remove them before saving.
+        </div>
+      ) : null}
+
       {!squadLoading && saveStatus === 'saving' ? (
         <div className="transfers-save-status transfers-save-status--saving" role="status">
           Saving squad…
@@ -642,6 +681,9 @@ export default function FantasyTransfers({ user, onBack, onGoToPickTeam }) {
                       </div>
                       <div className="pitch-player-info">
                         <span className="pitch-player-name">{p.name}</span>
+                        {playerAvailabilityLabel(p) ? (
+                          <span className="pitch-player-availability">{playerAvailabilityLabel(p)}</span>
+                        ) : null}
                         <span className="pitch-player-fixture">{formatPitchFixture(p, matches, currentGameweek)}</span>
                       </div>
                     </button>
@@ -665,6 +707,9 @@ export default function FantasyTransfers({ user, onBack, onGoToPickTeam }) {
                       </div>
                       <div className="pitch-player-info">
                         <span className="pitch-player-name">{p.name}</span>
+                        {playerAvailabilityLabel(p) ? (
+                          <span className="pitch-player-availability">{playerAvailabilityLabel(p)}</span>
+                        ) : null}
                         <span className="pitch-player-fixture">{formatPitchFixture(p, matches, currentGameweek)}</span>
                       </div>
                     </button>
@@ -688,6 +733,9 @@ export default function FantasyTransfers({ user, onBack, onGoToPickTeam }) {
                       </div>
                       <div className="pitch-player-info">
                         <span className="pitch-player-name">{p.name}</span>
+                        {playerAvailabilityLabel(p) ? (
+                          <span className="pitch-player-availability">{playerAvailabilityLabel(p)}</span>
+                        ) : null}
                         <span className="pitch-player-fixture">{formatPitchFixture(p, matches, currentGameweek)}</span>
                       </div>
                     </button>
@@ -711,6 +759,9 @@ export default function FantasyTransfers({ user, onBack, onGoToPickTeam }) {
                       </div>
                       <div className="pitch-player-info">
                         <span className="pitch-player-name">{p.name}</span>
+                        {playerAvailabilityLabel(p) ? (
+                          <span className="pitch-player-availability">{playerAvailabilityLabel(p)}</span>
+                        ) : null}
                         <span className="pitch-player-fixture">{formatPitchFixture(p, matches, currentGameweek)}</span>
                       </div>
                     </button>

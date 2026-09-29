@@ -22,7 +22,7 @@ const { buildDashboardSummary } = require('../utils/fantasyDashboardSummary');
 const { buildManagerProfilePayload } = require('../utils/fantasyManagerProfile');
 const { nextFixturesForTeam } = require('../utils/fantasyPlayerFixtures');
 const { loadPlayerStatsMaps, attachPlayerStats, statsForPlayer } = require('../utils/fantasyPlayerStats');
-const { validateMaxPlayersPerClubFromPlayers } = require('../utils/fantasySquadValidation');
+const { validateSquadPlayerLifecycle } = require('../utils/fantasyPlayerSquadIntegrity');
 const {
   roundPrice,
   normalizePlayerIds,
@@ -130,11 +130,23 @@ async function hydrateSquadSlots(slots, playerPurchasePrices = {}) {
     hydrated[pos] = arr.map((id) => {
       if (!id) return null;
       const player = byId.get(String(id));
-      if (!player) return null;
+      if (!player) {
+        return {
+          _id: String(id),
+          name: 'Unavailable player',
+          position: pos,
+          fantasyAvailability: 'missing',
+          team: null,
+          fantasyPrice: null,
+          purchasePrice: purchases[String(id)] != null ? roundPrice(purchases[String(id)]) : undefined,
+        };
+      }
       const teamId = player.team?._id || player.team;
+      const fantasyAvailability = player.active === false ? 'inactive' : 'active';
       return attachPlayerStats(
         {
           ...player,
+          fantasyAvailability,
           fantasyPrice: roundPrice(player.fantasyPrice),
           purchasePrice: purchases[String(id)] != null ? roundPrice(purchases[String(id)]) : undefined,
           nextThree: nextFixturesForTeam(leagueMatches, teamId, {
@@ -171,7 +183,8 @@ function mapLedgerError(result) {
   return result;
 }
 
-async function validateSlotPlayers(slots) {
+async function validateSlotPlayers(slots, options = {}) {
+  const previousPlayerIds = options.previousPlayerIds || [];
   const allIds = Object.values(slots).flat().filter(Boolean).map(String);
   const ids = [...new Set(allIds)];
   if (allIds.length !== ids.length) {
@@ -188,7 +201,7 @@ async function validateSlotPlayers(slots) {
   }
 
   const players = await Player.find({ _id: { $in: objectIds } })
-    .select('_id position team fantasyPrice')
+    .select('_id name position team fantasyPrice active')
     .populate('team', 'name')
     .lean();
   const byId = new Map(players.map((p) => [p._id.toString(), p]));
@@ -198,12 +211,10 @@ async function validateSlotPlayers(slots) {
       if (!id) continue;
       const player = byId.get(String(id));
       if (!player) {
-        return { ok: false, message: 'One or more players were not found.' };
-      }
-      if (player.active === false) {
         return {
           ok: false,
-          message: `${player.team?.name || 'Team'} player ${player.name || 'selection'} is no longer available. Remove them from your squad.`,
+          message:
+            'One or more players are no longer in the database. Remove them from your squad before saving.',
         };
       }
       if (player.position !== pos) {
@@ -212,9 +223,9 @@ async function validateSlotPlayers(slots) {
     }
   }
 
-  const clubCheck = validateMaxPlayersPerClubFromPlayers(byId, ids);
-  if (!clubCheck.ok) {
-    return clubCheck;
+  const lifecycleCheck = validateSquadPlayerLifecycle(byId, previousPlayerIds, ids);
+  if (!lifecycleCheck.ok) {
+    return lifecycleCheck;
   }
 
   return { ok: true, playersById: byId };
@@ -613,16 +624,17 @@ router.put('/my-squad', authenticateFantasyUser, async (req, res) => {
   try {
     if (!(await deadlineGuard(res))) return;
 
+    const existing = await FantasyDraftSquad.findOne({ fantasyUser: req.fantasyUser._id }).lean();
+    const existingSlots = normalizeSlotIds(existing?.slots || EMPTY_SLOTS);
+    const previousPlayerIds = squadIdsFromSlots(existingSlots);
+
     const slots = normalizeSlotIds(req.body?.squad || req.body?.slots);
-    const validation = await validateSlotPlayers(slots);
+    const validation = await validateSlotPlayers(slots, { previousPlayerIds });
     if (!validation.ok) {
       return res.status(400).json({ success: false, message: validation.message });
     }
-
-    const existing = await FantasyDraftSquad.findOne({ fantasyUser: req.fantasyUser._id }).lean();
     const incomingCount = squadIdsFromSlots(slots).length;
-    const existingSlots = normalizeSlotIds(existing?.slots || EMPTY_SLOTS);
-    const existingCount = squadIdsFromSlots(existingSlots).length;
+    const existingCount = previousPlayerIds.length;
     const matches = await loadLeagueMatchesForFantasy();
     const currentGameweek = deriveCurrentGameweekFromMatches(matches);
 
