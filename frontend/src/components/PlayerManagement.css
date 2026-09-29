@@ -215,6 +215,93 @@
   overflow-wrap: anywhere;
 }
 
+/* Inactive roster (outside numbered active list) */
+.admin-player-inactive-section {
+  margin: 16px 0 0;
+  padding: 14px 16px;
+  border: 1px dashed #94a3b8;
+  border-radius: 10px;
+  background: linear-gradient(180deg, #f1f5f9 0%, #f8fafc 100%);
+}
+
+.admin-player-inactive-title {
+  margin: 0 0 4px;
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #475569;
+}
+
+.admin-player-inactive-hint {
+  margin: 0 0 12px;
+  font-size: 0.8rem;
+  line-height: 1.45;
+  color: #64748b;
+}
+
+.admin-player-inactive-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.admin-player-inactive-item {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px 12px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+  background: #fff;
+}
+
+.admin-player-inactive-item.admin-player-highlight {
+  border-color: #fca5a5;
+  background: #fef2f2;
+  box-shadow: 0 0 0 2px rgba(220, 38, 38, 0.12);
+}
+
+.admin-player-inactive-main {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 8px 10px;
+  min-width: 0;
+  flex: 1;
+}
+
+.admin-player-inactive-badge {
+  flex-shrink: 0;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #7c2d12;
+  background: #ffedd5;
+  border: 1px solid #fdba74;
+}
+
+.admin-player-inactive-name {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #334155;
+  word-break: break-word;
+}
+
+.admin-player-inactive-meta {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #94a3b8;
+}
+
 /* Player search */
 .admin-player-search {
   position: relative;

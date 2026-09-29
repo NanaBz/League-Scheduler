@@ -48,9 +48,18 @@ export default function PlayerManagement({ onDataChange = () => {} }) {
     return playerSnapshot(player) !== saved;
   }, [savedSnapshots]);
 
+  const activePlayers = useMemo(
+    () => players.filter((p) => p.active !== false),
+    [players]
+  );
+  const inactivePlayers = useMemo(
+    () => players.filter((p) => p.active === false),
+    [players]
+  );
+
   const dirtyCount = useMemo(
-    () => players.filter((p) => isPlayerDirty(p)).length,
-    [players, isPlayerDirty]
+    () => activePlayers.filter((p) => isPlayerDirty(p)).length,
+    [activePlayers, isPlayerDirty]
   );
 
   // Boys teams: not acwpl, Girls teams: Orion/Firestorm or acwpl
@@ -78,7 +87,7 @@ export default function PlayerManagement({ onDataChange = () => {} }) {
     setLoading(true);
     setError('');
     try {
-      const { data } = await api.get('/players', { params: { teamId } });
+      const { data } = await api.get('/players', { params: { teamId, includeInactive: true } });
       const list = data || [];
       setPlayers(list);
       setSavedSnapshots(buildSnapshots(list));
@@ -120,6 +129,48 @@ export default function PlayerManagement({ onDataChange = () => {} }) {
     }).slice(0, 10);
   }, [players, playerSearchQuery]);
 
+  const renderInactiveSection = () => {
+    if (inactivePlayers.length === 0) return null;
+    return (
+      <section className="admin-player-inactive-section" aria-labelledby="admin-player-inactive-heading">
+        <h4 id="admin-player-inactive-heading" className="admin-player-inactive-title">
+          Inactive players
+        </h4>
+        <p className="admin-player-inactive-hint">
+          Not on the active roster. They may still appear in fantasy squads or historical stats.
+        </p>
+        <ul className="admin-player-inactive-list">
+          {inactivePlayers.map((p) => (
+            <li
+              key={p._id}
+              data-player-id={p._id}
+              className={`admin-player-inactive-item${highlightedPlayerId === p._id ? ' admin-player-highlight' : ''}`}
+            >
+              <div className="admin-player-inactive-main">
+                <span className="admin-player-inactive-badge">Inactive</span>
+                <span className="admin-player-inactive-name">{p.name || 'Unnamed player'}</span>
+                {(p.position || p.number != null) && (
+                  <span className="admin-player-inactive-meta">
+                    {[p.position, p.number != null && p.number !== '' ? `#${p.number}` : null]
+                      .filter(Boolean)
+                      .join(' · ')}
+                  </span>
+                )}
+              </div>
+              <button
+                type="button"
+                className="btn btn-danger btn-small"
+                onClick={() => deletePlayer(p)}
+              >
+                Remove
+              </button>
+            </li>
+          ))}
+        </ul>
+      </section>
+    );
+  };
+
   const navigateToPlayer = useCallback((playerId) => {
     setHighlightedPlayerId(playerId);
     setPlayerSearchQuery('');
@@ -130,7 +181,9 @@ export default function PlayerManagement({ onDataChange = () => {} }) {
       const selector = isMobile
         ? `.admin-player-mobile-only [data-player-id="${playerId}"]`
         : `.admin-player-desktop-only [data-player-id="${playerId}"]`;
-      const el = document.querySelector(selector);
+      const el =
+        document.querySelector(`.admin-player-inactive-section [data-player-id="${playerId}"]`) ||
+        document.querySelector(selector);
       if (el) {
         el.scrollIntoView({ behavior: 'smooth', block: 'center' });
         const nameInput = el.querySelector('input[type="text"], input:not([type])');
@@ -162,7 +215,7 @@ export default function PlayerManagement({ onDataChange = () => {} }) {
       updatePlayerField(id, 'isCaptain', false);
     } else {
       // Trying to set as captain
-      const currentCaptain = players.find(p => p.isCaptain);
+      const currentCaptain = players.find(p => p.isCaptain && p.active !== false);
       if (currentCaptain && currentCaptain._id !== id) {
         // There's already a different captain
         if (window.confirm(`${currentCaptain.name} is currently the captain. Switch captaincy to ${players.find(p => p._id === id).name}?`)) {
@@ -185,7 +238,7 @@ export default function PlayerManagement({ onDataChange = () => {} }) {
       updatePlayerField(id, 'isViceCaptain', false);
     } else {
       // Trying to set as vice captain
-      const currentViceCaptain = players.find(p => p.isViceCaptain);
+      const currentViceCaptain = players.find(p => p.isViceCaptain && p.active !== false);
       if (currentViceCaptain && currentViceCaptain._id !== id) {
         // There's already a different vice captain
         if (window.confirm(`${currentViceCaptain.name} is currently the vice captain. Switch vice captaincy to ${players.find(p => p._id === id).name}?`)) {
@@ -443,7 +496,7 @@ export default function PlayerManagement({ onDataChange = () => {} }) {
             <h3 className="admin-player-roster-title">
               Players — {selectedTeam.name}
             </h3>
-            {!loading && players.length > 0 && (
+            {!loading && (activePlayers.length > 0 || inactivePlayers.length > 0) && (
               <div className="admin-player-search" ref={playerSearchRef}>
                 <label htmlFor="admin-player-search-input" className="admin-player-search-label">
                   Search players
@@ -475,7 +528,10 @@ export default function PlayerManagement({ onDataChange = () => {} }) {
                             className="admin-player-search-option"
                             onClick={() => navigateToPlayer(p._id)}
                           >
-                            <span className="admin-player-search-option-name">{p.name || 'Unnamed player'}</span>
+                            <span className="admin-player-search-option-name">
+                              {p.name || 'Unnamed player'}
+                              {p.active === false ? ' (inactive)' : ''}
+                            </span>
                             <span className="admin-player-search-option-meta">
                               {p.number != null && p.number !== '' ? `#${p.number}` : 'No #'}
                               {' · '}
@@ -527,13 +583,13 @@ export default function PlayerManagement({ onDataChange = () => {} }) {
                   </tr>
                 </thead>
                 <tbody>
-                  {players.map((p, idx) => (
+                  {activePlayers.map((p, idx) => (
                     <tr
                       key={p._id}
                       data-player-id={p._id}
                       className={`admin-player-row${highlightedPlayerId === p._id ? ' admin-player-highlight' : ''}${isPlayerDirty(p) ? ' admin-player-row--dirty' : ''}`}
                     >
-                      <td className="admin-player-index-cell" title={`Player ${idx + 1} of ${players.length}`}>
+                      <td className="admin-player-index-cell" title={`Player ${idx + 1} of ${activePlayers.length}`}>
                         {idx + 1}
                       </td>
                       <td className="admin-player-name-cell">
@@ -626,18 +682,18 @@ export default function PlayerManagement({ onDataChange = () => {} }) {
                       </td>
                     </tr>
                   ))}
-                  {players.length === 0 && (
-                    <tr className="admin-player-empty-row"><td colSpan={8} className="admin-player-empty-cell">No players yet.</td></tr>
+                  {activePlayers.length === 0 && (
+                    <tr className="admin-player-empty-row"><td colSpan={8} className="admin-player-empty-cell">No active players yet.</td></tr>
                   )}
                 </tbody>
               </table>
               </div>
 
               <div className="admin-player-cards admin-player-mobile-only">
-                {players.length === 0 ? (
-                  <div className="admin-player-empty">No players yet.</div>
+                {activePlayers.length === 0 ? (
+                  <div className="admin-player-empty">No active players yet.</div>
                 ) : (
-                  players.map((p, idx) => (
+                  activePlayers.map((p, idx) => (
                     <article
                       key={p._id}
                       data-player-id={p._id}
@@ -744,6 +800,8 @@ export default function PlayerManagement({ onDataChange = () => {} }) {
                   ))
                 )}
               </div>
+
+              {renderInactiveSection()}
               </>
             )}
 
